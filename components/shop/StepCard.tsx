@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Upload, Sparkles, ShoppingBag } from "lucide-react";
+import { Upload, Sparkles, Shirt } from "lucide-react";
 
 const STEP_ICONS: Record<string, React.ReactNode> = {
-  "01": <Upload size={20} />,
-  "02": <Sparkles size={20} />,
-  "03": <ShoppingBag size={20} />,
+  "01": <Upload size={48} strokeWidth={1.5} />,
+  "02": <Sparkles size={48} strokeWidth={1.5} />,
+  "03": <Shirt size={48} strokeWidth={1.5} />,
 };
 
 interface StepCardProps {
@@ -14,60 +12,36 @@ interface StepCardProps {
   title: string;
   description: string;
   highlighted?: boolean;
-  ctaLabel?: string;
+  ctaHref?: string;
 }
 
 export function StepCard({
   number,
   title,
   description,
-  highlighted = false,
-  ctaLabel,
+  ctaHref = "/product/custom",
 }: StepCardProps) {
   return (
-    <Card
-      className={`flex flex-col gap-4 ${
-        highlighted ? "bg-ignition border-ignition" : ""
-      }`}
-    >
-      <span
-        className={`font-heading text-display ${
-          highlighted ? "text-white/30" : "text-white/10"
-        }`}
-      >
-        {number}
-      </span>
+    <Link href={ctaHref} className="block">
+      <div className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-border bg-obsidian p-10 min-h-[420px] transition-colors duration-300 hover:bg-ignition hover:border-ignition cursor-pointer">
+        <span className="absolute top-0 right-5 font-heading text-[190px] leading-none text-white/[0.06] group-hover:text-white/20 transition-colors duration-300">
+          {number}
+        </span>
 
-      <div
-        className={`flex h-10 w-10 items-center justify-center ${
-          highlighted ? "bg-white/20 text-white" : "bg-carbon text-muted"
-        } border border-border`}
-      >
-        {STEP_ICONS[number]}
+        <div className="relative z-10 flex flex-1 flex-col gap-6">
+          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-carbon text-muted border border-border transition-colors duration-300 group-hover:bg-white/20 group-hover:text-white group-hover:border-white/20">
+            {STEP_ICONS[number]}
+          </div>
+
+          <h3 className="font-heading mt-20 text-6xl text-white">
+            {title}
+          </h3>
+
+          <p className="text-base leading-relaxed text-muted transition-colors duration-300 group-hover:text-white/80">
+            {description}
+          </p>
+        </div>
       </div>
-
-      <h3 className="font-sub font-bold uppercase tracking-widest text-sm text-white">
-        {title}
-      </h3>
-
-      <p
-        className={`text-sm ${
-          highlighted ? "text-white/80" : "text-muted"
-        }`}
-      >
-        {description}
-      </p>
-
-      {ctaLabel && (
-        <Link href="/product/custom" className="mt-auto self-start">
-          <Button
-            variant={highlighted ? "outline" : "primary"}
-            size="sm"
-          >
-            {ctaLabel}
-          </Button>
-        </Link>
-      )}
-    </Card>
+    </Link>
   );
 }

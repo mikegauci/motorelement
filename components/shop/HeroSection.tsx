@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -6,14 +7,21 @@ export function HeroSection() {
   return (
     <section className="relative min-h-screen overflow-hidden bg-void">
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,_#1A1A1A_0%,_#0A0A0A_70%)]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-void via-void/90 to-transparent" />
+        <Image
+          src="/images/hero-img2.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-r from-void via-void/50 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-void to-transparent" />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-end px-6 pb-24 pt-32 lg:items-center lg:pb-0">
-        <div className="max-w-2xl">
-          <Badge>LIMITED RELEASE 006</Badge>
-
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-end px-6 pb-24 pt-0 lg:items-center lg:pb-0">
+        <div className="max-w-2xl"> 
           <h1 className="mt-6 font-heading text-hero italic leading-[0.95]">
             <span className="block text-white">YOUR CAR.</span>
             <span className="block text-ignition">YOUR ART.</span>
@@ -21,8 +29,8 @@ export function HeroSection() {
           </h1>
 
           <p className="mt-8 max-w-md text-base leading-relaxed text-muted">
-            Precision-engineered apparel for the modern driver. Upload your
-            build, generate high-end AI visuals, and wear your passion on the
+            Premium custom car apparel designed by you, powered by AI, and
+            delivered with brute force quality. JDM-inspired, built for the
             street.
           </p>
 
@@ -32,9 +40,9 @@ export function HeroSection() {
                 START MY BUILD
               </Button>
             </Link>
-            <Link href="/products">
+            <Link href="#how-it-works">
               <Button variant="secondary" size="lg">
-                EXPLORE THE COLLECTION
+                LEARN MORE
               </Button>
             </Link>
           </div>

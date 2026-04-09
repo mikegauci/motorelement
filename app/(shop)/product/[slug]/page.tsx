@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/supabase/queries/products";
 import ProductPage from "@/components/shop/ProductPage";
-import ProductCustomizer from "@/components/shop/ProductCustomizer";
+import ProductCustomizer from "@/components/shop/customizer/ProductCustomizer";
 import { CustomizerProvider } from "@/components/shop/customizer/CustomizerContext";
 
 export async function generateMetadata({

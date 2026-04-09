@@ -13,7 +13,7 @@ const config: Config = {
         void: "#0A0A0A",
         obsidian: "#111111",
         carbon: "#1A1A1A",
-        ignition: "#F97316",
+        ignition: "#DC2626",
         redline: "#EF4444",
         border: "#2A2A2A",
         muted: "#888888",

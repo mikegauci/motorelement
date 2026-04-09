@@ -1,4 +1,5 @@
 export { CustomizerProvider, useCustomizer } from './CustomizerContext'
+export { default as ProductCustomizer } from './ProductCustomizer'
 export { default as MockupPreview } from './MockupPreview'
 export { default as VehicleInputForm } from './VehicleInputForm'
 export { default as ResultViewer } from './ResultViewer'

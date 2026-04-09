@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, Barlow_Condensed, Inter, Space_Mono } from "next/font/google";
+import { Barlow_Condensed, Inter, Space_Mono } from "next/font/google";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 import { CartProvider } from "@/components/providers/CartProvider";
 import "./globals.css";
 
-const bebasNeue = Bebas_Neue({
-  weight: "400",
+const barlowCondensed = Barlow_Condensed({
+  weight: ["400", "700", "900"],
   subsets: ["latin"],
   variable: "--font-heading",
   display: "swap",
 });
 
-const barlowCondensed = Barlow_Condensed({
+const barlowCondensedSub = Barlow_Condensed({
   weight: ["400", "700"],
   subsets: ["latin"],
   variable: "--font-sub",
@@ -46,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bebasNeue.variable} ${barlowCondensed.variable} ${inter.variable} ${spaceMono.variable}`}
+      className={`${barlowCondensed.variable} ${barlowCondensedSub.variable} ${inter.variable} ${spaceMono.variable}`}
     >
       <body className="bg-void text-white font-body antialiased">
         <CartProvider>
