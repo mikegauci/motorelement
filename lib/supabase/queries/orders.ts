@@ -104,6 +104,7 @@ export async function getOrderById(
 export async function createOrder(order: {
   customerId: string;
   total: number;
+  stripePaymentId?: string;
   items: Array<{
     productId: string;
     quantity: number;
@@ -118,6 +119,9 @@ export async function createOrder(order: {
     .insert({
       customer_id: order.customerId,
       total: order.total,
+      ...(order.stripePaymentId && {
+        stripe_payment_id: order.stripePaymentId,
+      }),
     })
     .select()
     .single();
@@ -143,4 +147,47 @@ export async function createOrder(order: {
   }
 
   return { data: toOrder(orderRow), error: null };
+}
+
+export async function updateOrderPrintifyId(
+  orderId: string,
+  printifyOrderId: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ printify_order_id: printifyOrderId })
+    .eq("id", orderId);
+
+  return { error: error?.message ?? null };
+}
+
+export async function updateOrderStatus(
+  orderId: string,
+  status: OrderStatus
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ status })
+    .eq("id", orderId);
+
+  return { error: error?.message ?? null };
+}
+
+export async function getOrderByPrintifyId(
+  printifyOrderId: string
+): Promise<QueryResult<Order>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .eq("printify_order_id", printifyOrderId)
+    .single();
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data: toOrder(data), error: null };
 }
