@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { Container } from "@/components/ui/Container";
 
 export function HeroSection() {
   return (
@@ -19,7 +20,7 @@ export function HeroSection() {
         <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-void to-transparent" />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-end px-6 pb-24 pt-0 lg:items-center lg:pb-0">
+      <Container className="relative z-10 flex min-h-screen items-end lg:items-center">
         <div className="max-w-2xl"> 
           <h1 className="mt-6 font-heading text-hero italic leading-[0.95]">
             <span className="block text-white">YOUR CAR.</span>
@@ -46,7 +47,7 @@ export function HeroSection() {
             </Link>
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

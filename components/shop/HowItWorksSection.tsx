@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { StepCard } from "@/components/shop/StepCard";
 import { Button } from "@/components/ui/Button";
+import { Container } from "@/components/ui/Container";
 
 const steps = [
   {
@@ -29,9 +30,9 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="bg-void py-24">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mb-12 text-center">
+    <section id="how-it-works" className="bg-void py-12 md:py-24 mt-[-120px]">
+      <Container>
+        <div className="mb-8 text-center md:mb-12">
           <SectionLabel>PROCESS ARCHITECTURE</SectionLabel>
           <h2 className="mt-2 font-heading text-display text-white">
             HOW IT WORKS
@@ -51,7 +52,7 @@ export function HowItWorksSection() {
             </Button>
           </Link>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

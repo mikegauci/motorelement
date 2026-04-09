@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Container } from "@/components/ui/Container";
 
 const featuredProducts = [
   {
@@ -31,10 +32,10 @@ const featuredProducts = [
 
 export function FeaturedBuildsSection() {
   return (
-    <section className="bg-void py-24">
-      <div className="mx-auto max-w-7xl px-6">
-        <h2 className="mb-12 text-center font-heading text-display text-white">
-          FEATURED BUILDS
+    <section className="bg-void py-12 md:py-24">
+      <Container>
+        <h2 className="mb-8 text-center font-heading text-display text-white md:mb-12">
+          FEATURED ITEMS
         </h2>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -61,7 +62,7 @@ export function FeaturedBuildsSection() {
             </Card>
           ))}
         </div>
-      </div>
+      </Container>
     </section>
   );
 }
