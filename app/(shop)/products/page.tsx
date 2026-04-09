@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getActiveProducts } from "@/lib/supabase/queries/products";
+import { getProductThumbnail } from "@/lib/printify/helpers";
 import type { Product, ProductType } from "@/types/product";
 
 const TYPE_LABELS: Record<ProductType, string> = {
@@ -16,6 +18,17 @@ function formatPrice(cents: number) {
 
 export default async function ProductsPage() {
   const { data: products } = await getActiveProducts();
+
+  const thumbnails: Record<string, string | null> = {};
+  if (products) {
+    await Promise.all(
+      products
+        .filter((p) => !p.printifyBlueprintId.startsWith("PLACEHOLDER"))
+        .map(async (p) => {
+          thumbnails[p.id] = await getProductThumbnail(p.printifyBlueprintId);
+        })
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-24">
@@ -39,14 +52,26 @@ export default async function ProductsPage() {
         {products?.map((product: Product) => (
           <Link
             key={product.id}
-            href={`/product/${product.id}`}
+            href={`/product/${product.slug}`}
             className="group relative flex flex-col items-center border border-white/10 bg-white/5 p-8 transition hover:border-white/25 hover:bg-white/10"
           >
-            <div className="mb-4 flex h-40 w-40 items-center justify-center rounded-full bg-white/10 transition group-hover:bg-white/15">
-              <span className="font-sub text-xs font-bold uppercase tracking-widest text-muted">
-                {TYPE_LABELS[product.type] ?? product.type}
-              </span>
-            </div>
+            {thumbnails[product.id] ? (
+              <div className="relative mb-4 h-48 w-48 overflow-hidden">
+                <Image
+                  src={thumbnails[product.id]!}
+                  alt={product.name}
+                  fill
+                  className="object-contain transition group-hover:scale-105"
+                  sizes="192px"
+                />
+              </div>
+            ) : (
+              <div className="mb-4 flex h-48 w-48 items-center justify-center bg-white/5">
+                <span className="font-sub text-xs font-bold uppercase tracking-widest text-muted">
+                  {TYPE_LABELS[product.type] ?? product.type}
+                </span>
+              </div>
+            )}
             <h2 className="font-heading text-2xl text-white">
               {product.name}
             </h2>

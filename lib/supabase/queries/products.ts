@@ -8,6 +8,7 @@ interface QueryResult<T> {
 
 function toProduct(row: {
   id: string;
+  slug: string;
   name: string;
   type: string;
   base_price: number;
@@ -16,6 +17,7 @@ function toProduct(row: {
 }): Product {
   return {
     id: row.id,
+    slug: row.slug,
     name: row.name,
     type: row.type as ProductType,
     basePrice: row.base_price,
@@ -61,6 +63,23 @@ export async function getProductById(
     .from("products")
     .select("*")
     .eq("id", id)
+    .single();
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data: toProduct(data), error: null };
+}
+
+export async function getProductBySlug(
+  slug: string
+): Promise<QueryResult<Product>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("slug", slug)
     .single();
 
   if (error) {

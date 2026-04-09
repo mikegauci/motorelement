@@ -146,6 +146,23 @@ export async function listProducts() {
 // Shipping cost
 // ---------------------------------------------------------------------------
 
+export async function getProductThumbnail(
+  productId: string
+): Promise<string | null> {
+  try {
+    const product = await printifyFetch<{
+      images: Array<{ src: string; position: string; is_default: boolean }>;
+    }>(shopPath(`/products/${productId}.json`));
+
+    const frontDefault = product.images.find(
+      (img) => img.position === "front" && img.is_default
+    );
+    return frontDefault?.src ?? product.images[0]?.src ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function calculateShipping({
   lineItems,
   address,
