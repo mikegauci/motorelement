@@ -18,7 +18,8 @@ function getFalQueueId(queued: unknown): string | undefined {
   return q?.request_id ?? q?.requestId
 }
 
-const FAL_MODEL = 'fal-ai/gpt-image-1.5/edit'
+// const FAL_MODEL = 'fal-ai/gpt-image-1.5/edit'
+const FAL_MODEL = 'fal-ai/reve/fast/remix'
 const NANO_BANANA_MODEL = 'fal-ai/nano-banana-2'
 const STYLE_REFERENCE_ROOT = path.join(process.cwd(), 'public', 'style-reference')
 const STYLE_REFERENCE_PATH = path.join(STYLE_REFERENCE_ROOT, 'front', 'hatchback', 'front-01.jpg')

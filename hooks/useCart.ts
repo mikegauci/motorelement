@@ -9,6 +9,7 @@ export interface CartItem {
   size: string;
   price: number;
   quantity: number;
+  artworkUrl?: string;
 }
 
 export interface CartContextValue {

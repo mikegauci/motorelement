@@ -6,6 +6,9 @@ import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/Button";
 import { ShoppingBag, Check } from "lucide-react";
 import type { Product } from "@/types/product";
+import MockupPreview from "./customizer/MockupPreview";
+import { useCustomizer } from "./customizer/CustomizerContext";
+import { buildPrintAreaPng } from "./customizer/helpers";
 
 interface PrintifyColor {
   id: number;
@@ -56,12 +59,14 @@ export default function ProductPage({
   children?: React.ReactNode;
 }) {
   const { addItem } = useCart();
+  const { setTshirtBaseImage, artworkUrl, mockupPlacement } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedColor, setSelectedColor] = useState<number | null>(null);
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [added, setAdded] = useState(false);
+  const [showMockup, setShowMockup] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -97,14 +102,56 @@ export default function ProductPage({
   const selectedSizeObj = data?.sizes.find((s) => s.id === selectedSize);
   const displayPrice = selectedVariant?.price ?? product.basePrice;
 
-  function handleAddToCart() {
+  // Sync the front t-shirt image to customizer context for the mockup
+  useEffect(() => {
+    const frontImage = currentImages?.front ?? null;
+    setTshirtBaseImage(frontImage);
+  }, [currentImages?.front, setTshirtBaseImage]);
+
+  // Auto-show mockup when artwork is generated
+  useEffect(() => {
+    if (artworkUrl) setShowMockup(true);
+  }, [artworkUrl]);
+
+  const [uploading, setUploading] = useState(false);
+
+  async function handleAddToCart() {
     if (!selectedVariant || !selectedSizeObj) return;
+
+    let persistedArtworkUrl: string | undefined;
+
+    if (artworkUrl) {
+      setUploading(true);
+      try {
+        const blob = await buildPrintAreaPng(artworkUrl, mockupPlacement);
+        const fd = new FormData();
+        fd.append("file", blob, "print-area-artwork.png");
+        fd.append(
+          "metadata",
+          JSON.stringify({ kind: "print_area", placement: mockupPlacement })
+        );
+        const res = await fetch("/api/save-artwork", {
+          method: "POST",
+          body: fd,
+        });
+        if (res.ok) {
+          const { publicUrl } = await res.json();
+          persistedArtworkUrl = publicUrl;
+        }
+      } catch (err) {
+        console.error("Failed to build print-area artwork:", err);
+      } finally {
+        setUploading(false);
+      }
+    }
+
     addItem({
       productId: product.id,
       name: product.name,
       type: product.type,
       size: selectedSizeObj.title,
       price: displayPrice,
+      ...(persistedArtworkUrl ? { artworkUrl: persistedArtworkUrl } : {}),
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -137,47 +184,80 @@ export default function ProductPage({
   return (
     <div className="mx-auto max-w-7xl px-6 py-16">
       <div className="grid gap-12 lg:grid-cols-2">
-        {/* Image Gallery */}
+        {/* Image Gallery + Mockup */}
         <div>
-          <div className="relative aspect-square overflow-hidden bg-obsidian border border-border">
-            {allImages[activeImageIdx] ? (
-              <Image
-                src={allImages[activeImageIdx]}
-                alt={`${product.name} - ${selectedColorObj?.title ?? ""}`}
-                fill
-                className="object-contain"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <span className="font-sub text-sm text-muted">No image</span>
-              </div>
-            )}
+          {/* View toggle tabs */}
+          <div className="flex gap-1 mb-3">
+            <button
+              onClick={() => setShowMockup(false)}
+              className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
+                !showMockup
+                  ? "border-ignition bg-ignition/10 text-white"
+                  : "border-border text-muted hover:border-white/30 hover:text-white"
+              }`}
+            >
+              Product Photos
+            </button>
+            <button
+              onClick={() => setShowMockup(true)}
+              className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
+                showMockup
+                  ? "border-ignition bg-ignition/10 text-white"
+                  : "border-border text-muted hover:border-white/30 hover:text-white"
+              }`}
+            >
+              Live Mockup
+              {artworkUrl && (
+                <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-ignition" />
+              )}
+            </button>
           </div>
 
-          {allImages.length > 1 && (
-            <div className="mt-4 flex gap-3">
-              {allImages.map((src, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setActiveImageIdx(idx)}
-                  className={`relative h-16 w-16 overflow-hidden border transition ${
-                    idx === activeImageIdx
-                      ? "border-ignition"
-                      : "border-border hover:border-white/30"
-                  }`}
-                >
+          {showMockup ? (
+            <MockupPreview />
+          ) : (
+            <>
+              <div className="relative aspect-square overflow-hidden bg-obsidian border border-border">
+                {allImages[activeImageIdx] ? (
                   <Image
-                    src={src}
-                    alt={`View ${idx + 1}`}
+                    src={allImages[activeImageIdx]}
+                    alt={`${product.name} - ${selectedColorObj?.title ?? ""}`}
                     fill
                     className="object-contain"
-                    sizes="64px"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    priority
                   />
-                </button>
-              ))}
-            </div>
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <span className="font-sub text-sm text-muted">No image</span>
+                  </div>
+                )}
+              </div>
+
+              {allImages.length > 1 && (
+                <div className="mt-4 flex gap-3">
+                  {allImages.map((src, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIdx(idx)}
+                      className={`relative h-16 w-16 overflow-hidden border transition ${
+                        idx === activeImageIdx
+                          ? "border-ignition"
+                          : "border-border hover:border-white/30"
+                      }`}
+                    >
+                      <Image
+                        src={src}
+                        alt={`View ${idx + 1}`}
+                        fill
+                        className="object-contain"
+                        sizes="64px"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -275,9 +355,11 @@ export default function ProductPage({
               size="lg"
               className="w-full sm:w-auto flex items-center justify-center gap-2"
               onClick={handleAddToCart}
-              disabled={!selectedVariant}
+              disabled={!selectedVariant || uploading}
             >
-              {added ? (
+              {uploading ? (
+                "SAVING ARTWORK..."
+              ) : added ? (
                 <>
                   <Check size={18} /> ADDED TO CART
                 </>

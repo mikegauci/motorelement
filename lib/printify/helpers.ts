@@ -35,7 +35,9 @@ export interface PrintifyAddress {
 }
 
 export interface PrintifyLineItem {
-  product_id: string;
+  product_id?: string;
+  blueprint_id?: number;
+  print_provider_id?: number;
   variant_id: number;
   quantity: number;
   print_areas?: Record<string, string>;

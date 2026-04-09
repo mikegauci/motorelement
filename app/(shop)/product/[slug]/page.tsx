@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/supabase/queries/products";
 import ProductPage from "@/components/shop/ProductPage";
 import ProductCustomizer from "@/components/shop/ProductCustomizer";
+import { CustomizerProvider } from "@/components/shop/customizer/CustomizerContext";
 
 export async function generateMetadata({
   params,
@@ -24,11 +25,13 @@ export default async function ProductDetailPage({
 }) {
   if (params.slug === "custom") {
     return (
-      <div className="min-h-[calc(100vh-8rem)] bg-void">
-        <div className="mx-auto max-w-3xl px-6 py-16">
-          <ProductCustomizer />
+      <CustomizerProvider>
+        <div className="min-h-[calc(100vh-8rem)] bg-void">
+          <div className="mx-auto max-w-3xl px-6 py-16">
+            <ProductCustomizer />
+          </div>
         </div>
-      </div>
+      </CustomizerProvider>
     );
   }
 
@@ -36,15 +39,17 @@ export default async function ProductDetailPage({
   if (!product) notFound();
 
   return (
-    <div className="min-h-screen bg-void">
-      <ProductPage
-        product={product}
-        printifyProductId={product.printifyBlueprintId}
-      >
-        <div className="mt-10 border-t border-border pt-8">
-          <ProductCustomizer />
-        </div>
-      </ProductPage>
-    </div>
+    <CustomizerProvider>
+      <div className="min-h-screen bg-void">
+        <ProductPage
+          product={product}
+          printifyProductId={product.printifyBlueprintId}
+        >
+          <div className="mt-10 border-t border-border pt-8">
+            <ProductCustomizer />
+          </div>
+        </ProductPage>
+      </div>
+    </CustomizerProvider>
   );
 }
