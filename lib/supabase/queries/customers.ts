@@ -20,6 +20,20 @@ function toCustomer(row: {
   };
 }
 
+export async function getAllCustomers(): Promise<QueryResult<Customer[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("customers")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data: data.map(toCustomer), error: null };
+}
+
 export async function getCustomerById(
   id: string
 ): Promise<QueryResult<Customer>> {

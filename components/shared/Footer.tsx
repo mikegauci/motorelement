@@ -1,9 +1,9 @@
 import Link from "next/link";
+import { Video, Globe, Share2 } from "lucide-react";
 
 const shopLinks = [
   { href: "/products", label: "Shop All" },
-  { href: "/custom-upload", label: "Custom Upload" },
-  { href: "/size-guide", label: "Size Guide" },
+  { href: "/product/custom", label: "Custom Upload" },
 ];
 
 const companyLinks = [
@@ -11,6 +11,12 @@ const companyLinks = [
   { href: "/contact", label: "Contact" },
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
+];
+
+const socialLinks = [
+  { href: "https://youtube.com", label: "YouTube", icon: Video },
+  { href: "https://instagram.com", label: "Instagram", icon: Globe },
+  { href: "#", label: "Share", icon: Share2 },
 ];
 
 export function Footer() {
@@ -67,12 +73,22 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
           <p className="text-xs text-muted">
-            &copy; 2024 Motor Element. All rights reserved.
+            &copy; {new Date().getFullYear()} Motor Element. All rights
+            reserved.
           </p>
-          <div className="flex gap-4">
-            {/* TODO: YouTube and share social icons */}
-            <span className="text-xs text-muted">YouTube</span>
-            <span className="text-xs text-muted">Share</span>
+          <div className="flex items-center gap-4">
+            {socialLinks.map((social) => (
+              <a
+                key={social.label}
+                href={social.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted transition-colors hover:text-white"
+                aria-label={social.label}
+              >
+                <social.icon size={16} />
+              </a>
+            ))}
           </div>
         </div>
       </div>

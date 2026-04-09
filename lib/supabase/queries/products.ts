@@ -24,6 +24,20 @@ function toProduct(row: {
   };
 }
 
+export async function getAllProducts(): Promise<QueryResult<Product[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .order("name");
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data: data.map(toProduct), error: null };
+}
+
 export async function getActiveProducts(): Promise<QueryResult<Product[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase

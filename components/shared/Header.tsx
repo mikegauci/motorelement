@@ -1,13 +1,19 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, User, Menu } from "lucide-react";
+import { ShoppingBag, User, Menu, X } from "lucide-react";
+import { useCart } from "@/hooks/useCart";
 
 const navLinks = [
   { href: "/products", label: "SHOP ALL" },
-  { href: "/custom-upload", label: "CUSTOM UPLOAD" },
-  { href: "/size-guide", label: "SIZE GUIDE" },
+  { href: "/product/custom", label: "CUSTOM UPLOAD" },
 ];
 
 export function Header() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { totalItems } = useCart();
+
   return (
     <header className="sticky top-0 z-50 bg-carbon">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
@@ -30,10 +36,15 @@ export function Header() {
         <div className="flex items-center gap-4">
           <Link
             href="/cart"
-            className="text-muted transition-colors hover:text-white"
+            className="relative text-muted transition-colors hover:text-white"
             aria-label="Cart"
           >
             <ShoppingBag size={20} />
+            {totalItems > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-ignition text-[10px] font-bold text-white">
+                {totalItems}
+              </span>
+            )}
           </Link>
           <Link
             href="/account"
@@ -42,15 +53,33 @@ export function Header() {
           >
             <User size={20} />
           </Link>
-          {/* TODO: mobile menu logic */}
           <button
             className="text-muted transition-colors hover:text-white md:hidden"
             aria-label="Menu"
+            onClick={() => setMobileOpen(!mobileOpen)}
           >
-            <Menu size={20} />
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
+
+      {mobileOpen && (
+        <nav className="border-t border-border bg-carbon px-6 py-4 md:hidden">
+          <ul className="space-y-4">
+            {navLinks.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="block font-sub font-bold uppercase tracking-widest text-sm text-muted transition-colors hover:text-white"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
     </header>
   );
 }

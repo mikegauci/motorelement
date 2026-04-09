@@ -1,5 +1,13 @@
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Upload, Sparkles, ShoppingBag } from "lucide-react";
+
+const STEP_ICONS: Record<string, React.ReactNode> = {
+  "01": <Upload size={20} />,
+  "02": <Sparkles size={20} />,
+  "03": <ShoppingBag size={20} />,
+};
 
 interface StepCardProps {
   number: string;
@@ -30,18 +38,15 @@ export function StepCard({
         {number}
       </span>
 
-      {/* TODO: replace with actual icon */}
       <div
-        className={`h-10 w-10 ${
-          highlighted ? "bg-white/20" : "bg-carbon"
+        className={`flex h-10 w-10 items-center justify-center ${
+          highlighted ? "bg-white/20 text-white" : "bg-carbon text-muted"
         } border border-border`}
-      />
-
-      <h3
-        className={`font-sub font-bold uppercase tracking-widest text-sm ${
-          highlighted ? "text-white" : "text-white"
-        }`}
       >
+        {STEP_ICONS[number]}
+      </div>
+
+      <h3 className="font-sub font-bold uppercase tracking-widest text-sm text-white">
         {title}
       </h3>
 
@@ -54,13 +59,14 @@ export function StepCard({
       </p>
 
       {ctaLabel && (
-        <Button
-          variant={highlighted ? "outline" : "primary"}
-          size="sm"
-          className="mt-auto self-start"
-        >
-          {ctaLabel}
-        </Button>
+        <Link href="/product/custom" className="mt-auto self-start">
+          <Button
+            variant={highlighted ? "outline" : "primary"}
+            size="sm"
+          >
+            {ctaLabel}
+          </Button>
+        </Link>
       )}
     </Card>
   );

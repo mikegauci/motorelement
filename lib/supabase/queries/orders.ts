@@ -53,6 +53,20 @@ function toOrderItem(row: {
   };
 }
 
+export async function getAllOrders(): Promise<QueryResult<Order[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data: data.map(toOrder), error: null };
+}
+
 export async function getOrdersByCustomer(
   customerId: string
 ): Promise<QueryResult<Order[]>> {

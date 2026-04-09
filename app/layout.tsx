@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bebas_Neue, Barlow_Condensed, Inter, Space_Mono } from "next/font/google";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
+import { CartProvider } from "@/components/providers/CartProvider";
 import "./globals.css";
 
 const bebasNeue = Bebas_Neue({
@@ -48,9 +49,11 @@ export default function RootLayout({
       className={`${bebasNeue.variable} ${barlowCondensed.variable} ${inter.variable} ${spaceMono.variable}`}
     >
       <body className="bg-void text-white font-body antialiased">
-        <Header />
-        <main>{children}</main>
-        <Footer />
+        <CartProvider>
+          <Header />
+          <main>{children}</main>
+          <Footer />
+        </CartProvider>
       </body>
     </html>
   );
