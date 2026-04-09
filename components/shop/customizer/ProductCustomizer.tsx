@@ -183,7 +183,7 @@ export default function ProductCustomizer() {
           await ff.load()
           document.fonts.add(ff)
           loadedCustomFontFamiliesRef.current.add(font.value)
-        } catch (_) { /* ignore */ }
+        } catch { /* ignore */ }
       }
       if (!cancelled) composite.compositeRenderRef.current()
     })()
@@ -246,8 +246,8 @@ export default function ProductCustomizer() {
 
   // ---- Reset ----
   function reset() {
-    try { sessionStorage.removeItem(SESSION_KEY) } catch (_) { /* ignore */ }
-    try { sessionStorage.removeItem(PENDING_GENERATION_KEY); sessionStorage.removeItem(PENDING_BACKGROUND_KEY) } catch (_) { /* ignore */ }
+    try { sessionStorage.removeItem(SESSION_KEY) } catch { /* ignore */ }
+    try { sessionStorage.removeItem(PENDING_GENERATION_KEY); sessionStorage.removeItem(PENDING_BACKGROUND_KEY) } catch { /* ignore */ }
     if (carFileRef.current) carFileRef.current.value = ''
     if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
     setCarModel(''); setShowNumberPlate(false); setNumberPlate(''); setCustomerNotes('')
