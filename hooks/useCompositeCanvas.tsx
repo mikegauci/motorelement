@@ -5,13 +5,11 @@ import type { TextLayer } from '@/components/shop/customizer/types'
 import {
   loadImageElement,
   drawCompositeContent,
-  downloadPngBlob,
-  buildCompositePngBlob,
   getTextLayerBounds,
   clampAdjust,
   clampCompositeZoom,
 } from '@/components/shop/customizer/helpers'
-import styles from '@/components/shop/customizer/styles'
+import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
 
 interface CompositeCanvasDeps {
   transparentCarUrlForPreset: string | null
@@ -37,6 +35,7 @@ interface CompositeCanvasDeps {
 }
 
 export function useCompositeCanvas(deps: CompositeCanvasDeps) {
+  const { setCompositeDataUrl } = useCustomizer()
   const compositeStageRef = useRef<HTMLDivElement>(null)
   const compositeCanvasRef = useRef<HTMLCanvasElement>(null)
   const compositeRenderRef = useRef(() => {})
@@ -48,7 +47,6 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
 
   const [mobileCompositePreviewSrc, setMobileCompositePreviewSrc] = useState('')
   const [showMobileResultDock, setShowMobileResultDock] = useState(false)
-  const [exportingComposite, setExportingComposite] = useState(false)
 
   const carDragRef = useRef({
     active: false,
@@ -108,7 +106,11 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
         carScale: carScaleRef.current, textLayers: deps.textLayersRef.current ?? [],
         compositionZoom: compositionZoomRef.current,
       })
-      try { setMobileCompositePreviewSrc(canvas!.toDataURL('image/png')) } catch (_) { /* ignore */ }
+      try {
+        const dataUrl = canvas!.toDataURL('image/png')
+        setMobileCompositePreviewSrc(dataUrl)
+        setCompositeDataUrl(dataUrl)
+      } catch (_) { /* ignore */ }
     }
     compositeRenderRef.current = paint
     const bgPromise = deps.selectedBackgroundSrc ? loadImageElement(deps.selectedBackgroundSrc) : Promise.resolve(null)
@@ -121,10 +123,12 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     return () => { cancelled = true; compositeRenderRef.current = () => {}; ro.disconnect() }
   }, [deps.selectedBackgroundSrc, deps.selectedBackgroundIsCustom, deps.transparentCarUrlForPreset])
 
-  // Clear mobile preview when composite hides
   useEffect(() => {
-    if (!deps.transparentCarUrlForPreset) setMobileCompositePreviewSrc('')
-  }, [deps.transparentCarUrlForPreset])
+    if (!deps.transparentCarUrlForPreset) {
+      setMobileCompositePreviewSrc('')
+      setCompositeDataUrl(null)
+    }
+  }, [deps.transparentCarUrlForPreset, setCompositeDataUrl])
 
   // Mobile dock visibility
   useEffect(() => {
@@ -228,63 +232,15 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     deps.setCompositionZoom((prev: number) => clampCompositeZoom(prev + delta))
   }
 
-  async function handleExportComposite() {
-    if (!deps.transparentCarUrlForPreset) return
-    setExportingComposite(true)
-    try {
-      const fileSlug = !deps.selectedBackgroundSrc ? 'car-transparent' : deps.isCustomSavedSelection ? 'car-custom-background' : `car-${deps.selectedPreset?.id || 'background'}`
-      const blob = await buildCompositePngBlob({
-        bgSrc: deps.selectedBackgroundSrc || null, carSrc: deps.transparentCarUrlForPreset,
-        cropBackgroundToArtwork: deps.selectedBackgroundIsCustom,
-        carOffsetXPct: deps.carAdjustXPct, carOffsetYPct: deps.carAdjustYPct,
-        carScale: deps.carScale, textLayers: deps.textLayers, compositionZoom: deps.compositionZoom,
-      })
-      downloadPngBlob(blob, fileSlug)
-      const fd = new FormData()
-      fd.append('file', blob, `${fileSlug}.png`)
-      fd.append('metadata', JSON.stringify({
-        kind: 'print_export', file_slug: fileSlug,
-        preset_id: deps.selectedPreset?.id ?? null, preset_label: (deps.selectedPreset as { label?: string })?.label ?? null,
-        is_custom_saved_background: deps.isCustomSavedSelection,
-        custom_background_label: deps.selectedCustomBg?.label ?? null,
-        crop_background_to_artwork: deps.selectedBackgroundIsCustom,
-        car_adjust_x_pct: deps.carAdjustXPct, car_adjust_y_pct: deps.carAdjustYPct,
-        car_scale: deps.carScale, composition_zoom: deps.compositionZoom,
-        text_layer_count: deps.textLayers.length,
-      }))
-      const saveRes = await fetch('/api/save-artwork', { method: 'POST', body: fd })
-      if (!saveRes.ok) {
-        const err = await saveRes.json().catch(() => ({}))
-        console.warn('Could not save artwork to Supabase:', err.error || saveRes.status)
-      }
-    } catch (e: unknown) {
-      alert((e as Error).message || 'Export failed')
-    } finally {
-      setExportingComposite(false)
-    }
-  }
 
-  function renderCompositeStage(): ReactNode {
+  function renderHiddenCanvas(): ReactNode {
     return (
       <div
-        className={styles.compositeStage}
         ref={compositeStageRef}
-        onPointerDown={deps.desktopDragEnabled ? handleCompositePointerDown : undefined}
-        onPointerMove={deps.desktopDragEnabled ? handleCompositePointerMove : undefined}
-        onPointerUp={deps.desktopDragEnabled ? handleCompositePointerUp : undefined}
-        onPointerCancel={deps.desktopDragEnabled ? handleCompositePointerUp : undefined}
+        style={{ position: 'absolute', left: -9999, width: 720, height: 720, visibility: 'hidden', pointerEvents: 'none' }}
+        aria-hidden
       >
-        <div
-          className={styles.canvasSpaceControls}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button type="button" className={styles.compositeNudgeBtn} onClick={() => deps.setCompositionZoom(() => 1)} disabled={deps.backgroundControlsLocked || deps.compositionZoom === 1} aria-label="Reset zoom" title="Reset zoom">↻</button>
-          <button type="button" className={styles.compositeNudgeBtn} onClick={() => nudgeCompositeZoom(-0.05)} disabled={deps.backgroundControlsLocked || deps.compositionZoom <= 0.7} aria-label="Zoom out">-</button>
-          <span className={styles.canvasSpaceValue}>{Math.round(deps.compositionZoom * 100)}%</span>
-          <button type="button" className={styles.compositeNudgeBtn} onClick={() => nudgeCompositeZoom(0.05)} disabled={deps.backgroundControlsLocked || deps.compositionZoom >= 1.4} aria-label="Zoom in">+</button>
-        </div>
-        <canvas ref={compositeCanvasRef} className={styles.compositeCanvas} aria-hidden />
+        <canvas ref={compositeCanvasRef} width={720} height={720} />
       </div>
     )
   }
@@ -294,8 +250,6 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     resultCardRef,
     mobileCompositePreviewSrc,
     showMobileResultDock,
-    exportingComposite,
-    handleExportComposite,
-    renderCompositeStage,
+    renderHiddenCanvas,
   }
 }

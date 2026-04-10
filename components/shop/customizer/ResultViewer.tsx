@@ -12,8 +12,6 @@ interface ResultViewerProps {
   setViewIndex: (i: number) => void
   viewingUrl: string | null
   viewingTransparent: boolean
-  showUnifiedCompositeResult: boolean
-  renderCompositeStage: () => React.ReactNode
   resultCardRef: React.RefObject<HTMLDivElement>
 }
 
@@ -25,8 +23,6 @@ export default function ResultViewer({
   setViewIndex,
   viewingUrl,
   viewingTransparent,
-  showUnifiedCompositeResult,
-  renderCompositeStage,
   resultCardRef,
 }: ResultViewerProps) {
   const isRunning = status === 'running'
@@ -82,37 +78,29 @@ export default function ResultViewer({
             <p className={styles.spinnerText}>Generating… {elapsed}s</p>
           </div>
         )}
-        {showGeneratingOnLatest && (viewingUrl || showUnifiedCompositeResult) && (
-          <div
-            className={`${styles.resultFrame} ${
-              showUnifiedCompositeResult ? styles.resultFrameComposite : ''
-            }`}
-          >
-            {showUnifiedCompositeResult ? renderCompositeStage() : renderMainResultImg(viewingUrl!, '')}
+        {showGeneratingOnLatest && viewingUrl && (
+          <div className={styles.resultFrame}>
+            {renderMainResultImg(viewingUrl, '')}
             <div className={styles.generatingOverlay}>
               <div className={styles.spinner} />
               <p className={styles.overlayText}>Generating new version… {elapsed}s</p>
             </div>
           </div>
         )}
-        {showGeneratingWhileBrowsing && (viewingUrl || showUnifiedCompositeResult) && (
+        {showGeneratingWhileBrowsing && viewingUrl && (
           <div className={styles.resultFrame}>
-            {showUnifiedCompositeResult ? renderCompositeStage() : renderMainResultImg(viewingUrl!, '')}
+            {renderMainResultImg(viewingUrl, '')}
             <div className={styles.revisionBanner}>
               New version generating… {elapsed}s
             </div>
           </div>
         )}
-        {isDone && !isRunning && (showUnifiedCompositeResult || viewingUrl) && (
-          showUnifiedCompositeResult
-            ? renderCompositeStage()
-            : renderMainResultImg(viewingUrl!, 'Vector result')
+        {isDone && !isRunning && viewingUrl && (
+          renderMainResultImg(viewingUrl, 'Vector result')
         )}
         {isError && (
           <div className={styles.errorWithImage}>
-            {showUnifiedCompositeResult
-              ? renderCompositeStage()
-              : viewingUrl && renderMainResultImg(viewingUrl, '')}
+            {viewingUrl && renderMainResultImg(viewingUrl, '')}
             <p className={styles.errorText}>{errorMsg}</p>
           </div>
         )}

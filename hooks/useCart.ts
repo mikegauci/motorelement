@@ -7,16 +7,18 @@ export interface CartItem {
   name: string;
   type: string;
   size: string;
+  color: string;
   price: number;
   quantity: number;
   artworkUrl?: string;
+  thumbnailUrl?: string;
 }
 
 export interface CartContextValue {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">) => void;
-  removeItem: (productId: string, size: string) => void;
-  updateQuantity: (productId: string, size: string, quantity: number) => void;
+  removeItem: (productId: string, size: string, color?: string) => void;
+  updateQuantity: (productId: string, size: string, quantity: number, color?: string) => void;
   clear: () => void;
   totalItems: number;
   totalPrice: number;

@@ -90,13 +90,15 @@ export default function CheckoutPage() {
             <div className="mt-6 divide-y divide-border">
               {items.map((item) => (
                 <div
-                  key={`${item.productId}-${item.size}`}
+                  key={`${item.productId}-${item.size}-${item.color}`}
                   className="flex items-center justify-between py-4"
                 >
                   <div>
                     <p className="font-body text-sm text-white">{item.name}</p>
                     <p className="font-sub text-xs font-bold uppercase tracking-widest text-muted">
-                      {item.type} &middot; Size {item.size} &middot; Qty{" "}
+                      {item.type}
+                      {item.color && ` · ${item.color}`}
+                      {" · "}Size {item.size} &middot; Qty{" "}
                       {item.quantity}
                     </p>
                   </div>

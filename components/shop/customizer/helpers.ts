@@ -497,21 +497,86 @@ export function joinNotes(base: string, extra: string) {
 }
 
 /**
+ * Renders a small mockup thumbnail (garment + artwork overlay) for use in
+ * the cart / order summary. Returns a JPEG blob at 400px.
+ */
+export async function buildMockupThumbnail(
+  baseSrc: string,
+  artworkSrc: string,
+  placement: { xPct: number; yPct: number; scale: number },
+  productType?: string
+): Promise<Blob> {
+  const { getMockupPrintZone } = await import('./constants')
+  const pz = getMockupPrintZone(productType)
+
+  const [baseImg, artImg] = await Promise.all([
+    loadImageElement(baseSrc),
+    loadImageElement(artworkSrc),
+  ])
+
+  const size = 400
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d', { alpha: false })!
+  ctx.fillStyle = '#181818'
+  ctx.fillRect(0, 0, size, size)
+
+  const imgAspect = baseImg.naturalWidth / baseImg.naturalHeight
+  let drawW = size
+  let drawH = size / imgAspect
+  if (drawH > size) { drawH = size; drawW = size * imgAspect }
+  const drawX = (size - drawW) / 2
+  const drawY = (size - drawH) / 2
+  ctx.drawImage(baseImg, drawX, drawY, drawW, drawH)
+
+  const pzX = drawX + pz.xPct * drawW
+  const pzY = drawY + pz.yPct * drawH
+  const pzW = pz.widthPct * drawW
+  const pzH = pz.heightPct * drawH
+
+  const artAspect = artImg.naturalWidth / artImg.naturalHeight
+  const artW = pzW * placement.scale
+  const artH = artW / artAspect
+  const artX = pzX + placement.xPct * pzW - artW / 2
+  const artY = pzY + placement.yPct * pzH - artH / 2
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(pzX, pzY, pzW, pzH)
+  ctx.clip()
+  ctx.globalAlpha = 0.92
+  ctx.drawImage(artImg, artX, artY, artW, artH)
+  ctx.globalAlpha = 1.0
+  ctx.restore()
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('Could not create thumbnail'))),
+      'image/jpeg',
+      0.85
+    )
+  })
+}
+
+/**
  * Renders the artwork at the user's chosen position/scale into a canvas
  * matching Printify's exact print area dimensions. Returns a PNG Blob
  * ready for upload — what you see in the mockup is what gets printed.
  */
 export async function buildPrintAreaPng(
   artworkSrc: string,
-  placement: { xPct: number; yPct: number; scale: number }
+  placement: { xPct: number; yPct: number; scale: number },
+  productType?: string
 ): Promise<Blob> {
-  const { PRINTIFY_PRINT_AREA } = await import('./constants')
-  const { width: paW, height: paH } = PRINTIFY_PRINT_AREA
+  const { getPrintifyPrintArea, getPrintScaleFactor } = await import('./constants')
+  const { width: paW, height: paH } = getPrintifyPrintArea(productType)
+  const printFactor = getPrintScaleFactor(productType)
 
   const img = await loadImageElement(artworkSrc)
   const artAspect = img.naturalWidth / img.naturalHeight
 
-  const artW = paW * placement.scale
+  const artW = paW * placement.scale * printFactor
   const artH = artW / artAspect
   const artX = placement.xPct * paW - artW / 2
   const artY = placement.yPct * paH - artH / 2

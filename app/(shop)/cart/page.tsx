@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/Button";
 import { Minus, Plus, Trash2 } from "lucide-react";
@@ -41,13 +42,23 @@ export default function CartPage() {
         <div className="lg:col-span-2 space-y-6">
           {items.map((item) => (
             <div
-              key={`${item.productId}-${item.size}`}
+              key={`${item.productId}-${item.size}-${item.color}`}
               className="flex items-center gap-6 border border-border bg-obsidian p-6"
             >
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center bg-carbon">
-                <span className="font-sub text-xs font-bold uppercase tracking-widest text-muted">
-                  {item.type}
-                </span>
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden bg-carbon">
+                {item.thumbnailUrl ? (
+                  <Image
+                    src={item.thumbnailUrl}
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center font-sub text-xs font-bold uppercase tracking-widest text-muted">
+                    {item.type}
+                  </span>
+                )}
               </div>
 
               <div className="flex-1 min-w-0">
@@ -55,14 +66,14 @@ export default function CartPage() {
                   {item.name}
                 </h3>
                 <p className="mt-1 font-sub text-xs font-bold uppercase tracking-widest text-muted">
-                  Size: {item.size}
+                  {item.color && `${item.color} · `}Size: {item.size}
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
                 <button
                   onClick={() =>
-                    updateQuantity(item.productId, item.size, item.quantity - 1)
+                    updateQuantity(item.productId, item.size, item.quantity - 1, item.color)
                   }
                   className="flex h-8 w-8 items-center justify-center border border-border text-muted transition-colors hover:text-white"
                 >
@@ -73,7 +84,7 @@ export default function CartPage() {
                 </span>
                 <button
                   onClick={() =>
-                    updateQuantity(item.productId, item.size, item.quantity + 1)
+                    updateQuantity(item.productId, item.size, item.quantity + 1, item.color)
                   }
                   className="flex h-8 w-8 items-center justify-center border border-border text-muted transition-colors hover:text-white"
                 >
@@ -86,7 +97,7 @@ export default function CartPage() {
               </p>
 
               <button
-                onClick={() => removeItem(item.productId, item.size)}
+                onClick={() => removeItem(item.productId, item.size, item.color)}
                 className="text-muted transition-colors hover:text-redline"
               >
                 <Trash2 size={16} />

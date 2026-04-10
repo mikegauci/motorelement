@@ -18,11 +18,11 @@ import {
 import type { FontOption } from './types'
 
 import VehicleInputForm from './VehicleInputForm'
-import ResultViewer from './ResultViewer'
 import BackgroundPresets from './BackgroundPresets'
 import CompositeEditor from './CompositeEditor'
 import TextLayerEditor from './TextLayerEditor'
 
+import { useCustomizer } from './CustomizerContext'
 import { useTextLayers } from '@/hooks/useTextLayers'
 import { useCarGeneration } from '@/hooks/useCarGeneration'
 import { useBackgroundGeneration } from '@/hooks/useBackgroundGeneration'
@@ -30,6 +30,8 @@ import { useCompositeCanvas } from '@/hooks/useCompositeCanvas'
 import { useSession } from '@/hooks/useSession'
 
 export default function ProductCustomizer() {
+  const { mockupThumbnailUrl } = useCustomizer()
+
   // ---- Vehicle input state (owned by this component) ----
   const [carModel, setCarModel] = useState('')
   const [showNumberPlate, setShowNumberPlate] = useState(false)
@@ -52,7 +54,7 @@ export default function ProductCustomizer() {
   // ---- Composite position state ----
   const [carAdjustXPct, setCarAdjustXPct] = useState(0)
   const [carAdjustYPct, setCarAdjustYPct] = useState(0)
-  const [carScale, setCarScale] = useState(1)
+  const [carScale, setCarScale] = useState(0.70)
   const [compositionZoom, setCompositionZoom] = useState(1)
 
   // ---- UI state ----
@@ -86,7 +88,6 @@ export default function ProductCustomizer() {
   const isDone = carGen.status === 'done'
   const showResults = isRunning || carGen.status.startsWith('error') || carGen.revisions.length > 0
   const viewingUrl = carGen.revisions.length > 0 ? carGen.revisions[carGen.viewIndex]?.url : null
-  const viewingTransparent = !!carGen.revisions[carGen.viewIndex]?.transparent
   const hasTransparentRevision = carGen.revisions.some((r) => r.transparent)
 
   const transparentCarUrlForPreset = useMemo(() => {
@@ -106,7 +107,6 @@ export default function ProductCustomizer() {
   const selectedCustomBg = isCustomSavedSelection ? bgGen.savedCustomBackgrounds.find((bg) => bg.id === selectedPresetId) ?? null : null
   const selectedBackgroundSrc = isCustomSavedSelection ? selectedCustomBg?.resultUrl ?? null : selectedPreset?.src ?? null
   const selectedBackgroundIsCustom = isCustomSavedSelection
-  const showUnifiedCompositeResult = !!transparentCarUrlForPreset
   const showCustomPanel = selectedPresetId === CUSTOM_BACKGROUND_NEW
   const backgroundControlsLocked = bgGen.customBackgroundGenerating
   const canGenerateCustomBackground = !!customBackgroundValue.trim() && !bgGen.customBackgroundGenerating && !bgGen.customBackgroundRemoving
@@ -122,9 +122,7 @@ export default function ProductCustomizer() {
     backgroundControlsLocked, showResults, desktopDragEnabled,
   })
 
-  const mobileResultDockSrc = showUnifiedCompositeResult
-    ? composite.mobileCompositePreviewSrc || transparentCarUrlForPreset || viewingUrl
-    : viewingUrl
+  const mobileResultDockSrc = mockupThumbnailUrl || viewingUrl
 
   // ---- Session ----
   useSession(
@@ -298,19 +296,9 @@ export default function ProductCustomizer() {
       {showResults && (
         <div className={styles.results}>
           <h2 className={styles.resultsTitle}>Result</h2>
-          <div className={styles.grid}>
-            <ResultViewer
-              status={carGen.status} elapsed={carGen.elapsed}
-              revisions={carGen.revisions} viewIndex={carGen.viewIndex}
-              setViewIndex={carGen.setViewIndex} viewingUrl={viewingUrl}
-              viewingTransparent={viewingTransparent}
-              showUnifiedCompositeResult={showUnifiedCompositeResult}
-              renderCompositeStage={composite.renderCompositeStage}
-              resultCardRef={composite.resultCardRef}
-            />
-
+          <div ref={composite.resultCardRef}>
             {(vehicleLocked || hasTransparentRevision) && (
-              <div className={styles.resultSidePanel}>
+              <div>
                 {vehicleLocked && (
                   <div className={styles.tweakPanel}>
                     <button type="button" className={styles.collapseToggle} aria-expanded={isVehicleTweakOpen} onClick={() => setIsVehicleTweakOpen((v) => !v)}>
@@ -378,7 +366,6 @@ export default function ProductCustomizer() {
                           setCompositionZoom={setCompositionZoom}
                           setCarAdjustXPct={setCarAdjustXPct}
                           backgroundControlsLocked={backgroundControlsLocked}
-                          renderCompositeStage={composite.renderCompositeStage}
                         />
                         <TextLayerEditor
                           textLayers={textLayerHook.textLayers}
@@ -394,14 +381,6 @@ export default function ProductCustomizer() {
                           onNudgeTextFontSize={textLayerHook.nudgeTextFontSize}
                           onAlignTextLayerToCanvasVertical={textLayerHook.alignTextLayerToCanvasVertical}
                         />
-                        <div className={styles.compositeExportRow}>
-                          <button type="button" className={styles.btnExport} onClick={composite.handleExportComposite} disabled={composite.exportingComposite || backgroundControlsLocked}>
-                            {composite.exportingComposite ? 'Preparing PNG…' : 'Download PNG for print'}
-                          </button>
-                          <span className={styles.compositeExportHint}>
-                            Use top-right controls to zoom from center. Drag selected text to position it.
-                          </span>
-                        </div>
                       </>
                     )}
                   </>
@@ -425,6 +404,8 @@ export default function ProductCustomizer() {
           <img src={mobileResultDockSrc} alt="" />
         </button>
       )}
+
+      {composite.renderHiddenCanvas()}
     </main>
   )
 }

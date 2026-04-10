@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/Button";
-import { ShoppingBag, Check } from "lucide-react";
+import { ShoppingBag, Check, Eye } from "lucide-react";
 import type { Product } from "@/types/product";
 import MockupPreview from "./customizer/MockupPreview";
+import MockupPreviewModal from "./customizer/MockupPreviewModal";
 import { useCustomizer } from "./customizer/CustomizerContext";
-import { buildPrintAreaPng } from "./customizer/helpers";
+import { buildPrintAreaPng, buildMockupThumbnail } from "./customizer/helpers";
+import { getBlankMockupImage } from "./customizer/constants";
 
 interface PrintifyColor {
   id: number;
@@ -59,7 +61,10 @@ export default function ProductPage({
   children?: React.ReactNode;
 }) {
   const { addItem } = useCart();
-  const { setTshirtBaseImage, artworkUrl, mockupPlacement } = useCustomizer();
+  const {
+    setTshirtBaseImage, tshirtBaseImage, artworkUrl, compositeDataUrl,
+    mockupPlacement, setProductType, setSelectedColorHex,
+  } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedColor, setSelectedColor] = useState<number | null>(null);
@@ -67,6 +72,11 @@ export default function ProductPage({
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [added, setAdded] = useState(false);
   const [showMockup, setShowMockup] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+
+  useEffect(() => {
+    setProductType(product.type);
+  }, [product.type, setProductType]);
 
   useEffect(() => {
     async function load() {
@@ -102,11 +112,16 @@ export default function ProductPage({
   const selectedSizeObj = data?.sizes.find((s) => s.id === selectedSize);
   const displayPrice = selectedVariant?.price ?? product.basePrice;
 
-  // Sync the front t-shirt image to customizer context for the mockup
+  // Use a per-color blank mockup when available; fall back to Printify's front image
   useEffect(() => {
-    const frontImage = currentImages?.front ?? null;
-    setTshirtBaseImage(frontImage);
-  }, [currentImages?.front, setTshirtBaseImage]);
+    const blank = getBlankMockupImage(product.type, selectedColorObj?.title);
+    setTshirtBaseImage(blank ?? currentImages?.front ?? null);
+  }, [product.type, selectedColorObj?.title, currentImages?.front, setTshirtBaseImage]);
+
+  // Push selected color hex into context for mockup tinting
+  useEffect(() => {
+    setSelectedColorHex(selectedColorObj?.hex ?? null);
+  }, [selectedColorObj?.hex, setSelectedColorHex]);
 
   // Auto-show mockup when artwork is generated
   useEffect(() => {
@@ -119,27 +134,42 @@ export default function ProductPage({
     if (!selectedVariant || !selectedSizeObj) return;
 
     let persistedArtworkUrl: string | undefined;
+    let persistedThumbnailUrl: string | undefined;
 
-    if (artworkUrl) {
+    const printSource = compositeDataUrl ?? artworkUrl;
+    if (printSource) {
       setUploading(true);
       try {
-        const blob = await buildPrintAreaPng(artworkUrl, mockupPlacement);
-        const fd = new FormData();
-        fd.append("file", blob, "print-area-artwork.png");
-        fd.append(
-          "metadata",
-          JSON.stringify({ kind: "print_area", placement: mockupPlacement })
-        );
-        const res = await fetch("/api/save-artwork", {
-          method: "POST",
-          body: fd,
-        });
-        if (res.ok) {
-          const { publicUrl } = await res.json();
-          persistedArtworkUrl = publicUrl;
-        }
+        const printBlob = buildPrintAreaPng(printSource, mockupPlacement, product.type);
+        const thumbBlob = tshirtBaseImage
+          ? buildMockupThumbnail(tshirtBaseImage, printSource, mockupPlacement, product.type)
+          : null;
+
+        const [printResult, thumbResult] = await Promise.all([
+          printBlob.then(async (blob) => {
+            const fd = new FormData();
+            fd.append("file", blob, "print-area-artwork.png");
+            fd.append("metadata", JSON.stringify({ kind: "print_area", placement: mockupPlacement }));
+            const res = await fetch("/api/save-artwork", { method: "POST", body: fd });
+            if (res.ok) return (await res.json()).publicUrl as string;
+            return undefined;
+          }),
+          thumbBlob
+            ? thumbBlob.then(async (blob) => {
+                const fd = new FormData();
+                fd.append("file", blob, "mockup-thumbnail.jpg");
+                fd.append("metadata", JSON.stringify({ kind: "mockup_thumbnail" }));
+                const res = await fetch("/api/save-artwork", { method: "POST", body: fd });
+                if (res.ok) return (await res.json()).publicUrl as string;
+                return undefined;
+              })
+            : Promise.resolve(undefined),
+        ]);
+
+        persistedArtworkUrl = printResult;
+        persistedThumbnailUrl = thumbResult;
       } catch (err) {
-        console.error("Failed to build print-area artwork:", err);
+        console.error("Failed to build artwork:", err);
       } finally {
         setUploading(false);
       }
@@ -150,8 +180,10 @@ export default function ProductPage({
       name: product.name,
       type: product.type,
       size: selectedSizeObj.title,
+      color: selectedColorObj?.title ?? "",
       price: displayPrice,
       ...(persistedArtworkUrl ? { artworkUrl: persistedArtworkUrl } : {}),
+      ...(persistedThumbnailUrl ? { thumbnailUrl: persistedThumbnailUrl } : {}),
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -185,7 +217,7 @@ export default function ProductPage({
     <div className="mx-auto max-w-7xl px-6 py-16">
       <div className="grid gap-12 lg:grid-cols-2">
         {/* Image Gallery + Mockup */}
-        <div>
+        <div className="lg:sticky lg:top-6 lg:self-start">
           {/* View toggle tabs */}
           <div className="flex gap-1 mb-3">
             <button
@@ -211,6 +243,15 @@ export default function ProductPage({
                 <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-ignition" />
               )}
             </button>
+            {artworkUrl && (
+              <button
+                onClick={() => setShowPreviewModal(true)}
+                className="px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border border-border text-muted hover:border-white/30 hover:text-white transition flex items-center gap-1.5"
+              >
+                <Eye size={14} />
+                Preview
+              </button>
+            )}
           </div>
 
           {showMockup ? (
@@ -393,6 +434,11 @@ export default function ProductPage({
           {children}
         </div>
       </div>
+
+      <MockupPreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+      />
     </div>
   );
 }

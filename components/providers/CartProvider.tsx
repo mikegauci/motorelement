@@ -23,8 +23,8 @@ function saveCart(items: CartItem[]) {
   }
 }
 
-function itemKey(productId: string, size: string) {
-  return `${productId}::${size}`;
+function itemKey(productId: string, size: string, color?: string) {
+  return `${productId}::${size}::${color ?? ""}`;
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -42,9 +42,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback((item: Omit<CartItem, "quantity">) => {
     setItems((prev) => {
-      const key = itemKey(item.productId, item.size);
+      const key = itemKey(item.productId, item.size, item.color);
       const idx = prev.findIndex(
-        (i) => itemKey(i.productId, i.size) === key
+        (i) => itemKey(i.productId, i.size, i.color) === key
       );
       if (idx >= 0) {
         const updated = [...prev];
@@ -55,21 +55,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const removeItem = useCallback((productId: string, size: string) => {
-    const key = itemKey(productId, size);
-    setItems((prev) => prev.filter((i) => itemKey(i.productId, i.size) !== key));
+  const removeItem = useCallback((productId: string, size: string, color?: string) => {
+    const key = itemKey(productId, size, color);
+    setItems((prev) => prev.filter((i) => itemKey(i.productId, i.size, i.color) !== key));
   }, []);
 
   const updateQuantity = useCallback(
-    (productId: string, size: string, quantity: number) => {
+    (productId: string, size: string, quantity: number, color?: string) => {
       if (quantity < 1) {
-        removeItem(productId, size);
+        removeItem(productId, size, color);
         return;
       }
-      const key = itemKey(productId, size);
+      const key = itemKey(productId, size, color);
       setItems((prev) =>
         prev.map((i) =>
-          itemKey(i.productId, i.size) === key ? { ...i, quantity } : i
+          itemKey(i.productId, i.size, i.color) === key ? { ...i, quantity } : i
         )
       );
     },

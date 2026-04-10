@@ -11,7 +11,6 @@ interface CompositeEditorProps {
   setCompositionZoom: (v: number) => void
   setCarAdjustXPct: (v: number) => void
   backgroundControlsLocked: boolean
-  renderCompositeStage: () => React.ReactNode
 }
 
 export default function CompositeEditor({
@@ -102,19 +101,32 @@ export default function CompositeEditor({
             </button>
           </div>
         </div>
-        <button
-          type="button"
-          className={styles.btn}
-          onClick={() => {
-            setCarAdjustXPct(0)
-            setCarAdjustYPct(0)
-            setCarScale(1)
-            setCompositionZoom(1)
-          }}
-          disabled={backgroundControlsLocked}
-        >
-          Reset position
-        </button>
+        <div className={styles.compositeAdjustInputRow} style={{ gap: 8 }}>
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={() => {
+              setCarAdjustXPct(0)
+              setCarAdjustYPct(0)
+            }}
+            disabled={backgroundControlsLocked}
+          >
+            Center align
+          </button>
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={() => {
+              setCarAdjustXPct(0)
+              setCarAdjustYPct(0)
+              setCarScale(1)
+              setCompositionZoom(1)
+            }}
+            disabled={backgroundControlsLocked}
+          >
+            Reset all
+          </button>
+        </div>
       </div>
     </div>
   )

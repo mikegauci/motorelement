@@ -22,6 +22,7 @@ export async function createCheckoutSession({
         metadata: {
           productId: item.productId,
           size: item.size,
+          color: item.color,
           type: item.type,
         },
       },

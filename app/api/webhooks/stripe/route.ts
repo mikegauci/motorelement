@@ -4,11 +4,9 @@ import {
   createOrder,
   updateOrderPrintifyId,
 } from "@/lib/supabase/queries/orders";
+import { getProductById } from "@/lib/supabase/queries/products";
 import { uploadImage, createPrintifyOrder } from "@/lib/printify/helpers";
-import {
-  PRINTIFY_PRODUCT_ID,
-  resolveVariantId,
-} from "@/lib/printify/variants";
+import { resolveVariantIdForProduct } from "@/lib/printify/variants";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -54,6 +52,7 @@ export async function POST(request: Request) {
           productId: meta.productId ?? "",
           quantity: item.quantity ?? 1,
           size: meta.size ?? "default",
+          color: meta.color ?? "",
           price: item.amount_total,
         };
       });
@@ -74,23 +73,39 @@ export async function POST(request: Request) {
           const name = shipping.name ?? "";
           const [firstName, ...lastParts] = name.split(" ");
 
-          // Upload artwork to Printify
           const image = await uploadImage(artworkUrl, "customer-artwork.png");
           console.log("[stripe-webhook] Uploaded to Printify, image_id:", image.id);
 
-          // Build line items with print areas
-          const printifyLineItems = items
-            .map((item) => {
-              const variantId = resolveVariantId(item.size);
-              if (!variantId) return null;
-              return {
-                product_id: PRINTIFY_PRODUCT_ID,
-                variant_id: variantId,
-                quantity: item.quantity,
-                print_areas: { front: image.preview_url },
-              };
-            })
-            .filter(Boolean) as Array<{
+          // Look up Printify product ID per cart item from Supabase
+          const printifyLineItems = (
+            await Promise.all(
+              items.map(async (item) => {
+                const { data: dbProduct } = await getProductById(item.productId);
+                if (!dbProduct) {
+                  console.warn(`[stripe-webhook] No DB product for id ${item.productId}`);
+                  return null;
+                }
+                const printifyProductId = dbProduct.printifyBlueprintId;
+                const variantId = resolveVariantIdForProduct(
+                  printifyProductId,
+                  item.size,
+                  item.color || undefined
+                );
+                if (!variantId) {
+                  console.warn(
+                    `[stripe-webhook] No variant for ${printifyProductId} ${item.color} ${item.size}`
+                  );
+                  return null;
+                }
+                return {
+                  product_id: printifyProductId,
+                  variant_id: variantId,
+                  quantity: item.quantity,
+                  print_areas: { front: image.preview_url },
+                };
+              })
+            )
+          ).filter(Boolean) as Array<{
             product_id: string;
             variant_id: number;
             quantity: number;

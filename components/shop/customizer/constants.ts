@@ -37,15 +37,86 @@ export const TEXT_FONTS: FontOption[] = [
 ]
 
 /**
- * Print zone on the t-shirt mockup (fraction of image dimensions).
- * Matches Printify Gildan 64000 front print area: 3852 × 4398 px (portrait).
+ * Per-color blank garment mockup images used by the Live Mockup tab instead
+ * of Printify's images (which contain "Custom Print" placeholder text).
+ * Keyed by product type → colour slug → image path in public/.
  */
-export const MOCKUP_PRINT_ZONE = {
-  xPct: 0.27,
-  yPct: 0.17,
-  widthPct: 0.46,
-  heightPct: 0.53,
+const BLANK_MOCKUP_IMAGES: Record<string, Record<string, string>> = {
+  hoodie: {
+    white: '/images/mockups/front-white-hoodie.png',
+    black: '/images/mockups/front-black-hoodie.png',
+    grey:  '/images/mockups/front-grey-hoodie.png',
+    navy:  '/images/mockups/front-navy-hoodie.png',
+  },
 }
 
-/** Printify Gildan 64000 front print area in pixels. */
-export const PRINTIFY_PRINT_AREA = { width: 3852, height: 4398 }
+const COLOR_TITLE_TO_SLUG: Record<string, string> = {
+  'sport grey': 'grey',
+  'sport gray': 'grey',
+  'dark heather': 'grey',
+}
+
+function colorSlug(title: string): string {
+  const lower = title.toLowerCase().trim()
+  return COLOR_TITLE_TO_SLUG[lower] ?? lower.replace(/\s+/g, '-')
+}
+
+/**
+ * Look up a blank mockup image for a given product type and Printify colour title.
+ * Returns the image path if a matching file exists, or `null` (caller falls back
+ * to the Printify front image).
+ */
+export function getBlankMockupImage(productType?: string, colorTitle?: string): string | null {
+  const typeMap = BLANK_MOCKUP_IMAGES[productType ?? '']
+  if (!typeMap) return null
+  if (!colorTitle) return Object.values(typeMap)[0] ?? null
+  const slug = colorSlug(colorTitle)
+  return typeMap[slug] ?? null
+}
+
+/**
+ * Print zone on the product mockup (fraction of image dimensions).
+ * Must visually match where Printify places the print on the garment.
+ */
+const MOCKUP_PRINT_ZONES: Record<string, { xPct: number; yPct: number; widthPct: number; heightPct: number }> = {
+  't-shirt': { xPct: 0.36, yPct: 0.35, widthPct: 0.25, heightPct: 0.23 },
+  hoodie:    { xPct: 0.36, yPct: 0.35, widthPct: 0.25, heightPct: 0.23 },
+}
+
+const DEFAULT_MOCKUP_PRINT_ZONE = MOCKUP_PRINT_ZONES['t-shirt']
+
+export function getMockupPrintZone(productType?: string) {
+  return MOCKUP_PRINT_ZONES[productType ?? ''] ?? DEFAULT_MOCKUP_PRINT_ZONE
+}
+
+/** @deprecated Use getMockupPrintZone(). Kept for backward compat. */
+export const MOCKUP_PRINT_ZONE = DEFAULT_MOCKUP_PRINT_ZONE
+
+/** Printify front print area in pixels, per product type (from Printify API). */
+const PRINT_AREAS: Record<string, { width: number; height: number }> = {
+  't-shirt': { width: 3852, height: 4398 },
+  hoodie:    { width: 3709, height: 2472 },
+}
+
+const DEFAULT_PRINT_AREA = PRINT_AREAS['t-shirt']
+
+export function getPrintifyPrintArea(productType?: string) {
+  return PRINT_AREAS[productType ?? ''] ?? DEFAULT_PRINT_AREA
+}
+
+/**
+ * Scale factor applied when building the print file for Printify.
+ * The mockup scale (0–1) is multiplied by this to fit the artwork
+ * within the actual print area without overflowing.
+ */
+const PRINT_SCALE_FACTOR: Record<string, number> = {
+  't-shirt': 0.75,
+  hoodie:    0.75,
+}
+
+export function getPrintScaleFactor(productType?: string): number {
+  return PRINT_SCALE_FACTOR[productType ?? ''] ?? 0.20
+}
+
+/** @deprecated Use getPrintifyPrintArea(). Kept for backward compat. */
+export const PRINTIFY_PRINT_AREA = DEFAULT_PRINT_AREA

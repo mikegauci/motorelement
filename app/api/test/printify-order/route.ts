@@ -4,7 +4,8 @@ import {
   createPrintifyOrder,
   getProduct,
 } from "@/lib/printify/helpers";
-import { PRINTIFY_PRODUCT_ID, resolveVariantId } from "@/lib/printify/variants";
+import { getProductById } from "@/lib/supabase/queries/products";
+import { resolveVariantIdForProduct } from "@/lib/printify/variants";
 
 const TEST_ADDRESS = {
   first_name: "Test",
@@ -17,18 +18,23 @@ const TEST_ADDRESS = {
   zip: "90001",
 };
 
+interface TestItem {
+  productId: string;
+  size: string;
+  color?: string;
+  quantity: number;
+  artworkUrl?: string;
+}
+
 export async function POST(request: Request) {
   try {
-    const { items } = await request.json();
+    const { items } = (await request.json()) as { items: TestItem[] };
 
     if (!items?.length) {
       return NextResponse.json({ error: "No items provided" }, { status: 400 });
     }
 
-    const artworkUrl = items.find(
-      (i: { artworkUrl?: string }) => i.artworkUrl
-    )?.artworkUrl as string | undefined;
-
+    const artworkUrl = items.find((i) => i.artworkUrl)?.artworkUrl;
     if (!artworkUrl) {
       return NextResponse.json(
         { error: "No artwork found. Customize your design before ordering." },
@@ -36,47 +42,53 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Fetch the existing product to get blueprint_id and print_provider_id
-    const product = (await getProduct(PRINTIFY_PRODUCT_ID)) as {
-      blueprint_id: number;
-      print_provider_id: number;
-    };
-    console.log(
-      `[test-printify] Blueprint: ${product.blueprint_id}, Provider: ${product.print_provider_id}`
-    );
-
-    // 2. Upload customer artwork to Printify
     console.log("[test-printify] Uploading customer artwork...");
     const image = await uploadImage(artworkUrl, "customer-artwork.png");
     console.log("[test-printify] Image uploaded:", image.id);
 
-    // 3. Build line items using on-the-fly product creation format
-    //    (blueprint_id + print_provider_id instead of product_id)
-    const lineItems = items
-      .map((item: { size: string; quantity: number }) => {
-        const variantId = resolveVariantId(item.size);
-        if (!variantId) {
-          console.warn(`[test-printify] No variant for size: ${item.size}`);
-          return null;
-        }
-        return {
-          blueprint_id: product.blueprint_id,
-          print_provider_id: product.print_provider_id,
-          variant_id: variantId,
-          quantity: item.quantity,
-          print_areas: { front: image.preview_url },
-        };
-      })
-      .filter(Boolean);
+    const lineItems = (
+      await Promise.all(
+        items.map(async (item) => {
+          const { data: dbProduct } = await getProductById(item.productId);
+          if (!dbProduct) {
+            console.warn(`[test-printify] No DB product for id ${item.productId}`);
+            return null;
+          }
+          const printifyProductId = dbProduct.printifyBlueprintId;
+
+          const pfyProduct = (await getProduct(printifyProductId)) as {
+            blueprint_id: number;
+            print_provider_id: number;
+          };
+
+          const variantId = resolveVariantIdForProduct(
+            printifyProductId,
+            item.size,
+            item.color
+          );
+          if (!variantId) {
+            console.warn(`[test-printify] No variant for ${printifyProductId} ${item.color} ${item.size}`);
+            return null;
+          }
+
+          return {
+            blueprint_id: pfyProduct.blueprint_id,
+            print_provider_id: pfyProduct.print_provider_id,
+            variant_id: variantId,
+            quantity: item.quantity,
+            print_areas: { front: image.preview_url },
+          };
+        })
+      )
+    ).filter((li): li is NonNullable<typeof li> => li !== null);
 
     if (lineItems.length === 0) {
       return NextResponse.json(
-        { error: "No valid variants found for the given sizes" },
+        { error: "No valid variants found for the given items" },
         { status: 400 }
       );
     }
 
-    // 4. Create the order (on-the-fly product creation)
     console.log("[test-printify] Creating Printify order...");
     const order = await createPrintifyOrder({
       externalId: `test-${Date.now()}`,

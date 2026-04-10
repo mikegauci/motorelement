@@ -1,13 +1,13 @@
 'use client'
 
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useCustomizer } from './CustomizerContext'
 import { loadImageElement } from './helpers'
-import { MOCKUP_PRINT_ZONE } from './constants'
+import { getMockupPrintZone } from './constants'
 
 /**
  * 2D t-shirt mockup that overlays the generated artwork onto the Printify
- * product image. The user can drag to reposition and scroll/pinch to resize.
+ * product image. Read-only preview — positioning is fixed.
  *
  * Designed with a stable interface so the internals can be swapped for a
  * React Three Fiber 3D scene later without changing the API.
@@ -15,24 +15,25 @@ import { MOCKUP_PRINT_ZONE } from './constants'
 export default function MockupPreview() {
   const {
     artworkUrl,
+    compositeDataUrl,
     mockupPlacement,
     setMockupPlacement,
     tshirtBaseImage,
+    productType,
+    selectedColorHex,
+    setMockupThumbnailUrl,
   } = useCustomizer()
+
+  const overlayUrl = compositeDataUrl ?? artworkUrl
+
+  const pz = useMemo(() => getMockupPrintZone(productType), [productType])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const baseImgRef = useRef<HTMLImageElement | null>(null)
   const artworkImgRef = useRef<HTMLImageElement | null>(null)
-
-  const dragRef = useRef({
-    active: false,
-    pointerId: -1,
-    startX: 0,
-    startY: 0,
-    startPlacementX: 0,
-    startPlacementY: 0,
-  })
+  const tintCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const thumbCanvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const [loaded, setLoaded] = useState(false)
 
@@ -60,7 +61,6 @@ export default function MockupPreview() {
 
     const baseImg = baseImgRef.current
     if (baseImg) {
-      // Draw t-shirt base image to fill canvas while maintaining aspect ratio
       const imgAspect = baseImg.naturalWidth / baseImg.naturalHeight
       let drawW = w
       let drawH = w / imgAspect
@@ -70,11 +70,32 @@ export default function MockupPreview() {
       }
       const drawX = (w - drawW) / 2
       const drawY = (h - drawH) / 2
-      ctx.drawImage(baseImg, drawX, drawY, drawW, drawH)
+
+      const isLocalMockup = tshirtBaseImage?.startsWith('/images/mockups/')
+      const needsTint = !isLocalMockup && selectedColorHex && !/^#?f{3,6}$/i.test(selectedColorHex)
+      if (needsTint) {
+        if (!tintCanvasRef.current) tintCanvasRef.current = document.createElement('canvas')
+        const tc = tintCanvasRef.current
+        const tw = Math.round(drawW)
+        const th = Math.round(drawH)
+        if (tc.width !== tw) tc.width = tw
+        if (tc.height !== th) tc.height = th
+        const tctx = tc.getContext('2d', { alpha: true })!
+        tctx.clearRect(0, 0, tw, th)
+        tctx.drawImage(baseImg, 0, 0, tw, th)
+        tctx.globalCompositeOperation = 'multiply'
+        tctx.fillStyle = selectedColorHex!
+        tctx.fillRect(0, 0, tw, th)
+        tctx.globalCompositeOperation = 'destination-in'
+        tctx.drawImage(baseImg, 0, 0, tw, th)
+        tctx.globalCompositeOperation = 'source-over'
+        ctx.drawImage(tc, drawX, drawY, drawW, drawH)
+      } else {
+        ctx.drawImage(baseImg, drawX, drawY, drawW, drawH)
+      }
 
       // Draw artwork overlay within the print zone
       const artworkImg = artworkImgRef.current
-      const pz = MOCKUP_PRINT_ZONE
       const pzX = drawX + pz.xPct * drawW
       const pzY = drawY + pz.yPct * drawH
       const pzW = pz.widthPct * drawW
@@ -108,6 +129,23 @@ export default function MockupPreview() {
         ctx.strokeRect(pzX, pzY, pzW, pzH)
         ctx.setLineDash([])
       }
+
+      // Generate a cropped print-zone thumbnail for the mobile dock
+      if (artworkImg && pzW > 0 && pzH > 0) {
+        try {
+          const thumbSize = 280
+          if (!thumbCanvasRef.current) thumbCanvasRef.current = document.createElement('canvas')
+          const tc = thumbCanvasRef.current
+          const aspect = pzW / pzH
+          const tw = aspect >= 1 ? thumbSize : Math.round(thumbSize * aspect)
+          const th = aspect >= 1 ? Math.round(thumbSize / aspect) : thumbSize
+          if (tc.width !== tw) tc.width = tw
+          if (tc.height !== th) tc.height = th
+          const tctx = tc.getContext('2d', { alpha: false })!
+          tctx.drawImage(canvas, pzX, pzY, pzW, pzH, 0, 0, tw, th)
+          setMockupThumbnailUrl(tc.toDataURL('image/jpeg', 0.85))
+        } catch { /* ignore */ }
+      }
     } else {
       // No base image yet - show placeholder text
       ctx.fillStyle = '#666'
@@ -115,7 +153,7 @@ export default function MockupPreview() {
       ctx.textAlign = 'center'
       ctx.fillText('Select a product to see mockup', w / 2, h / 2)
     }
-  }, [mockupPlacement])
+  }, [mockupPlacement, pz, selectedColorHex, setMockupThumbnailUrl])
 
   // Load base t-shirt image
   useEffect(() => {
@@ -140,15 +178,15 @@ export default function MockupPreview() {
     return () => { cancelled = true }
   }, [tshirtBaseImage, paint])
 
-  // Load artwork image
+  // Load artwork/composite overlay image
   useEffect(() => {
-    if (!artworkUrl) {
+    if (!overlayUrl) {
       artworkImgRef.current = null
       paint()
       return
     }
     let cancelled = false
-    loadImageElement(artworkUrl).then((img) => {
+    loadImageElement(overlayUrl).then((img) => {
       if (cancelled) return
       artworkImgRef.current = img
       paint()
@@ -158,7 +196,7 @@ export default function MockupPreview() {
       paint()
     })
     return () => { cancelled = true }
-  }, [artworkUrl, paint])
+  }, [overlayUrl, paint])
 
   // Repaint on resize
   useEffect(() => {
@@ -169,82 +207,22 @@ export default function MockupPreview() {
     return () => ro.disconnect()
   }, [paint])
 
-  // Drag to reposition
-  function handlePointerDown(e: React.PointerEvent) {
-    if (!artworkUrl) return
-    const d = dragRef.current
-    d.active = true
-    d.pointerId = e.pointerId
-    d.startX = e.clientX
-    d.startY = e.clientY
-    d.startPlacementX = mockupPlacement.xPct
-    d.startPlacementY = mockupPlacement.yPct
-    containerRef.current?.setPointerCapture(e.pointerId)
-  }
 
-  function handlePointerMove(e: React.PointerEvent) {
-    const d = dragRef.current
-    if (!d.active || d.pointerId !== e.pointerId) return
-    const container = containerRef.current
-    if (!container) return
+  const hasArtwork = !!overlayUrl
+  const scalePct = Math.round(mockupPlacement.scale * 100)
 
-    const rect = container.getBoundingClientRect()
-    const baseImg = baseImgRef.current
-    if (!baseImg) return
-
-    // Map pixel delta to print zone fraction
-    const imgAspect = baseImg.naturalWidth / baseImg.naturalHeight
-    let drawW = rect.width
-    let drawH = rect.width / imgAspect
-    if (drawH > rect.width) {
-      drawH = rect.width
-      drawW = rect.width * imgAspect
-    }
-    const pzW = MOCKUP_PRINT_ZONE.widthPct * drawW
-    const pzH = MOCKUP_PRINT_ZONE.heightPct * drawH
-
-    const dxPct = (e.clientX - d.startX) / pzW
-    const dyPct = (e.clientY - d.startY) / pzH
-
+  function nudgeScale(delta: number) {
     setMockupPlacement({
       ...mockupPlacement,
-      xPct: Math.min(1, Math.max(0, d.startPlacementX + dxPct)),
-      yPct: Math.min(1, Math.max(0, d.startPlacementY + dyPct)),
+      scale: mockupPlacement.scale + delta,
     })
   }
-
-  function handlePointerUp(e: React.PointerEvent) {
-    const d = dragRef.current
-    if (!d.active || d.pointerId !== e.pointerId) return
-    d.active = false
-    d.pointerId = -1
-    containerRef.current?.releasePointerCapture(e.pointerId)
-  }
-
-  // Scroll/wheel to resize
-  function handleWheel(e: React.WheelEvent) {
-    if (!artworkUrl) return
-    e.preventDefault()
-    const delta = e.deltaY > 0 ? -0.03 : 0.03
-    setMockupPlacement({
-      ...mockupPlacement,
-      scale: Math.min(1, Math.max(0.1, mockupPlacement.scale + delta)),
-    })
-  }
-
-  const hasArtwork = !!artworkUrl
 
   return (
     <div className="relative w-full">
       <div
         ref={containerRef}
-        className={`relative w-full aspect-square overflow-hidden border border-border bg-obsidian ${hasArtwork ? 'cursor-grab active:cursor-grabbing' : ''}`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onWheel={handleWheel}
-        style={{ touchAction: 'none' }}
+        className="relative w-full aspect-square overflow-hidden border border-border bg-obsidian"
       >
         <canvas
           ref={canvasRef}
@@ -252,22 +230,36 @@ export default function MockupPreview() {
           aria-label="T-shirt mockup preview"
         />
         {hasArtwork && (
-          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-black/60 backdrop-blur-sm">
-            <span className="text-[10px] text-muted">Size</span>
-            <input
-              type="range"
-              min={10}
-              max={100}
-              value={Math.round(mockupPlacement.scale * 100)}
-              onChange={(e) => setMockupPlacement({
-                ...mockupPlacement,
-                scale: Number(e.target.value) / 100,
-              })}
-              className="flex-1 accent-ignition h-1"
-            />
-            <span className="text-[10px] text-white font-semibold w-8 text-right">
-              {Math.round(mockupPlacement.scale * 100)}%
-            </span>
+          <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+            <button
+              type="button"
+              onClick={() => setMockupPlacement({ ...mockupPlacement, scale: 1.0 })}
+              disabled={mockupPlacement.scale === 1.0}
+              className="w-8 h-8 flex items-center justify-center rounded bg-black/70 text-white text-sm hover:bg-black/90 disabled:opacity-30 transition"
+              aria-label="Reset size"
+              title="Reset size"
+            >
+              ↻
+            </button>
+            <button
+              type="button"
+              onClick={() => nudgeScale(-0.05)}
+              disabled={mockupPlacement.scale <= 0.1}
+              className="w-8 h-8 flex items-center justify-center rounded bg-black/70 text-white text-sm hover:bg-black/90 disabled:opacity-30 transition"
+              aria-label="Decrease size"
+            >
+              −
+            </button>
+            <span className="w-8 text-center text-[10px] text-white/70 font-mono leading-tight">{scalePct}%</span>
+            <button
+              type="button"
+              onClick={() => nudgeScale(0.05)}
+              disabled={mockupPlacement.scale >= 1.0}
+              className="w-8 h-8 flex items-center justify-center rounded bg-black/70 text-white text-sm hover:bg-black/90 disabled:opacity-30 transition"
+              aria-label="Increase size"
+            >
+              +
+            </button>
           </div>
         )}
       </div>
