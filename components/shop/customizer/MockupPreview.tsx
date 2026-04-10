@@ -123,7 +123,12 @@ export default function MockupPreview() {
 
       // Print zone boundary (visible dashed outline)
       if (artworkImg) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.25)'
+        const isWhiteMockup =
+          tshirtBaseImage?.includes('-white-') ||
+          (selectedColorHex && /^#?f{3,6}$/i.test(selectedColorHex))
+        ctx.strokeStyle = isWhiteMockup
+          ? 'rgba(0,0,0,0.20)'
+          : 'rgba(255,255,255,0.25)'
         ctx.lineWidth = 1.5
         ctx.setLineDash([8, 5])
         ctx.strokeRect(pzX, pzY, pzW, pzH)
@@ -153,7 +158,7 @@ export default function MockupPreview() {
       ctx.textAlign = 'center'
       ctx.fillText('Select a product to see mockup', w / 2, h / 2)
     }
-  }, [mockupPlacement, pz, selectedColorHex, setMockupThumbnailUrl])
+  }, [mockupPlacement, pz, selectedColorHex, tshirtBaseImage, setMockupThumbnailUrl])
 
   // Load base t-shirt image
   useEffect(() => {

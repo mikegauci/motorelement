@@ -569,24 +569,32 @@ export async function buildPrintAreaPng(
   placement: { xPct: number; yPct: number; scale: number },
   productType?: string
 ): Promise<Blob> {
-  const { getPrintifyPrintArea, getPrintScaleFactor } = await import('./constants')
+  const { getPrintifyPrintArea, getPrintScaleFactor, getPrintYOffsetPx } = await import('./constants')
   const { width: paW, height: paH } = getPrintifyPrintArea(productType)
   const printFactor = getPrintScaleFactor(productType)
+  const yOffset = getPrintYOffsetPx(productType)
 
   const img = await loadImageElement(artworkSrc)
-  const artAspect = img.naturalWidth / img.naturalHeight
+
+  // Trim transparent padding so the actual artwork drives sizing
+  const bounds = getCarAlphaBounds(img)
+  const srcX = bounds?.minX ?? 0
+  const srcY = bounds?.minY ?? 0
+  const srcW = bounds?.w ?? img.naturalWidth
+  const srcH = bounds?.h ?? img.naturalHeight
+  const artAspect = srcW / srcH
 
   const artW = paW * placement.scale * printFactor
   const artH = artW / artAspect
   const artX = placement.xPct * paW - artW / 2
-  const artY = placement.yPct * paH - artH / 2
+  const artY = placement.yPct * paH - artH / 2 + yOffset
 
   const canvas = document.createElement('canvas')
   canvas.width = paW
   canvas.height = paH
   const ctx = canvas.getContext('2d', { alpha: true })!
   ctx.clearRect(0, 0, paW, paH)
-  ctx.drawImage(img, artX, artY, artW, artH)
+  ctx.drawImage(img, srcX, srcY, srcW, srcH, artX, artY, artW, artH)
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(

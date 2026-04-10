@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  uploadImage,
   createPrintifyOrder,
   getProduct,
 } from "@/lib/printify/helpers";
@@ -42,10 +41,6 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("[test-printify] Uploading customer artwork...");
-    const image = await uploadImage(artworkUrl, "customer-artwork.png");
-    console.log("[test-printify] Image uploaded:", image.id);
-
     const lineItems = (
       await Promise.all(
         items.map(async (item) => {
@@ -76,7 +71,7 @@ export async function POST(request: Request) {
             print_provider_id: pfyProduct.print_provider_id,
             variant_id: variantId,
             quantity: item.quantity,
-            print_areas: { front: image.preview_url },
+            print_areas: { front: artworkUrl },
           };
         })
       )

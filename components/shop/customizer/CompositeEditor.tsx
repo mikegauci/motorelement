@@ -2,6 +2,7 @@
 
 import styles from './styles'
 import { clampAdjust, clampCarScale } from './helpers'
+import { useCustomizer } from './CustomizerContext'
 
 interface CompositeEditorProps {
   carAdjustYPct: number
@@ -22,6 +23,7 @@ export default function CompositeEditor({
   setCarAdjustXPct,
   backgroundControlsLocked,
 }: CompositeEditorProps) {
+  const { mockupPlacement, setMockupPlacement } = useCustomizer()
   function nudgeCarAdjustY(deltaPct: number) {
     setCarAdjustYPct(clampAdjust(carAdjustYPct + deltaPct))
   }
@@ -101,6 +103,74 @@ export default function CompositeEditor({
             </button>
           </div>
         </div>
+        <div className={styles.compositeAdjustControl}>
+          <div className={styles.compositeAdjustHead}>
+            <span>Artwork on mockup</span>
+            <span className={styles.compositeAdjustValue}>
+              {Math.round(mockupPlacement.scale * 100)}%
+            </span>
+          </div>
+          <div className={styles.compositeAdjustInputRow}>
+            <button
+              type="button"
+              className={styles.compositeNudgeBtn}
+              onClick={() => setMockupPlacement({ ...mockupPlacement, scale: mockupPlacement.scale - 0.05 })}
+              disabled={backgroundControlsLocked || mockupPlacement.scale <= 0.1}
+            >
+              -
+            </button>
+            <input
+              type="range"
+              min={10}
+              max={100}
+              value={Math.round(mockupPlacement.scale * 100)}
+              onChange={(e) => setMockupPlacement({ ...mockupPlacement, scale: Number(e.target.value) / 100 })}
+              disabled={backgroundControlsLocked}
+            />
+            <button
+              type="button"
+              className={styles.compositeNudgeBtn}
+              onClick={() => setMockupPlacement({ ...mockupPlacement, scale: mockupPlacement.scale + 0.05 })}
+              disabled={backgroundControlsLocked || mockupPlacement.scale >= 1.0}
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <div className={styles.compositeAdjustControl}>
+          <div className={styles.compositeAdjustHead}>
+            <span>Artwork vertical</span>
+            <span className={styles.compositeAdjustValue}>
+              {Math.round((mockupPlacement.yPct - 0.5) * 100)}
+            </span>
+          </div>
+          <div className={styles.compositeAdjustInputRow}>
+            <button
+              type="button"
+              className={styles.compositeNudgeBtn}
+              onClick={() => setMockupPlacement({ ...mockupPlacement, yPct: mockupPlacement.yPct - 0.01 })}
+              disabled={backgroundControlsLocked}
+            >
+              -
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(mockupPlacement.yPct * 100)}
+              onChange={(e) => setMockupPlacement({ ...mockupPlacement, yPct: Number(e.target.value) / 100 })}
+              disabled={backgroundControlsLocked}
+            />
+            <button
+              type="button"
+              className={styles.compositeNudgeBtn}
+              onClick={() => setMockupPlacement({ ...mockupPlacement, yPct: mockupPlacement.yPct + 0.01 })}
+              disabled={backgroundControlsLocked}
+            >
+              +
+            </button>
+          </div>
+        </div>
         <div className={styles.compositeAdjustInputRow} style={{ gap: 8 }}>
           <button
             type="button"
@@ -121,6 +191,7 @@ export default function CompositeEditor({
               setCarAdjustYPct(0)
               setCarScale(1)
               setCompositionZoom(1)
+              setMockupPlacement({ xPct: 0.5, yPct: 0.5, scale: 1.0 })
             }}
             disabled={backgroundControlsLocked}
           >

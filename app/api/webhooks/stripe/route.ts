@@ -5,7 +5,7 @@ import {
   updateOrderPrintifyId,
 } from "@/lib/supabase/queries/orders";
 import { getProductById } from "@/lib/supabase/queries/products";
-import { uploadImage, createPrintifyOrder } from "@/lib/printify/helpers";
+import { createPrintifyOrder } from "@/lib/printify/helpers";
 import { resolveVariantIdForProduct } from "@/lib/printify/variants";
 
 export async function POST(request: Request) {
@@ -73,9 +73,6 @@ export async function POST(request: Request) {
           const name = shipping.name ?? "";
           const [firstName, ...lastParts] = name.split(" ");
 
-          const image = await uploadImage(artworkUrl, "customer-artwork.png");
-          console.log("[stripe-webhook] Uploaded to Printify, image_id:", image.id);
-
           // Look up Printify product ID per cart item from Supabase
           const printifyLineItems = (
             await Promise.all(
@@ -101,7 +98,7 @@ export async function POST(request: Request) {
                   product_id: printifyProductId,
                   variant_id: variantId,
                   quantity: item.quantity,
-                  print_areas: { front: image.preview_url },
+                  print_areas: { front: artworkUrl },
                 };
               })
             )

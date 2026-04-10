@@ -326,6 +326,7 @@ export async function POST(request: Request) {
     const png = await sharp(out, {
       raw: { width: w, height: h, channels: 4 },
     })
+      .trim()
       .png()
       .toBuffer()
 

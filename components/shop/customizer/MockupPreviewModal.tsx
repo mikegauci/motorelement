@@ -31,6 +31,8 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
   const baseImgRef = useRef<HTMLImageElement | null>(null)
   const artworkImgRef = useRef<HTMLImageElement | null>(null)
 
+  const offscreenRef = useRef<HTMLCanvasElement | null>(null)
+
   const paint = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -53,36 +55,61 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
 
     if (!baseImg) return
 
+    // Draw full mockup to an offscreen canvas, then crop around the print zone
+    const fullSize = px * 2
+    if (!offscreenRef.current) offscreenRef.current = document.createElement('canvas')
+    const off = offscreenRef.current
+    if (off.width !== fullSize) off.width = fullSize
+    if (off.height !== fullSize) off.height = fullSize
+    const offCtx = off.getContext('2d', { alpha: false })!
+    offCtx.imageSmoothingEnabled = true
+    offCtx.imageSmoothingQuality = 'high'
+    offCtx.fillStyle = '#111'
+    offCtx.fillRect(0, 0, fullSize, fullSize)
+
     const imgAspect = baseImg.naturalWidth / baseImg.naturalHeight
-    let drawW = px
-    let drawH = px / imgAspect
-    if (drawH > px) { drawH = px; drawW = px * imgAspect }
-    const drawX = (px - drawW) / 2
-    const drawY = (px - drawH) / 2
+    let drawW = fullSize
+    let drawH = fullSize / imgAspect
+    if (drawH > fullSize) { drawH = fullSize; drawW = fullSize * imgAspect }
+    const drawX = (fullSize - drawW) /2
+    const drawY = (fullSize - drawH) / 2
+    offCtx.drawImage(baseImg, drawX, drawY, drawW, drawH)
 
-    ctx.drawImage(baseImg, drawX, drawY, drawW, drawH)
+    if (artworkImg) {
+      const pzX = drawX + pz.xPct * drawW
+      const pzY = drawY + pz.yPct * drawH
+      const pzW = pz.widthPct * drawW
+      const pzH = pz.heightPct * drawH
 
-    if (!artworkImg) return
+      const artAspect = artworkImg.naturalWidth / artworkImg.naturalHeight
+      const baseArtW = pzW * mockupPlacement.scale
+      const baseArtH = baseArtW / artAspect
+      const artX = pzX + mockupPlacement.xPct * pzW - baseArtW / 2
+      const artY = pzY + mockupPlacement.yPct * pzH - baseArtH / 2
 
-    const pzX = drawX + pz.xPct * drawW
-    const pzY = drawY + pz.yPct * drawH
-    const pzW = pz.widthPct * drawW
-    const pzH = pz.heightPct * drawH
+      offCtx.save()
+      offCtx.beginPath()
+      offCtx.rect(pzX, pzY, pzW, pzH)
+      offCtx.clip()
+      offCtx.globalAlpha = 0.92
+      offCtx.drawImage(artworkImg, artX, artY, baseArtW, baseArtH)
+      offCtx.globalAlpha = 1.0
+      offCtx.restore()
+    }
 
-    const artAspect = artworkImg.naturalWidth / artworkImg.naturalHeight
-    const baseArtW = pzW * mockupPlacement.scale
-    const baseArtH = baseArtW / artAspect
-    const artX = pzX + mockupPlacement.xPct * pzW - baseArtW / 2
-    const artY = pzY + mockupPlacement.yPct * pzH - baseArtH / 2
+    // Crop: centre on the print zone with padding so the artwork fills the view
+    const cropPzX = drawX + pz.xPct * drawW
+    const cropPzY = drawY + pz.yPct * drawH
+    const cropPzW = pz.widthPct * drawW
+    const cropPzH = pz.heightPct * drawH
+    const padding = 1
+    const cropCx = cropPzX + cropPzW / 2
+    const cropCy = cropPzY + cropPzH / 2
+    const cropSide = Math.max(cropPzW, cropPzH) * (1 + padding)
+    const sx = Math.max(0, Math.min(cropCx - cropSide / 2, fullSize - cropSide))
+    const sy = Math.max(0, Math.min(cropCy - cropSide / 2, fullSize - cropSide))
 
-    ctx.save()
-    ctx.beginPath()
-    ctx.rect(pzX, pzY, pzW, pzH)
-    ctx.clip()
-    ctx.globalAlpha = 0.92
-    ctx.drawImage(artworkImg, artX, artY, baseArtW, baseArtH)
-    ctx.globalAlpha = 1.0
-    ctx.restore()
+    ctx.drawImage(off, sx, sy, cropSide, cropSide, 0, 0, px, px)
   }, [mockupPlacement, pz, tshirtBaseImage, overlayUrl])
 
   useEffect(() => {

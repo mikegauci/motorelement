@@ -42,11 +42,17 @@ export const TEXT_FONTS: FontOption[] = [
  * Keyed by product type → colour slug → image path in public/.
  */
 const BLANK_MOCKUP_IMAGES: Record<string, Record<string, string>> = {
+  't-shirt': {
+    white: '/images/mockups/t-shirt/front-white-t-shirt.png',
+    black: '/images/mockups/t-shirt/front-black-t-shirt.png',
+    grey:  '/images/mockups/t-shirt/front-grey-t-shirt.png',
+    navy:  '/images/mockups/t-shirt/front-navy-t-shirt.png',
+  },
   hoodie: {
-    white: '/images/mockups/front-white-hoodie.png',
-    black: '/images/mockups/front-black-hoodie.png',
-    grey:  '/images/mockups/front-grey-hoodie.png',
-    navy:  '/images/mockups/front-navy-hoodie.png',
+    white: '/images/mockups/hoodie/front-white-hoodie.png',
+    black: '/images/mockups/hoodie/front-black-hoodie.png',
+    grey:  '/images/mockups/hoodie/front-grey-hoodie.png',
+    navy:  '/images/mockups/hoodie/front-navy-hoodie.png',
   },
 }
 
@@ -79,7 +85,7 @@ export function getBlankMockupImage(productType?: string, colorTitle?: string): 
  * Must visually match where Printify places the print on the garment.
  */
 const MOCKUP_PRINT_ZONES: Record<string, { xPct: number; yPct: number; widthPct: number; heightPct: number }> = {
-  't-shirt': { xPct: 0.36, yPct: 0.35, widthPct: 0.25, heightPct: 0.23 },
+  't-shirt': { xPct: 0.38, yPct: 0.28, widthPct: 0.25, heightPct: 0.28 },
   hoodie:    { xPct: 0.36, yPct: 0.35, widthPct: 0.25, heightPct: 0.23 },
 }
 
@@ -115,7 +121,20 @@ const PRINT_SCALE_FACTOR: Record<string, number> = {
 }
 
 export function getPrintScaleFactor(productType?: string): number {
-  return PRINT_SCALE_FACTOR[productType ?? ''] ?? 0.20
+  return PRINT_SCALE_FACTOR[productType ?? ''] ?? 0.75
+}
+
+/**
+ * Vertical pixel offset applied to the artwork in the Printify print file.
+ * Negative = shift up, positive = shift down.
+ */
+const PRINT_Y_OFFSET_PX: Record<string, number> = {
+  't-shirt': -750,
+  hoodie:    0,
+}
+
+export function getPrintYOffsetPx(productType?: string): number {
+  return PRINT_Y_OFFSET_PX[productType ?? ''] ?? 0
 }
 
 /** @deprecated Use getPrintifyPrintArea(). Kept for backward compat. */
