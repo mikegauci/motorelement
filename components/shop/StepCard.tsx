@@ -23,8 +23,8 @@ export function StepCard({
 }: StepCardProps) {
   return (
     <Link href={ctaHref} className="block">
-      <div className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-border bg-obsidian p-10 min-h-[420px] transition-colors duration-300 hover:bg-ignition hover:border-ignition cursor-pointer">
-        <span className="absolute top-0 right-5 font-heading text-[190px] leading-none text-white/[0.06] group-hover:text-white/20 transition-colors duration-300">
+      <div className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-border bg-obsidian mt:p-10 p-8 md:min-h-[420px] transition-colors duration-300 hover:bg-ignition hover:border-ignition cursor-pointer">
+        <span className="absolute top-0 right-5 font-heading md:text-[190px] text-[100px] leading-none text-white/[0.06] group-hover:text-white/20 transition-colors duration-300">
           {number}
         </span>
 
@@ -33,7 +33,7 @@ export function StepCard({
             {STEP_ICONS[number]}
           </div>
 
-          <h3 className="font-heading mt-20 text-6xl text-white">
+          <h3 className="font-heading md:mt-20 mt-4 md:text-6xl text-4xl text-white">
             {title}
           </h3>
 

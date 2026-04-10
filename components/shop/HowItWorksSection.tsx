@@ -14,7 +14,7 @@ const steps = [
   },
   {
     number: "02",
-    title: "AI RENDER",
+    title: "CUSTOMIZE",
     description:
       "Watch our advanced AI generate multiple design options and styles instantly. Customize and refine your design.",
     ctaHref: "/products",
@@ -30,7 +30,7 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="bg-void py-12 md:py-24 mt-[-120px]">
+    <section id="how-it-works" className="bg-void py-12 md:py-24 lg:mt-[-100px]">
       <Container>
         <div className="mb-8 text-center md:mb-12">
           <SectionLabel>PROCESS ARCHITECTURE</SectionLabel>
@@ -46,8 +46,11 @@ export function HowItWorksSection() {
         </div>
 
         <div className="mt-12 flex justify-center">
-          <Link href="/product/classic-tee">
-            <Button variant="primary" size="lg">
+          <Link
+            href="/product/classic-tee"
+            className="block w-full md:w-auto"
+          >
+            <Button variant="primary" size="lg" className="w-full md:w-auto">
               TRY IT NOW
             </Button>
           </Link>

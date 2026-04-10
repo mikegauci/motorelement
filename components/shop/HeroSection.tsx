@@ -5,7 +5,7 @@ import { Container } from "@/components/ui/Container";
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen overflow-hidden bg-void">
+    <section className="relative overflow-hidden bg-void">
       <div className="absolute inset-0">
         <Image
           src="/images/hero-img2.jpg"
@@ -16,13 +16,13 @@ export function HeroSection() {
           className="object-cover"
         />
         <div className="absolute inset-0 bg-black/50" />
-        <div className="absolute inset-0 bg-gradient-to-r from-void via-void/50 to-transparent" />
+        <div className="absolute inset-0 md:bg-gradient-to-r from-void via-void/50 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-void to-transparent" />
       </div>
 
-      <Container className="relative z-10 flex min-h-screen items-end lg:items-center">
+      <Container className="relative z-10 flex lg:min-h-screen items-end lg:items-center">
         <div className="max-w-2xl"> 
-          <h1 className="mt-6 font-heading text-hero italic leading-[0.95]">
+          <h1 className="mt-6 font-heading text-display italic leading-[0.95] md:text-hero">
             <span className="block text-white">YOUR CAR.</span>
             <span className="block text-ignition">YOUR ART.</span>
             <span className="block text-white">YOUR STYLE.</span>
@@ -34,14 +34,22 @@ export function HeroSection() {
             street.
           </p>
 
-          <div className="mt-10 flex gap-4">
-            <Link href="/product/custom">
-              <Button variant="primary" size="lg">
+          <div className="mt-10 grid w-full grid-cols-2 gap-4 md:flex md:w-auto">
+            <Link href="/product/custom" className="block min-w-0">
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full md:w-auto"
+              >
                 START MY BUILD
               </Button>
             </Link>
-            <Link href="#how-it-works">
-              <Button variant="secondary" size="lg">
+            <Link href="#how-it-works" className="block min-w-0">
+              <Button
+                variant="secondary"
+                size="lg"
+                className="w-full md:w-auto"
+              >
                 LEARN MORE
               </Button>
             </Link>
