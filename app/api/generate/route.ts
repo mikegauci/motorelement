@@ -83,7 +83,7 @@ function buildFullPrompt(vehicle: VehiclePayload) {
   const bodyLabel = resolvedBodyStyle ? resolvedBodyStyle.toUpperCase() : null
   const bodyLine = bodyLabel ? `This is a ${bodyLabel}.` : ''
   const numberPlateLine = vehicle.showNumberPlate
-    ? 'Reproduce the number plate text exactly from Image 1. If unreadable, leave blank.'
+    ? 'Reproduce the number plate text and POSITION exactly from Image 1. The plate must be in the same location on the bumper as in Image 1 (e.g. if it is offset to one side, keep it offset — do NOT center it). If unreadable, leave blank.'
     : 'Remove any number plate. Fill the area with the car body colour.'
   const customerNotes = typeof vehicle.customerNotes === 'string' ? vehicle.customerNotes.trim() : ''
   const notesLine = customerNotes ? `\nApply these customer notes: ${customerNotes}` : ''
@@ -106,6 +106,7 @@ Image 1 is the ONLY source for shape, angle, proportions, and details.
 - Same body proportions: wheelbase, roof height, bonnet length, rear overhang
 - Same window count and placement
 - Same wheel size ratio and visibility
+- Same number plate position (left-offset, right-offset, or centered — match Image 1 exactly)
 - Do not rotate, recompose, or normalize the view
 ${numberPlateLine}${notesLine}
 
