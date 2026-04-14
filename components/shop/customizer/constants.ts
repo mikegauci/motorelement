@@ -5,8 +5,10 @@ export const PENDING_GENERATION_KEY = 'car-vector-pending-generation-v1'
 export const PENDING_BACKGROUND_KEY = 'car-vector-pending-background-v1'
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = [
-  { id: 'retrowave-ii', name: 'Retrowave', src: '/presets/retrowave-ii.png' },
-  { id: 'torii-gate', name: 'Torii gate', src: '/presets/torii-gate.png' },
+  { id: 'torii-gate', name: 'Torii Gate', src: '/presets/torii-gate.png' },
+  { id: 'samurai', name: 'Samurai', src: '/presets/samurai.png' },
+  { id: 'samurai-tiger', name: 'Samurai Tiger', src: '/presets/samurai-tiger.png' },
+  { id: 'fairlady', name: 'Fairlady', src: '/presets/fairlady.png' },
 ]
 
 export const CUSTOM_BACKGROUND_NEW = 'custom-new'
