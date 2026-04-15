@@ -336,6 +336,11 @@ interface CompositeOpts {
   carScale?: number
   textLayers?: TextLayer[]
   compositionZoom?: number
+  bgScale?: number
+}
+
+export function clampBgScale(v: number) {
+  return Math.min(1.4, Math.max(0.5, v))
 }
 
 export function drawCompositeContent(
@@ -352,8 +357,11 @@ export function drawCompositeContent(
     carScale: carScaleVal = 1,
     textLayers: layers = [],
     compositionZoom = 1,
+    bgScale: bgScaleVal = 1,
   } = opts
   const safeCompositionZoom = clampCompositeZoom(compositionZoom)
+  const safeBgScale = clampBgScale(bgScaleVal)
+  const bgZoom = safeCompositionZoom * safeBgScale
   const center = size / 2
   const baseBgW = size * COMPOSITE.bgWidthPct
   const omitBackground = !bgImg
@@ -364,10 +372,10 @@ export function drawCompositeContent(
   const baseBgH = (srcH / srcW) * baseBgW
   const baseBgX = (size - baseBgW) / 2
   const baseBgY = size * COMPOSITE.bgTopPct
-  const bgW = baseBgW * safeCompositionZoom
-  const bgH = baseBgH * safeCompositionZoom
-  const bgX = center + (baseBgX - center) * safeCompositionZoom
-  const bgY = center + (baseBgY - center) * safeCompositionZoom
+  const bgW = baseBgW * bgZoom
+  const bgH = baseBgH * bgZoom
+  const bgX = center + (baseBgX - center) * bgZoom
+  const bgY = center + (baseBgY - center) * bgZoom
   const lift = size * COMPOSITE.carLiftPct
   const carOffsetX = size * carOffsetXPct
   const carOffsetY = size * carOffsetYPct
@@ -466,6 +474,7 @@ export async function buildCompositePngBlob(opts: {
   carScale?: number
   textLayers?: TextLayer[]
   compositionZoom?: number
+  bgScale?: number
 }): Promise<Blob> {
   const size = COMPOSITE.exportSize
   const canvas = document.createElement('canvas')
@@ -479,6 +488,7 @@ export async function buildCompositePngBlob(opts: {
     carScale: opts.carScale,
     textLayers: opts.textLayers,
     compositionZoom: opts.compositionZoom,
+    bgScale: opts.bgScale,
   })
 
   return new Promise<Blob>((resolve, reject) => {

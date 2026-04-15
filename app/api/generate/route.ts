@@ -18,23 +18,11 @@ function getFalQueueId(queued: unknown): string | undefined {
   return q?.request_id ?? q?.requestId
 }
 
-// const FAL_MODEL = 'fal-ai/gpt-image-1.5/edit'
 const FAL_MODEL = 'fal-ai/reve/fast/remix'
-const NANO_BANANA_MODEL = 'fal-ai/nano-banana-2'
+const IMAGE_BACKGROUNDS = 'fal-ai/nano-banana-2/edit'
+const TEXT_BACKGROUNDS = 'fal-ai/nano-banana-2'
 const STYLE_REFERENCE_ROOT = path.join(process.cwd(), 'public', 'style-reference')
 const STYLE_REFERENCE_PATH = path.join(STYLE_REFERENCE_ROOT, 'front', 'hatchback', 'front-01.jpg')
-const ROUND_BACKGROUND_REFERENCE_1_PATH = path.join(
-  process.cwd(),
-  'public',
-  'round-background-reference',
-  'style-reference-1.png'
-)
-const ROUND_BACKGROUND_REFERENCE_2_PATH = path.join(
-  process.cwd(),
-  'public',
-  'round-background-reference',
-  'style-reference-2.png'
-)
 function detectExpectedBodyStyle({ carModel, customerNotes }: VehiclePayload) {
   const text = `${carModel || ''} ${customerNotes || ''}`.toLowerCase()
   if (!text.trim()) return null
@@ -129,20 +117,18 @@ function buildBackgroundPrompt(backgroundValue: string) {
 
 ---
 
-Transform the scene in Image 1 into a polished graphic
+Transform the scene in the provided image into a premium graphic
 illustration cropped into a perfect circle.
 
-Use Images 2 and 3 as STYLE REFERENCES ONLY for
-the illustration style, circle crop format, and
-level of detail.
-
-The output must match the style references in:
-- Bold flat colour fills with minimal gradients
-- Clean simplified shapes, no photographic detail
-- Hard edges and strong colour contrast
-- Cartoon illustration aesthetic
+STYLE:
+- Bold colour fills — match the colour tones from the provided image faithfully
+- Refined, detailed shapes — NOT cartoonish or childish
+- Hard edges with strong colour contrast
+- Premium graphic illustration style (poster or screen-print quality)
+- Clean line work for definition
+- No dark overlays, no moody filters — stay true to the original image's lighting and colour balance
+- No photorealism, but richer detail than a basic cartoon
 - Perfect circular crop with clean edges
-- No photorealism, no grain, no texture
 
 CRITICAL — COMPOSITION:
 - Fill the entire circle with the illustrated scene
@@ -156,7 +142,7 @@ CRITICAL — COLOUR LIMIT:
 - Prefer tonal variations/shading within the same base colours instead of introducing new colours
 
 CRITICAL — NO HALLUCINATIONS:
-- Only illustrate elements visible in Image 1
+- Only illustrate elements visible in the provided image
 - Do not add elements not present in the scene
 
 Output: High resolution circular graphic illustration,
@@ -224,7 +210,7 @@ function resolvePersistKind({
 }): PersistFalKind {
   if (mode === 'background') return 'background'
   if (mode === 'car') return 'car'
-  if (String(endpointId || '') === NANO_BANANA_MODEL) return 'background'
+  if (String(endpointId || '') === TEXT_BACKGROUNDS) return 'background'
   return 'car'
 }
 
@@ -258,16 +244,7 @@ async function loadStyleReferenceDataUrl(filePath: string) {
   return `data:${mime};base64,${buffer.toString('base64')}`
 }
 
-async function loadRoundBackgroundReferenceDataUrls() {
-  const [buffer1, buffer2] = await Promise.all([
-    readFile(ROUND_BACKGROUND_REFERENCE_1_PATH),
-    readFile(ROUND_BACKGROUND_REFERENCE_2_PATH),
-  ])
-  return [
-    `data:image/png;base64,${buffer1.toString('base64')}`,
-    `data:image/png;base64,${buffer2.toString('base64')}`,
-  ]
-}
+
 
 export async function POST(request: Request) {
   const apiKey = process.env.FAL_API_KEY
@@ -370,28 +347,29 @@ export async function POST(request: Request) {
           return Response.json({ error: 'Background value is required' }, { status: 400 })
         }
         if (backgroundImageDataUrl && typeof backgroundImageDataUrl === 'string') {
-          const [ref1DataUrl, ref2DataUrl] = await loadRoundBackgroundReferenceDataUrls()
-          const [url1, url2, url3] = await Promise.all([
-            uploadDataUrl(backgroundImageDataUrl),
-            uploadDataUrl(ref1DataUrl),
-            uploadDataUrl(ref2DataUrl),
-          ])
+          const imageUrl = await uploadDataUrl(backgroundImageDataUrl)
           const prompt = buildBackgroundPrompt(String(backgroundValue ?? ''))
-          const queued = await fal.queue.submit(FAL_MODEL, {
-            input: { prompt, image_urls: [url1, url2, url3] },
+          const queued = await fal.queue.submit(IMAGE_BACKGROUNDS, {
+            input: {
+              prompt,
+              image_urls: [imageUrl],
+              image_size: '1024x1024',
+              background: 'transparent',
+              quality: 'high',
+            },
           })
           const queuedId = getFalQueueId(queued)
-          return Response.json({ requestId: queuedId, endpointId: FAL_MODEL, status: 'IN_QUEUE' })
+          return Response.json({ requestId: queuedId, endpointId: IMAGE_BACKGROUNDS, status: 'IN_QUEUE' })
         }
 
         const prompt = buildNanoBananaBackgroundPrompt(String(backgroundValue ?? ''))
-        const queued = await fal.queue.submit(NANO_BANANA_MODEL, {
+        const queued = await fal.queue.submit(TEXT_BACKGROUNDS, {
           input: { prompt },
         })
         const queuedId = getFalQueueId(queued)
         return Response.json({
           requestId: queuedId,
-          endpointId: NANO_BANANA_MODEL,
+          endpointId: TEXT_BACKGROUNDS,
           status: 'IN_QUEUE',
         })
       }
@@ -425,19 +403,17 @@ export async function POST(request: Request) {
         return Response.json({ error: 'Background value is required' }, { status: 400 })
       }
       if (backgroundImageDataUrl && typeof backgroundImageDataUrl === 'string') {
-        const [ref1DataUrl, ref2DataUrl] = await loadRoundBackgroundReferenceDataUrls()
-        const [url1, url2, url3] = await Promise.all([
-          uploadDataUrl(backgroundImageDataUrl),
-          uploadDataUrl(ref1DataUrl),
-          uploadDataUrl(ref2DataUrl),
-        ])
+        const imageUrl = await uploadDataUrl(backgroundImageDataUrl)
         const prompt = buildBackgroundPrompt(String(backgroundValue ?? ''))
-        console.log('\n[generate-background-edit] Prompt sent to Fal:\n')
+        console.log('\n[generate-background-edit] Prompt sent to Fal (gpt-image-1.5):\n')
         console.log(prompt)
-        result = await fal.subscribe(FAL_MODEL, {
+        result = await fal.subscribe(IMAGE_BACKGROUNDS, {
           input: {
             prompt,
-            image_urls: [url1, url2, url3],
+            image_urls: [imageUrl],
+            image_size: '1024x1024',
+            background: 'transparent',
+            quality: 'high',
           },
           logs: true,
         })
@@ -445,7 +421,7 @@ export async function POST(request: Request) {
         const prompt = buildNanoBananaBackgroundPrompt(String(backgroundValue ?? ''))
         console.log('\n[generate-background-text] Prompt sent to Fal (nano-banana-2 ):\n')
         console.log(prompt)
-        result = await fal.subscribe(NANO_BANANA_MODEL, {
+        result = await fal.subscribe(TEXT_BACKGROUNDS, {
           input: {
             prompt,
           },

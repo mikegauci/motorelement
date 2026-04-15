@@ -56,6 +56,7 @@ export default function ProductCustomizer() {
   const [carAdjustYPct, setCarAdjustYPct] = useState(0)
   const [carScale, setCarScale] = useState(0.70)
   const [compositionZoom, setCompositionZoom] = useState(1)
+  const [bgScale, setBgScale] = useState(1)
 
   // ---- UI state ----
   const [desktopDragEnabled, setDesktopDragEnabled] = useState(false)
@@ -115,7 +116,7 @@ export default function ProductCustomizer() {
     transparentCarUrlForPreset, selectedBackgroundSrc, selectedBackgroundIsCustom,
     selectedPreset, isCustomSavedSelection, selectedCustomBg,
     carAdjustXPct, setCarAdjustXPct, carAdjustYPct, setCarAdjustYPct,
-    carScale, compositionZoom, setCompositionZoom,
+    carScale, compositionZoom, setCompositionZoom, bgScale,
     textLayersRef: textLayerHook.textLayersRef, textLayers: textLayerHook.textLayers,
     selectedTextLayerId: textLayerHook.selectedTextLayerId,
     updateTextLayer: textLayerHook.updateTextLayer,
@@ -133,7 +134,7 @@ export default function ProductCustomizer() {
       vehicleLocked, composedPromptNotes, tweakNotes, selectedPresetId,
       savedCustomBackgrounds: bgGen.savedCustomBackgrounds,
       customBackgroundImageDataUrl, customBackgroundImagePreview, customBackgroundValue,
-      carAdjustXPct, carAdjustYPct, carScale, compositionZoom,
+      carAdjustXPct, carAdjustYPct, carScale, compositionZoom, bgScale,
       textLayers: textLayerHook.textLayers, selectedTextLayerId: textLayerHook.selectedTextLayerId,
     },
     {
@@ -143,7 +144,7 @@ export default function ProductCustomizer() {
       setVehicleLocked, setComposedPromptNotes, setTweakNotes, setSelectedPresetId,
       setSavedCustomBackgrounds: bgGen.setSavedCustomBackgrounds,
       setCustomBackgroundImageDataUrl, setCustomBackgroundImagePreview, setCustomBackgroundValue,
-      setCarAdjustXPct, setCarAdjustYPct, setCarScale, setCompositionZoom,
+      setCarAdjustXPct, setCarAdjustYPct, setCarScale, setCompositionZoom, setBgScale,
       setTextLayers: textLayerHook.setTextLayers, setSelectedTextLayerId: textLayerHook.setSelectedTextLayerId,
       setStatus: carGen.setStatus,
       resumePendingGeneration: carGen.resumePendingGeneration,
@@ -255,7 +256,7 @@ export default function ProductCustomizer() {
     setCustomBackgroundImageDataUrl(null); setCustomBackgroundImagePreview(null)
     setCustomBackgroundValue('')
     setIsVehicleTweakOpen(false); setIsBackgroundTweakOpen(false)
-    setCarAdjustXPct(0); setCarAdjustYPct(0); setCarScale(1); setCompositionZoom(1)
+    setCarAdjustXPct(0); setCarAdjustYPct(0); setCarScale(1); setCompositionZoom(1); setBgScale(1)
     carGen.resetCarGeneration()
     bgGen.resetBackgroundGeneration()
     textLayerHook.resetTextLayers()
@@ -363,6 +364,7 @@ export default function ProductCustomizer() {
                         <CompositeEditor
                           carAdjustYPct={carAdjustYPct} setCarAdjustYPct={setCarAdjustYPct}
                           carScale={carScale} setCarScale={setCarScale}
+                          bgScale={bgScale} setBgScale={setBgScale}
                           setCompositionZoom={setCompositionZoom}
                           setCarAdjustXPct={setCarAdjustXPct}
                           backgroundControlsLocked={backgroundControlsLocked}

@@ -25,6 +25,7 @@ interface CompositeCanvasDeps {
   carScale: number
   compositionZoom: number
   setCompositionZoom: (v: number | ((prev: number) => number)) => void
+  bgScale: number
   textLayersRef: React.RefObject<TextLayer[]>
   textLayers: TextLayer[]
   selectedTextLayerId: string | null
@@ -43,6 +44,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
   const carAdjustYRef = useRef(0)
   const carScaleRef = useRef(1)
   const compositionZoomRef = useRef(1)
+  const bgScaleRef = useRef(1)
   const resultCardRef = useRef<HTMLDivElement>(null)
 
   const [mobileCompositePreviewSrc, setMobileCompositePreviewSrc] = useState('')
@@ -73,8 +75,9 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     carAdjustYRef.current = deps.carAdjustYPct
     carScaleRef.current = deps.carScale
     compositionZoomRef.current = deps.compositionZoom
+    bgScaleRef.current = deps.bgScale
     compositeRenderRef.current()
-  }, [deps.carAdjustXPct, deps.carAdjustYPct, deps.carScale, deps.compositionZoom])
+  }, [deps.carAdjustXPct, deps.carAdjustYPct, deps.carScale, deps.compositionZoom, deps.bgScale])
 
   useEffect(() => { compositeRenderRef.current() }, [deps.textLayers])
 
@@ -105,6 +108,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
         carOffsetXPct: carAdjustXRef.current, carOffsetYPct: carAdjustYRef.current,
         carScale: carScaleRef.current, textLayers: deps.textLayersRef.current ?? [],
         compositionZoom: compositionZoomRef.current,
+        bgScale: bgScaleRef.current,
       })
       try {
         const dataUrl = canvas!.toDataURL('image/png')

@@ -119,7 +119,7 @@ export function getPrintifyPrintArea(productType?: string) {
  */
 const PRINT_SCALE_FACTOR: Record<string, number> = {
   't-shirt': 0.75,
-  hoodie:    0.75,
+  hoodie:    0.47,
 }
 
 export function getPrintScaleFactor(productType?: string): number {
@@ -132,7 +132,7 @@ export function getPrintScaleFactor(productType?: string): number {
  */
 const PRINT_Y_OFFSET_PX: Record<string, number> = {
   't-shirt': -750,
-  hoodie:    0,
+  hoodie:    100,
 }
 
 export function getPrintYOffsetPx(productType?: string): number {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { TextLayer, Revision, SavedCustomBackground } from '@/components/shop/customizer/types'
 import { SESSION_KEY, PENDING_GENERATION_KEY, PENDING_BACKGROUND_KEY } from '@/components/shop/customizer/constants'
-import { normalizeTextLayer, clampCompositeZoom } from '@/components/shop/customizer/helpers'
+import { normalizeTextLayer, clampCompositeZoom, clampBgScale } from '@/components/shop/customizer/helpers'
 
 interface SessionState {
   carModel: string
@@ -26,6 +26,7 @@ interface SessionState {
   carAdjustYPct: number
   carScale: number
   compositionZoom: number
+  bgScale: number
   textLayers: TextLayer[]
   selectedTextLayerId: string | null
 }
@@ -51,6 +52,7 @@ interface SessionSetters {
   setCarAdjustYPct: (v: number) => void
   setCarScale: (v: number) => void
   setCompositionZoom: (v: number) => void
+  setBgScale: (v: number) => void
   setTextLayers: (v: TextLayer[]) => void
   setSelectedTextLayerId: (v: string | null) => void
   setStatus: (v: string) => void
@@ -104,6 +106,9 @@ export function useSession(state: SessionState, setters: SessionSetters) {
           setters.setCompositionZoom(clampCompositeZoom(s.compositionZoom))
         } else if (typeof s.backgroundZoom === 'number') {
           setters.setCompositionZoom(clampCompositeZoom(s.backgroundZoom))
+        }
+        if (typeof s.bgScale === 'number') {
+          setters.setBgScale(clampBgScale(s.bgScale))
         }
         if (Array.isArray(s.textLayers)) {
           setters.setTextLayers(s.textLayers.map((layer: unknown, index: number) =>
