@@ -405,6 +405,18 @@ export function drawCompositeContent(
       ctx.drawImage(bgImg!, bgX, bgY, bgW, bgH)
     }
     stripOutsideCircleDarkCorners(ctx, size)
+
+    // White outline around the circular background
+    const outlineCx = bgX + bgW / 2
+    const outlineCy = bgY + bgH / 2
+    const outlineR = Math.min(bgW, bgH) / 2
+    ctx.save()
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = Math.max(2, size * 0.007)
+    ctx.beginPath()
+    ctx.arc(outlineCx, outlineCy, outlineR, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.restore()
   }
   if (carDrawSource) {
     const { minX, minY, sw, sh } = carDrawSource
