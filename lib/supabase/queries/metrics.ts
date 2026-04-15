@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 
-export interface DashboardMetrics {
+interface DashboardMetrics {
   totalRevenue: number;
   totalOrders: number;
   totalCustomers: number;

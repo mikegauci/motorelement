@@ -11,7 +11,7 @@ function extFromMime(mime: string | null) {
 
 export type PersistFalKind = 'car' | 'background'
 
-export type PersistFalResult = {
+type PersistFalResult = {
   id: string
   publicUrl: string
   storagePath: string

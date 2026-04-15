@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
 
-export type PersistArtworkResult = {
+type PersistArtworkResult = {
   id: string
   publicUrl: string
   storagePath: string

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 
-export interface Illustration {
+interface Illustration {
   id: string;
   customerId: string;
   orderId: string | null;

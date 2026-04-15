@@ -14,7 +14,7 @@ export interface CartItem {
   thumbnailUrl?: string;
 }
 
-export interface CartContextValue {
+interface CartContextValue {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (productId: string, size: string, color?: string) => void;

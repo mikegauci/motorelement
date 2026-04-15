@@ -36,38 +36,6 @@ export async function printifyFetch<T = unknown>(
   return res.json() as Promise<T>;
 }
 
-/** POST with JSON body (defaults to `{}`); use for publish / publishing_failed endpoints. */
-export async function printifyPost<T = unknown>(
-  path: string,
-  body: Record<string, unknown> = {}
-): Promise<T> {
-  const url = `${BASE_URL}${path}`;
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${getApiKey()}`,
-    "Content-Type": "application/json",
-    "User-Agent": "MotorElement/1.0",
-  };
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const errBody = await res.text();
-    throw new Error(
-      `Printify API ${res.status} ${res.statusText}: ${errBody}`
-    );
-  }
-
-  const text = await res.text();
-  if (!text) {
-    return {} as T;
-  }
-  return JSON.parse(text) as T;
-}
-
 export function shopPath(path: string): string {
   return `/shops/${getShopId()}${path}`;
 }

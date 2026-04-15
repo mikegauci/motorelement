@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getAllIllustrations } from "@/lib/supabase/queries/illustrations";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -28,9 +29,11 @@ export default async function AdminIllustrationsPage() {
             <div key={ill.id} className="border border-border bg-obsidian p-4">
               <div className="flex gap-4">
                 {ill.generatedImageUrl && (
-                  <img
+                  <Image
                     src={ill.generatedImageUrl}
                     alt={`${ill.carMake} ${ill.carModel}`}
+                    width={96}
+                    height={96}
                     className="h-24 w-24 object-cover bg-carbon"
                   />
                 )}

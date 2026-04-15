@@ -97,9 +97,6 @@ export function getMockupPrintZone(productType?: string) {
   return MOCKUP_PRINT_ZONES[productType ?? ''] ?? DEFAULT_MOCKUP_PRINT_ZONE
 }
 
-/** @deprecated Use getMockupPrintZone(). Kept for backward compat. */
-export const MOCKUP_PRINT_ZONE = DEFAULT_MOCKUP_PRINT_ZONE
-
 /** Printify front print area in pixels, per product type (from Printify API). */
 const PRINT_AREAS: Record<string, { width: number; height: number }> = {
   't-shirt': { width: 3852, height: 4398 },
@@ -138,6 +135,3 @@ const PRINT_Y_OFFSET_PX: Record<string, number> = {
 export function getPrintYOffsetPx(productType?: string): number {
   return PRINT_Y_OFFSET_PX[productType ?? ''] ?? 0
 }
-
-/** @deprecated Use getPrintifyPrintArea(). Kept for backward compat. */
-export const PRINTIFY_PRINT_AREA = DEFAULT_PRINT_AREA

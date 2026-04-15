@@ -84,23 +84,6 @@ export async function getOrdersByCustomer(
   return { data: data.map(toOrder), error: null };
 }
 
-export async function getOrderById(
-  id: string
-): Promise<QueryResult<Order>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("orders")
-    .select("*, order_items(*)")
-    .eq("id", id)
-    .single();
-
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
-  return { data: toOrder(data), error: null };
-}
-
 export async function createOrder(order: {
   customerId: string;
   total: number;

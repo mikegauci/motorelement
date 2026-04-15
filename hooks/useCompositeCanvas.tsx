@@ -7,7 +7,6 @@ import {
   drawCompositeContent,
   getTextLayerBounds,
   clampAdjust,
-  clampCompositeZoom,
 } from '@/components/shop/customizer/helpers'
 import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
 
@@ -231,11 +230,6 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     drag.active = false; drag.pointerId = null
     compositeStageRef.current?.releasePointerCapture?.(e.pointerId)
   }
-
-  function nudgeCompositeZoom(delta: number) {
-    deps.setCompositionZoom((prev: number) => clampCompositeZoom(prev + delta))
-  }
-
 
   function renderHiddenCanvas(): ReactNode {
     return (

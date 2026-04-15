@@ -40,11 +40,6 @@ export interface FontOption {
   url?: string
 }
 
-export interface ActiveRequest {
-  requestId: string
-  endpointId: string
-}
-
 export interface MockupPlacement {
   xPct: number
   yPct: number

@@ -7,7 +7,7 @@ type Size = "S" | "M" | "L" | "XL" | "2XL" | "3XL" | "4XL" | "5XL";
 type VariantMap = Record<string, Record<Size, number>>;
 
 // ── Gildan Softstyle 64000 (Classic Tee) ────────────────────────────
-export const TEE_PRODUCT_ID = "69d74f3460816e829603d93f";
+const TEE_PRODUCT_ID = "69d74f3460816e829603d93f";
 
 const TEE_VARIANTS: VariantMap = {
   white: {
@@ -29,7 +29,7 @@ const TEE_VARIANTS: VariantMap = {
 };
 
 // ── Gildan 18500 Heavy Blend Hoodie ─────────────────────────────────
-export const HOODIE_PRODUCT_ID = "69d8c3476246f29b190f7d9e";
+const HOODIE_PRODUCT_ID = "69d8c3476246f29b190f7d9e";
 
 const HOODIE_VARIANTS: VariantMap = {
   "dark-heather": {
@@ -57,9 +57,6 @@ const PRODUCT_VARIANTS: Record<string, { map: VariantMap; defaultColor: string }
   [HOODIE_PRODUCT_ID]: { map: HOODIE_VARIANTS, defaultColor: "black" },
 };
 
-/** @deprecated Use `resolveVariantIdForProduct` for multi-product support. */
-export const PRINTIFY_PRODUCT_ID = TEE_PRODUCT_ID;
-
 /**
  * Resolve a Printify variant ID given a product, size, and optional color.
  * Falls back to the product's default color if `color` is omitted or unknown.
@@ -78,12 +75,4 @@ export function resolveVariantIdForProduct(
   const colorMap = entry.map[normalizedColor] ?? entry.map[entry.defaultColor];
   if (!colorMap) return null;
   return colorMap[normalizedSize] ?? null;
-}
-
-/** @deprecated Use `resolveVariantIdForProduct`. Kept for backward compat. */
-export function resolveVariantId(
-  size: string,
-  color?: string
-): number | null {
-  return resolveVariantIdForProduct(TEE_PRODUCT_ID, size, color);
 }

@@ -80,11 +80,11 @@ export function getCanvasAlignedYPct(alignY: string) {
   return 0.5
 }
 
-export function getTextFontPx(size: number, layer: TextLayer) {
+function getTextFontPx(size: number, layer: TextLayer) {
   return Math.round(size * clampTextFontSizePct(layer.fontSizePct))
 }
 
-export function applyTextLayerFont(ctx: CanvasRenderingContext2D, size: number, layer: TextLayer) {
+function applyTextLayerFont(ctx: CanvasRenderingContext2D, size: number, layer: TextLayer) {
   const px = getTextFontPx(size, layer)
   const italic = layer.italic ? 'italic ' : ''
   const weight = layer.bold ? '700 ' : '400 '
@@ -93,13 +93,13 @@ export function applyTextLayerFont(ctx: CanvasRenderingContext2D, size: number, 
   return px
 }
 
-export function getCanvasTextBaseline(alignY: string): CanvasTextBaseline {
+function getCanvasTextBaseline(alignY: string): CanvasTextBaseline {
   if (alignY === 'top') return 'top'
   if (alignY === 'bottom') return 'bottom'
   return 'middle'
 }
 
-export function drawTextLayer(ctx: CanvasRenderingContext2D, size: number, layer: TextLayer) {
+function drawTextLayer(ctx: CanvasRenderingContext2D, size: number, layer: TextLayer) {
   if (!layer?.visible) return
   const text = (layer.text || '').trim()
   if (!text) return
@@ -240,7 +240,7 @@ export function compressImageDataUrl(
 // Canvas composite helpers
 // ---------------------------------------------------------------------------
 
-export function stripOutsideCircleDarkCorners(ctx: CanvasRenderingContext2D, size: number) {
+function stripOutsideCircleDarkCorners(ctx: CanvasRenderingContext2D, size: number) {
   const img = ctx.getImageData(0, 0, size, size)
   const d = img.data
   const cx = size / 2
@@ -263,7 +263,7 @@ export function stripOutsideCircleDarkCorners(ctx: CanvasRenderingContext2D, siz
   ctx.putImageData(img, 0, 0)
 }
 
-export function getCarAlphaBounds(img: HTMLImageElement) {
+function getCarAlphaBounds(img: HTMLImageElement) {
   const w = img.naturalWidth
   const h = img.naturalHeight
   if (!w || !h) return null
@@ -438,72 +438,6 @@ export function drawCompositeContent(
     drawTextLayer(ctx, size, layer)
     ctx.restore()
   }
-}
-
-export async function drawCompositeFromSrc(
-  ctx: CanvasRenderingContext2D,
-  size: number,
-  bgSrc: string | null,
-  carSrc: string,
-  opts: CompositeOpts = {}
-) {
-  const carImg = await loadImageElement(carSrc)
-  if (!bgSrc) {
-    drawCompositeContent(ctx, size, null, carImg, opts)
-    return
-  }
-  const bgImg = await loadImageElement(bgSrc)
-  drawCompositeContent(ctx, size, bgImg, carImg, opts)
-}
-
-export function downloadPngBlob(blob: Blob, fileSlug: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${fileSlug || 'composite'}.png`
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-export async function buildCompositePngBlob(opts: {
-  bgSrc?: string | null
-  carSrc: string
-  cropBackgroundToArtwork?: boolean
-  carOffsetXPct?: number
-  carOffsetYPct?: number
-  carScale?: number
-  textLayers?: TextLayer[]
-  compositionZoom?: number
-  bgScale?: number
-}): Promise<Blob> {
-  const size = COMPOSITE.exportSize
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d', { alpha: true })!
-  await drawCompositeFromSrc(ctx, size, opts.bgSrc || null, opts.carSrc, {
-    cropBackgroundToArtwork: opts.cropBackgroundToArtwork,
-    carOffsetXPct: opts.carOffsetXPct,
-    carOffsetYPct: opts.carOffsetYPct,
-    carScale: opts.carScale,
-    textLayers: opts.textLayers,
-    compositionZoom: opts.compositionZoom,
-    bgScale: opts.bgScale,
-  })
-
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          reject(new Error('Could not create PNG'))
-          return
-        }
-        resolve(blob)
-      },
-      'image/png',
-      1
-    )
-  })
 }
 
 export function readFileAsDataUrl(file: File, onDone: (result: string) => void) {

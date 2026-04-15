@@ -110,7 +110,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     const sy = Math.max(0, Math.min(cropCy - cropSide / 2, fullSize - cropSide))
 
     ctx.drawImage(off, sx, sy, cropSide, cropSide, 0, 0, px, px)
-  }, [mockupPlacement, pz, tshirtBaseImage, overlayUrl])
+  }, [mockupPlacement, pz])
 
   useEffect(() => {
     if (!open) return
