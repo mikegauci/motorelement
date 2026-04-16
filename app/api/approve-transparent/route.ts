@@ -72,6 +72,113 @@ function isNearWhite(out: Buffer, i: number): boolean {
   )
 }
 
+/** Checkerboard "transparency" patterns use alternating white and light gray. */
+const CHECKER_GRAY_THRESHOLD = 180
+const CHECKER_SATURATION_MAX = 12
+
+function isBackgroundOrChecker(out: Buffer, i: number): boolean {
+  if (isNearWhite(out, i)) return true
+  const r = out[i], g = out[i + 1], b = out[i + 2]
+  if (r >= CHECKER_GRAY_THRESHOLD && g >= CHECKER_GRAY_THRESHOLD && b >= CHECKER_GRAY_THRESHOLD) {
+    if (Math.max(r, g, b) - Math.min(r, g, b) <= CHECKER_SATURATION_MAX) return true
+  }
+  return false
+}
+
+/**
+ * Detect and remove baked-in checkerboard "transparency" patterns.
+ * AI models sometimes render transparent areas as a visible checkerboard grid
+ * instead of true alpha. This detects the grid from the image corners, then
+ * flood-fills from edges only through pixels matching the grid — so artwork
+ * whites/grays inside the circle are never touched.
+ */
+const CHECKER_COLOR_TOLERANCE = 25
+
+function removeCheckerboardTransparency(out: Buffer, w: number, h: number): void {
+  const px = (x: number, y: number) => {
+    const i = (y * w + x) * 4
+    return [out[i], out[i + 1], out[i + 2], out[i + 3]] as const
+  }
+
+  const corner = px(0, 0)
+  if (corner[3] < 128) return
+  const cr = corner[0], cg = corner[1], cb = corner[2]
+  if (cr < CHECKER_GRAY_THRESHOLD || cg < CHECKER_GRAY_THRESHOLD || cb < CHECKER_GRAY_THRESHOLD) return
+  if (Math.max(cr, cg, cb) - Math.min(cr, cg, cb) > CHECKER_SATURATION_MAX) return
+
+  let blockSize = 0
+  for (let x = 1; x < Math.min(w, 50); x++) {
+    const p = px(x, 0)
+    if (Math.abs(p[0] - cr) > 20 || Math.abs(p[1] - cg) > 20 || Math.abs(p[2] - cb) > 20) {
+      blockSize = x
+      break
+    }
+  }
+  if (blockSize < 3 || blockSize > 30) return
+
+  const c2 = px(blockSize, 0)
+  if (c2[0] < CHECKER_GRAY_THRESHOLD || c2[1] < CHECKER_GRAY_THRESHOLD || c2[2] < CHECKER_GRAY_THRESHOLD) return
+  if (Math.max(c2[0], c2[1], c2[2]) - Math.min(c2[0], c2[1], c2[2]) > CHECKER_SATURATION_MAX) return
+
+  const colA = [cr, cg, cb] as const
+  const colB = [c2[0], c2[1], c2[2]] as const
+
+  let verified = 0
+  for (let bx = 2; bx < 6 && bx * blockSize < w; bx++) {
+    const p = px(bx * blockSize + 1, 1)
+    const exp = bx % 2 === 0 ? colA : colB
+    if (Math.abs(p[0] - exp[0]) < 20 && Math.abs(p[1] - exp[1]) < 20 && Math.abs(p[2] - exp[2]) < 20) verified++
+  }
+  for (let by = 1; by < 4 && by * blockSize < h; by++) {
+    const p = px(1, by * blockSize + 1)
+    const exp = by % 2 === 0 ? colA : colB
+    if (Math.abs(p[0] - exp[0]) < 20 && Math.abs(p[1] - exp[1]) < 20 && Math.abs(p[2] - exp[2]) < 20) verified++
+  }
+  if (verified < 3) return
+
+  const matchesGrid = new Uint8Array(w * h)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      if (out[i + 3] < 8) continue
+      const bx = Math.floor(x / blockSize)
+      const by = Math.floor(y / blockSize)
+      const exp = (bx + by) % 2 === 0 ? colA : colB
+      if (
+        Math.abs(out[i] - exp[0]) <= CHECKER_COLOR_TOLERANCE &&
+        Math.abs(out[i + 1] - exp[1]) <= CHECKER_COLOR_TOLERANCE &&
+        Math.abs(out[i + 2] - exp[2]) <= CHECKER_COLOR_TOLERANCE
+      ) {
+        matchesGrid[y * w + x] = 1
+      }
+    }
+  }
+
+  const toRemove = new Uint8Array(w * h)
+  const stack: number[] = []
+  const seed = (x: number, y: number) => {
+    if (x < 0 || x >= w || y < 0 || y >= h) return
+    const p = y * w + x
+    if (toRemove[p] || !matchesGrid[p]) return
+    toRemove[p] = 1
+    stack.push(x, y)
+  }
+  for (let x = 0; x < w; x++) { seed(x, 0); seed(x, h - 1) }
+  for (let y = 0; y < h; y++) { seed(0, y); seed(w - 1, y) }
+  let qi = 0
+  while (qi < stack.length) {
+    const sx = stack[qi++], sy = stack[qi++]
+    seed(sx + 1, sy); seed(sx - 1, sy); seed(sx, sy + 1); seed(sx, sy - 1)
+  }
+
+  for (let p = 0; p < w * h; p++) {
+    if (toRemove[p]) {
+      const i = p * 4
+      out[i] = 0; out[i + 1] = 0; out[i + 2] = 0; out[i + 3] = 0
+    }
+  }
+}
+
 /**
  * Flood-fill from border: only edge-connected white becomes transparent.
  * Enclosed white (streaks, highlights inside the subject) is unchanged.
@@ -186,7 +293,7 @@ function removeOutsideDetectedCircle(
       const i = (y * w + x) * 4
       const a = out[i + 3]
       if (a < 8) continue
-      if (isNearWhite(out, i)) continue
+      if (isBackgroundOrChecker(out, i)) continue
       if (x < minX) minX = x
       if (x > maxX) maxX = x
       if (y < minY) minY = y
@@ -280,6 +387,7 @@ export async function POST(request: Request) {
     const out = Buffer.from(data)
 
     if (mode === 'circle-outside-only') {
+      removeCheckerboardTransparency(out, w, h)
       const ok = removeOutsideDetectedCircle(out, w, h, circleInsetPx)
       if (!ok) {
         removeEdgeConnectedWhiteBackground(out, w, h)

@@ -18,7 +18,8 @@ function getFalQueueId(queued: unknown): string | undefined {
   return q?.request_id ?? q?.requestId
 }
 
-const FAL_MODEL = 'fal-ai/reve/fast/remix'
+// const FAL_MODEL = 'fal-ai/reve/fast/remix'
+const FAL_MODEL = 'fal-ai/gpt-image-1.5/edit'
 const IMAGE_BACKGROUNDS = 'fal-ai/nano-banana-2/edit'
 const TEXT_BACKGROUNDS = 'fal-ai/nano-banana-2'
 const BACKGROUND_TWEAK = 'fal-ai/gemini-3-pro-image-preview/edit'

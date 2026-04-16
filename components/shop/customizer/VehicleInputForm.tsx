@@ -1,6 +1,7 @@
 'use client'
 /* eslint-disable @next/next/no-img-element */
 
+import { useState } from 'react'
 import styles from './styles'
 
 interface VehicleInputFormProps {
@@ -19,6 +20,7 @@ interface VehicleInputFormProps {
   isDone: boolean
   revCount: number
   onUploadClick: () => void
+  onRemoveCarImage: () => void
   onGenerate: () => void
   onCancel: () => void
   onReset: () => void
@@ -40,19 +42,44 @@ export default function VehicleInputForm({
   isDone,
   revCount,
   onUploadClick,
+  onRemoveCarImage,
   onGenerate,
   onCancel,
   onReset,
 }: VehicleInputFormProps) {
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+
   return (
     <div className={styles.setup}>
       <div className={styles.setupBlock}>
         <div
-          className={`${styles.uploadZone} ${carImagePreview ? styles.hasImage : ''}`}
-          onClick={onUploadClick}
+          className={`${styles.uploadZone} ${carImagePreview ? styles.hasImage : ''} relative`}
+          onClick={() => { if (!carImagePreview && !vehicleLocked) onUploadClick() }}
         >
           {carImagePreview ? (
-            <img src={carImagePreview} alt="Car preview" className={styles.preview} />
+            <>
+              <img src={carImagePreview} alt="Car preview" className={styles.preview} />
+              <div className="absolute top-2 right-2 flex gap-1.5">
+                <button
+                  type="button"
+                  title="View full image"
+                  className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center text-sm transition-colors"
+                  onClick={(e) => { e.stopPropagation(); setLightboxSrc(carImagePreview) }}
+                >⤢</button>
+                <button
+                  type="button"
+                  title="Replace image"
+                  className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center text-sm transition-colors"
+                  onClick={(e) => { e.stopPropagation(); if (!vehicleLocked) onUploadClick() }}
+                >↻</button>
+                <button
+                  type="button"
+                  title="Remove image"
+                  className="w-7 h-7 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center text-sm transition-colors"
+                  onClick={(e) => { e.stopPropagation(); if (!vehicleLocked) onRemoveCarImage() }}
+                >✕</button>
+              </div>
+            </>
           ) : (
             <div className={styles.uploadPlaceholder}>
               <span className={styles.uploadIcon}>↑</span>
@@ -61,6 +88,25 @@ export default function VehicleInputForm({
           )}
         </div>
       </div>
+
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <button
+            type="button"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-lg transition-colors"
+            onClick={() => setLightboxSrc(null)}
+          >✕</button>
+          <img
+            src={lightboxSrc}
+            alt="Full car preview"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       <div className={styles.vehicleFields}>
         <div className={styles.setupBlock}>

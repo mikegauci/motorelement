@@ -289,6 +289,11 @@ export default function ProductCustomizer() {
         running={carGen.running} canRun={canRun} isDone={isDone}
         revCount={carGen.revisions.length}
         onUploadClick={() => carFileRef.current?.click()}
+        onRemoveCarImage={() => {
+          setCarImageDataUrl(null)
+          setCarImagePreview(null)
+          if (carFileRef.current) carFileRef.current.value = ''
+        }}
         onGenerate={carGen.runGeneration}
         onCancel={carGen.cancelCarGeneration}
         onReset={reset}
