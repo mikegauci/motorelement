@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import type { SavedCustomBackground } from './types'
 import { BACKGROUND_PRESETS, CUSTOM_BACKGROUND_NEW } from './constants'
 import styles from './styles'
@@ -10,6 +11,7 @@ interface BackgroundPresetsProps {
   selectedPresetId: string | null
   setSelectedPresetId: (id: string | null) => void
   savedCustomBackgrounds: SavedCustomBackground[]
+  transparentCarUrl: string | null
   backgroundControlsLocked: boolean
   customBackgroundGenerating: boolean
   customBackgroundElapsed: number
@@ -41,6 +43,7 @@ export default function BackgroundPresets({
   selectedPresetId,
   setSelectedPresetId,
   savedCustomBackgrounds,
+  transparentCarUrl,
   backgroundControlsLocked,
   customBackgroundGenerating,
   customBackgroundElapsed,
@@ -109,9 +112,14 @@ export default function BackgroundPresets({
           onClick={() => setSelectedPresetId(null)}
           disabled={backgroundControlsLocked}
         >
-          <span className={styles.presetNoneLabel}>None</span>
-          <span className={styles.presetOptionCaption}>Transparent only</span>
-          <span className={styles.presetOptionSub}>Text overlays below</span>
+          {transparentCarUrl ? (
+            <span className={styles.presetThumbWrap}>
+              <img src={transparentCarUrl} alt="Transparent only" className={`${styles.presetThumb} !object-contain`} />
+            </span>
+          ) : (
+            <span className={styles.presetNoneLabel}>None</span>
+          )}
+          <span className={styles.presetOptionCaption}>No background</span>
         </button>
         {visiblePresets.map((p, i) => (
           <button
@@ -122,7 +130,7 @@ export default function BackgroundPresets({
             disabled={backgroundControlsLocked}
           >
             <span className={styles.presetThumbWrap}>
-              <img src={p.src} alt="" className={styles.presetThumb} loading={i < 4 ? 'eager' : 'lazy'} />
+              <Image src={p.src} alt={p.name} width={210} height={210} className={styles.presetThumb} loading={i < 4 ? 'eager' : 'lazy'} />
             </span>
             <span className={styles.presetOptionCaption}>{p.name}</span>
           </button>

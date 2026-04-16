@@ -334,6 +334,7 @@ export default function ProductCustomizer() {
                     <BackgroundPresets
                       selectedPresetId={selectedPresetId} setSelectedPresetId={setSelectedPresetId}
                       savedCustomBackgrounds={bgGen.savedCustomBackgrounds}
+                      transparentCarUrl={transparentCarUrlForPreset}
                       backgroundControlsLocked={backgroundControlsLocked}
                       customBackgroundGenerating={bgGen.customBackgroundGenerating}
                       customBackgroundElapsed={bgGen.customBackgroundElapsed}
