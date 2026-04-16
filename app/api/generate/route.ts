@@ -407,6 +407,20 @@ export async function POST(request: Request) {
         })
       }
 
+      if (tweakImageUrl && typeof tweakImageUrl === 'string') {
+        const notes = typeof customerNotes === 'string' ? customerNotes.trim() : ''
+        const prompt = `Edit this car illustration based on these instructions:\n${notes}\n\nKeep the existing art style, proportions, and composition intact.\nOnly apply the requested changes.\nThe background MUST be solid white. Do not add any other background colour.`
+        const queued = await fal.queue.submit(MODEL_TWEAK, {
+          input: {
+            prompt,
+            image_urls: [String(tweakImageUrl)],
+            output_format: 'png',
+          },
+        })
+        const queuedId = getFalQueueId(queued)
+        return Response.json({ requestId: queuedId, endpointId: MODEL_TWEAK, status: 'IN_QUEUE' })
+      }
+
       if (typeof carImageDataUrl !== 'string' || !carImageDataUrl) {
         return Response.json({ error: 'Car image is required' }, { status: 400 })
       }

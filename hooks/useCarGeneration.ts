@@ -167,11 +167,21 @@ export function useCarGeneration(deps: CarGenerationDeps) {
     const runId = Date.now()
     generationPollRunRef.current = runId
     try {
-      const notesForPrompt = deps.vehicleLocked ? joinNotes(deps.composedPromptNotes, deps.tweakNotes) : deps.customerNotes
+      const isTweak = deps.vehicleLocked && revisions.length > 0
+      const notesForPrompt = isTweak ? joinNotes(deps.composedPromptNotes, deps.tweakNotes) : deps.customerNotes
+      const currentIllustrationUrl = isTweak ? revisions[viewIndex]?.url : undefined
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'submit', carImageDataUrl: deps.carImageDataUrl, carModel: deps.carModel, showNumberPlate: deps.showNumberPlate, numberPlate: deps.numberPlate, customerNotes: notesForPrompt }),
+        body: JSON.stringify({
+          action: 'submit',
+          carImageDataUrl: deps.carImageDataUrl,
+          carModel: deps.carModel,
+          showNumberPlate: deps.showNumberPlate,
+          numberPlate: deps.numberPlate,
+          customerNotes: notesForPrompt,
+          ...(currentIllustrationUrl ? { tweakImageUrl: currentIllustrationUrl } : {}),
+        }),
       })
       if (res.status === 413) { stopTimer(); setStatus('error:Image too large — try a smaller photo or lower resolution'); setRunning(false); return }
       const data = await res.json()
