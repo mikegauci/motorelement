@@ -64,8 +64,8 @@ export function useBackgroundGeneration(deps: BackgroundGenerationDeps) {
     try {
       const isHttp = sourceUrlOrDataUrl.startsWith('http://') || sourceUrlOrDataUrl.startsWith('https://')
       const body = isHttp
-        ? { imageUrl: sourceUrlOrDataUrl, addWhiteBorder: false, mode: 'circle-outside-only', circleInsetPx: 4 }
-        : { imageBase64: sourceUrlOrDataUrl, addWhiteBorder: false, mode: 'circle-outside-only', circleInsetPx: 4 }
+        ? { imageUrl: sourceUrlOrDataUrl, addWhiteBorder: true, mode: 'circle-outside-only', circleInsetPx: 4 }
+        : { imageBase64: sourceUrlOrDataUrl, addWhiteBorder: true, mode: 'circle-outside-only', circleInsetPx: 4 }
       const res = await fetch('/api/approve-transparent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

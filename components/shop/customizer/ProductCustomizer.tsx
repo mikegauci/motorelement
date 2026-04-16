@@ -233,6 +233,7 @@ export default function ProductCustomizer() {
       setCustomBackgroundImagePreview(dataUrl)
       bgGen.setCustomBackgroundError('')
       setSelectedPresetId(CUSTOM_BACKGROUND_NEW)
+      if (!customBackgroundValue.trim()) setCustomBackgroundValue('Use this image as reference')
       try {
         const compressed = await compressImageDataUrl(dataUrl)
         setCustomBackgroundImageDataUrl(compressed)
@@ -355,6 +356,12 @@ export default function ProductCustomizer() {
                         bgGen.setCustomBackgroundError('')
                         if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
                         setSelectedPresetId(CUSTOM_BACKGROUND_NEW)
+                      }}
+                      onRemoveCustomImage={() => {
+                        setCustomBackgroundImageDataUrl(null)
+                        setCustomBackgroundImagePreview(null)
+                        bgGen.setCustomBackgroundError('')
+                        if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
                       }}
                     />
                     <input ref={customBackgroundFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCustomBackgroundFile} disabled={backgroundControlsLocked} />
