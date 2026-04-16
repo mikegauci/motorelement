@@ -148,6 +148,10 @@ CRITICAL — COLOUR LIMIT:
 - If the user explicitly asks for more or less colours in BACKGROUND DETAILS, follow their request
 - Prefer tonal variations/shading within the same base colours instead of introducing new colours
 
+CRITICAL — NO VEHICLES:
+- Do NOT include any cars, motorcycles, or vehicles unless the user explicitly requests one in BACKGROUND DETAILS
+- This background will be used behind a separate vehicle illustration
+
 CRITICAL — NO HALLUCINATIONS:
 - Only illustrate elements visible in the provided image
 - Do not add elements not present in the scene
@@ -184,6 +188,10 @@ COMPOSITION:
   - Fill the circle edge-to-edge with the composition
   - Use layered depth with foreground and background elements
   - Clear separation between foreground, midground, and background
+
+NO VEHICLES:
+  - Do NOT include any cars, motorcycles, or vehicles unless the user explicitly requests one in BACKGROUND DETAILS
+  - This background will be used behind a separate vehicle illustration
 
 ACCURACY:
   - Unless specified in the BACKGROUND DETAILS, do not add fictional buildings, objects, or extra elements
