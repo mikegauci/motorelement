@@ -5,10 +5,28 @@ export const PENDING_GENERATION_KEY = 'car-vector-pending-generation-v1'
 export const PENDING_BACKGROUND_KEY = 'car-vector-pending-background-v1'
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = [
-  { id: 'torii-gate', name: 'Torii Gate', src: '/presets/torii-gate.png' },
-  { id: 'samurai', name: 'Samurai', src: '/presets/samurai.png' },
-  { id: 'samurai-tiger', name: 'Samurai Tiger', src: '/presets/samurai-tiger.png' },
-  { id: 'fairlady', name: 'Fairlady', src: '/presets/fairlady.png' },
+  { id: 'cyberpunk', name: 'Cyberpunk', src: '/presets/cyberpunk.png' },
+  { id: 'daikouku', name: 'Daikouku', src: '/presets/daikouku.png' },
+  { id: 'daytona-beach', name: 'Daytona Beach', src: '/presets/daytona-beach.png' },
+  { id: 'dystopia', name: 'Dystopia', src: '/presets/dystopia.png' },
+  { id: 'eternal-path', name: 'Eternal Path', src: '/presets/eternal-path.png' },
+  { id: 'forest', name: 'Forest', src: '/presets/forest.png' },
+  { id: 'godzilla', name: 'Godzilla', src: '/presets/godzilla.png' },
+  { id: 'las-vegas', name: 'Las Vegas', src: '/presets/las-vegas.png' },
+  { id: 'london', name: 'London', src: '/presets/london.png' },
+  { id: 'miami', name: 'Miami', src: '/presets/miami.png' },
+  { id: 'mount-fuji', name: 'Mount Fuji', src: '/presets/mount-fuji.png' },
+  { id: 'mountain-pass', name: 'Mountain Pass', src: '/presets/mountain-pass.png' },
+  { id: 'new-york', name: 'New York', src: '/presets/new-york.png' },
+  { id: 'racetrack', name: 'Racetrack', src: '/presets/racetrack.png' },
+  { id: 'retrowave', name: 'Retrowave', src: '/presets/retrowave.png' },
+  { id: 'sakura', name: 'Sakura', src: '/presets/sakura.png' },
+  { id: 'sand-dunes', name: 'Sand Dunes', src: '/presets/sand-dunes.png' },
+  { id: 'shibuya-crossing', name: 'Shibuya Crossing', src: '/presets/shibuya-crossing.png' },
+  { id: 'synthwave', name: 'Synthwave', src: '/presets/synthwave.png' },
+  { id: 'touge', name: 'Touge', src: '/presets/touge.png' },
+  { id: 'vaporwave', name: 'Vaporwave', src: '/presets/vaporwave.png' },
+  { id: 'wangan', name: 'Wangan', src: '/presets/wangan.png' },
 ]
 
 export const CUSTOM_BACKGROUND_NEW = 'custom-new'

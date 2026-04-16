@@ -1,7 +1,7 @@
 'use client'
 /* eslint-disable @next/next/no-img-element */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { SavedCustomBackground } from './types'
 import { BACKGROUND_PRESETS, CUSTOM_BACKGROUND_NEW } from './constants'
 import styles from './styles'
@@ -65,6 +65,20 @@ export default function BackgroundPresets({
   onRemoveCustomImage,
 }: BackgroundPresetsProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+  const [showAllPresets, setShowAllPresets] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  const presetLimit = isMobile ? 9 : 7
+  const visiblePresets = showAllPresets ? BACKGROUND_PRESETS : BACKGROUND_PRESETS.slice(0, presetLimit)
+  const hasMore = BACKGROUND_PRESETS.length > presetLimit
 
   return (
     <section
@@ -99,7 +113,7 @@ export default function BackgroundPresets({
           <span className={styles.presetOptionCaption}>Transparent only</span>
           <span className={styles.presetOptionSub}>Text overlays below</span>
         </button>
-        {BACKGROUND_PRESETS.map((p) => (
+        {visiblePresets.map((p, i) => (
           <button
             key={p.id}
             type="button"
@@ -108,11 +122,21 @@ export default function BackgroundPresets({
             disabled={backgroundControlsLocked}
           >
             <span className={styles.presetThumbWrap}>
-              <img src={p.src} alt="" className={styles.presetThumb} />
+              <img src={p.src} alt="" className={styles.presetThumb} loading={i < 4 ? 'eager' : 'lazy'} />
             </span>
             <span className={styles.presetOptionCaption}>{p.name}</span>
           </button>
         ))}
+        {hasMore && !showAllPresets && (
+          <button
+            type="button"
+            className={`${styles.presetOption} ${styles.presetOptionNew}`}
+            onClick={() => setShowAllPresets(true)}
+          >
+            <span className={styles.presetNoneLabel}>+{BACKGROUND_PRESETS.length - presetLimit}</span>
+            <span className={styles.presetOptionCaption}>Show all</span>
+          </button>
+        )}
         {savedCustomBackgrounds.map((bg) => (
           <button
             key={bg.id}
@@ -122,7 +146,7 @@ export default function BackgroundPresets({
             disabled={backgroundControlsLocked}
           >
             <span className={styles.presetThumbWrap}>
-              <img src={bg.thumbUrl || bg.resultUrl} alt="" className={styles.presetThumb} />
+              <img src={bg.thumbUrl || bg.resultUrl} alt="" className={styles.presetThumb} loading="lazy" />
             </span>
             <span className={styles.presetOptionCaption}>{bg.label}</span>
           </button>
