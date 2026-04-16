@@ -14,6 +14,7 @@ function toProduct(row: {
   base_price: number;
   printify_blueprint_id: string;
   active: boolean;
+  thumbnail_url: string | null;
 }): Product {
   return {
     id: row.id,
@@ -23,6 +24,7 @@ function toProduct(row: {
     basePrice: row.base_price,
     printifyBlueprintId: row.printify_blueprint_id,
     active: row.active,
+    thumbnailUrl: row.thumbnail_url,
   };
 }
 

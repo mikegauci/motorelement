@@ -19,7 +19,7 @@ export function StepCard({
   number,
   title,
   description,
-  ctaHref = "/product/custom",
+  ctaHref = "/products",
 }: StepCardProps) {
   return (
     <Link href={ctaHref} className="block">

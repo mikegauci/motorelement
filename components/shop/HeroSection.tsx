@@ -35,7 +35,7 @@ export function HeroSection() {
           </p>
 
           <div className="mt-10 grid w-full grid-cols-2 gap-4 md:flex md:w-auto">
-            <Link href="/product/custom" className="block min-w-0">
+            <Link href="/products" className="block min-w-0">
               <Button
                 variant="primary"
                 size="lg"

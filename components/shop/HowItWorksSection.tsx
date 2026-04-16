@@ -10,7 +10,7 @@ const steps = [
     title: "UPLOAD",
     description:
       "Simply upload a high quality photo of your ride. Our system handles any vehicle and angle.",
-    ctaHref: "/product/custom",
+    ctaHref: "/products",
   },
   {
     number: "02",
@@ -24,7 +24,7 @@ const steps = [
     title: "WEAR",
     description:
       "Get your custom apparel shipped directly to your door! Represent your build, everywhere.",
-    ctaHref: "/product/custom",
+    ctaHref: "/products",
   },
 ];
 

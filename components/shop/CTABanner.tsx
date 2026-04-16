@@ -20,7 +20,7 @@ export function CTABanner() {
           your build everywhere you go.
         </p>
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <Link href="/product/custom">
+          <Link href="/products">
             <Button variant="primary" size="lg">
               START MY BUILD
             </Button>

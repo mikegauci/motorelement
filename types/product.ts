@@ -8,4 +8,5 @@ export interface Product {
   basePrice: number;
   printifyBlueprintId: string;
   active: boolean;
+  thumbnailUrl: string | null;
 }

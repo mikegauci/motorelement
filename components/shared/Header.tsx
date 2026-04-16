@@ -7,7 +7,6 @@ import { useCart } from "@/hooks/useCart";
 
 const navLinks = [
   { href: "/products", label: "SHOP ALL" },
-  { href: "/product/custom", label: "CUSTOM UPLOAD" },
 ];
 
 export function Header() {

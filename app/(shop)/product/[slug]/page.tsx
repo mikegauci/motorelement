@@ -23,18 +23,6 @@ export default async function ProductDetailPage({
 }: {
   params: { slug: string };
 }) {
-  if (params.slug === "custom") {
-    return (
-      <CustomizerProvider>
-        <div className="min-h-[calc(100vh-8rem)] bg-void">
-          <div className="mx-auto max-w-3xl px-6 py-16">
-            <ProductCustomizer />
-          </div>
-        </div>
-      </CustomizerProvider>
-    );
-  }
-
   const { data: product } = await getProductBySlug(params.slug);
   if (!product) notFound();
 

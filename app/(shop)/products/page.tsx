@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getActiveProducts } from "@/lib/supabase/queries/products";
-import { getProductThumbnail } from "@/lib/printify/helpers";
 import type { Product, ProductType } from "@/types/product";
 
 const TYPE_LABELS: Record<ProductType, string> = {
@@ -19,46 +18,21 @@ function formatPrice(cents: number) {
 export default async function ProductsPage() {
   const { data: products } = await getActiveProducts();
 
-  const thumbnails: Record<string, string | null> = {};
-  if (products) {
-    await Promise.all(
-      products
-        .filter((p) => !p.printifyBlueprintId.startsWith("PLACEHOLDER"))
-        .map(async (p) => {
-          thumbnails[p.id] = await getProductThumbnail(p.printifyBlueprintId);
-        })
-    );
-  }
-
   return (
     <div className="mx-auto max-w-7xl px-6 py-24">
       <h1 className="font-heading text-display text-white">SHOP ALL</h1>
 
       <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        <Link
-          href="/product/custom"
-          className="group relative flex flex-col items-center border border-white/10 bg-white/5 p-8 transition hover:border-white/25 hover:bg-white/10"
-        >
-          <div className="mb-4 flex h-40 w-40 items-center justify-center rounded-full bg-white/10 text-5xl transition group-hover:bg-white/15">
-            🎨
-          </div>
-          <h2 className="font-heading text-2xl text-white">Custom Design</h2>
-          <p className="mt-2 text-center text-sm text-white/60">
-            Upload your car photo, generate vector artwork, and build a
-            print-ready design.
-          </p>
-        </Link>
-
         {products?.map((product: Product) => (
           <Link
             key={product.id}
             href={`/product/${product.slug}`}
             className="group relative flex flex-col items-center border border-white/10 bg-white/5 p-8 transition hover:border-white/25 hover:bg-white/10"
           >
-            {thumbnails[product.id] ? (
+            {product.thumbnailUrl ? (
               <div className="relative mb-4 h-48 w-48 overflow-hidden">
                 <Image
-                  src={thumbnails[product.id]!}
+                  src={product.thumbnailUrl}
                   alt={product.name}
                   fill
                   className="object-contain transition group-hover:scale-105"
