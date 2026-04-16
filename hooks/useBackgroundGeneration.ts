@@ -228,7 +228,7 @@ export function useBackgroundGeneration(deps: BackgroundGenerationDeps) {
   async function runBackgroundTweak(selectedCustomBg: SavedCustomBackground | null) {
     if (!selectedCustomBg || !backgroundTweakNotes.trim()) return
     if (customBackgroundGenerating || customBackgroundRemoving) return
-    const combinedValue = `${selectedCustomBg.value}\n\n${backgroundTweakNotes.trim()}`
+    const tweakText = backgroundTweakNotes.trim()
     setCustomBackgroundGenerating(true)
     const runId = Date.now()
     backgroundPollRunRef.current = runId
@@ -237,19 +237,18 @@ export function useBackgroundGeneration(deps: BackgroundGenerationDeps) {
     try {
       const res = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'submit', mode: 'background', backgroundValue: combinedValue }),
+        body: JSON.stringify({ action: 'submit', mode: 'background', backgroundValue: tweakText, backgroundTweakImageUrl: selectedCustomBg.resultUrl }),
       })
       const data = await res.json()
       if (!res.ok || !data.requestId || !data.endpointId) { setCustomBackgroundError(data.error || 'Background tweak failed'); return }
       setActiveBackgroundRequest({ requestId: data.requestId, endpointId: data.endpointId })
-      const tweakText = backgroundTweakNotes.trim()
       sessionStorage.setItem(PENDING_BACKGROUND_KEY, JSON.stringify({
         kind: 'tweak', requestId: data.requestId, endpointId: data.endpointId,
-        combinedValue, baseLabel: selectedCustomBg.label, tweakText,
+        combinedValue: tweakText, baseLabel: selectedCustomBg.label, tweakText,
       }))
       const rawUrl = await pollBackgroundUntilComplete({ requestId: data.requestId, endpointId: data.endpointId, runId })
       if (backgroundPollRunRef.current !== runId) return
-      await finalizeBackgroundTweakResult(rawUrl, combinedValue, selectedCustomBg.label, tweakText)
+      await finalizeBackgroundTweakResult(rawUrl, tweakText, selectedCustomBg.label, tweakText)
       sessionStorage.removeItem(PENDING_BACKGROUND_KEY)
     } catch (err: unknown) {
       if (backgroundPollRunRef.current === runId) {

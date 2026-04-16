@@ -21,6 +21,7 @@ function getFalQueueId(queued: unknown): string | undefined {
 const FAL_MODEL = 'fal-ai/reve/fast/remix'
 const IMAGE_BACKGROUNDS = 'fal-ai/nano-banana-2/edit'
 const TEXT_BACKGROUNDS = 'fal-ai/nano-banana-2'
+const BACKGROUND_TWEAK = 'fal-ai/gemini-3-pro-image-preview/edit'
 const STYLE_REFERENCE_ROOT = path.join(process.cwd(), 'public', 'style-reference')
 const STYLE_REFERENCE_PATH = path.join(STYLE_REFERENCE_ROOT, 'front', 'hatchback', 'front-01.jpg')
 function detectExpectedBodyStyle({ carModel, customerNotes }: VehiclePayload) {
@@ -188,6 +189,15 @@ OUTPUT:
   - Background outside the circle to be solid white`
 }
 
+function buildBackgroundTweakPrompt(tweakNotes: string) {
+  const notes = typeof tweakNotes === 'string' ? tweakNotes.trim() : ''
+  return `Edit this background illustration based on these instructions:
+${notes}
+
+Keep the existing composition, style, and circular crop intact.
+Only apply the requested changes.`
+}
+
 function parseDataUrl(dataUrl: string) {
   const m = /^data:([^;]+);base64,([\s\S]+)$/.exec(dataUrl)
   if (!m) throw new Error('Invalid image data URL')
@@ -261,6 +271,7 @@ export async function POST(request: Request) {
     customerNotes,
     backgroundImageDataUrl,
     backgroundValue,
+    backgroundTweakImageUrl,
   } = body
 
   const persistKindForStatus = resolvePersistKind({ mode, endpointId })
@@ -346,6 +357,21 @@ export async function POST(request: Request) {
         if (!backgroundValue || !String(backgroundValue).trim()) {
           return Response.json({ error: 'Background value is required' }, { status: 400 })
         }
+
+        if (backgroundTweakImageUrl && typeof backgroundTweakImageUrl === 'string') {
+          const prompt = buildBackgroundTweakPrompt(String(backgroundValue ?? ''))
+          const queued = await fal.queue.submit(BACKGROUND_TWEAK, {
+            input: {
+              prompt,
+              image_urls: [String(backgroundTweakImageUrl)],
+              aspect_ratio: '1:1',
+              output_format: 'png',
+            },
+          })
+          const queuedId = getFalQueueId(queued)
+          return Response.json({ requestId: queuedId, endpointId: BACKGROUND_TWEAK, status: 'IN_QUEUE' })
+        }
+
         if (backgroundImageDataUrl && typeof backgroundImageDataUrl === 'string') {
           const imageUrl = await uploadDataUrl(backgroundImageDataUrl)
           const prompt = buildBackgroundPrompt(String(backgroundValue ?? ''))
