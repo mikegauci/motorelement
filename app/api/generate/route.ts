@@ -22,7 +22,7 @@ function getFalQueueId(queued: unknown): string | undefined {
 const FAL_MODEL = 'fal-ai/gpt-image-1.5/edit'
 const IMAGE_BACKGROUNDS = 'fal-ai/nano-banana-2/edit'
 const TEXT_BACKGROUNDS = 'fal-ai/nano-banana-2'
-const BACKGROUND_TWEAK = 'fal-ai/gemini-3-pro-image-preview/edit'
+const MODEL_TWEAK = 'fal-ai/gemini-3-pro-image-preview/edit'
 const STYLE_REFERENCE_ROOT = path.join(process.cwd(), 'public', 'style-reference')
 const STYLE_REFERENCE_PATH = path.join(STYLE_REFERENCE_ROOT, 'front', 'hatchback', 'front-01.jpg')
 function detectExpectedBodyStyle({ carModel, customerNotes }: VehiclePayload) {
@@ -108,6 +108,11 @@ STYLE (from Image 2 only):
 - Windshield: dark tint band across top, fading slightly toward bottom
 - Satin/matte paint finish, no glossy flares or specular hotspots
 - Only render details visible in Image 1 — do not hallucinate or add extras
+
+CRITICAL — NO PURE WHITE INSIDE THE ILLUSTRATION:
+- Use off-white or light grey (not #FFFFFF) for smoke, highlights, exhaust, and any light-coloured elements inside the illustration
+- Pure white is reserved for the background only
+- Window highlight streaks should be light grey, not pure white
 
 White background, flat black shadow beneath.`
 }
@@ -273,6 +278,7 @@ export async function POST(request: Request) {
     backgroundImageDataUrl,
     backgroundValue,
     backgroundTweakImageUrl,
+    tweakImageUrl,
   } = body
 
   const persistKindForStatus = resolvePersistKind({ mode, endpointId })
@@ -361,7 +367,7 @@ export async function POST(request: Request) {
 
         if (backgroundTweakImageUrl && typeof backgroundTweakImageUrl === 'string') {
           const prompt = buildBackgroundTweakPrompt(String(backgroundValue ?? ''))
-          const queued = await fal.queue.submit(BACKGROUND_TWEAK, {
+          const queued = await fal.queue.submit(MODEL_TWEAK, {
             input: {
               prompt,
               image_urls: [String(backgroundTweakImageUrl)],
@@ -370,7 +376,7 @@ export async function POST(request: Request) {
             },
           })
           const queuedId = getFalQueueId(queued)
-          return Response.json({ requestId: queuedId, endpointId: BACKGROUND_TWEAK, status: 'IN_QUEUE' })
+          return Response.json({ requestId: queuedId, endpointId: MODEL_TWEAK, status: 'IN_QUEUE' })
         }
 
         if (backgroundImageDataUrl && typeof backgroundImageDataUrl === 'string') {
