@@ -463,6 +463,7 @@ export async function buildMockupThumbnail(
   productType?: string
 ): Promise<Blob> {
   const { getMockupPrintZone } = await import('./constants')
+  const { letterbox, printZoneRect, drawArtworkClipped } = await import('./canvas')
   const pz = getMockupPrintZone(productType)
 
   const [baseImg, artImg] = await Promise.all([
@@ -478,33 +479,11 @@ export async function buildMockupThumbnail(
   ctx.fillStyle = '#181818'
   ctx.fillRect(0, 0, size, size)
 
-  const imgAspect = baseImg.naturalWidth / baseImg.naturalHeight
-  let drawW = size
-  let drawH = size / imgAspect
-  if (drawH > size) { drawH = size; drawW = size * imgAspect }
-  const drawX = (size - drawW) / 2
-  const drawY = (size - drawH) / 2
-  ctx.drawImage(baseImg, drawX, drawY, drawW, drawH)
+  const baseRect = letterbox(baseImg.naturalWidth, baseImg.naturalHeight, size)
+  ctx.drawImage(baseImg, baseRect.x, baseRect.y, baseRect.w, baseRect.h)
 
-  const pzX = drawX + pz.xPct * drawW
-  const pzY = drawY + pz.yPct * drawH
-  const pzW = pz.widthPct * drawW
-  const pzH = pz.heightPct * drawH
-
-  const artAspect = artImg.naturalWidth / artImg.naturalHeight
-  const artW = pzW * placement.scale
-  const artH = artW / artAspect
-  const artX = pzX + placement.xPct * pzW - artW / 2
-  const artY = pzY + placement.yPct * pzH - artH / 2
-
-  ctx.save()
-  ctx.beginPath()
-  ctx.rect(pzX, pzY, pzW, pzH)
-  ctx.clip()
-  ctx.globalAlpha = 0.92
-  ctx.drawImage(artImg, artX, artY, artW, artH)
-  ctx.globalAlpha = 1.0
-  ctx.restore()
+  const pzr = printZoneRect(baseRect, pz)
+  drawArtworkClipped(ctx, artImg, pzr, placement)
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(

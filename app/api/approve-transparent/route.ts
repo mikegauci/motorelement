@@ -1,28 +1,11 @@
 import sharp from 'sharp'
+import { parseDataUrlToBuffer } from '@/lib/api/fal'
 
-/**
- * Background removal: only near-white regions **connected to the image edge** (flood fill).
- * Interior whites (windshield streaks, highlights) stay — they are not connected to the edge.
- */
 const WHITE_THRESHOLD = 248
-
-/** Whitish semi-transparent **exterior** halos only (must touch transparency). */
 const FRINGE_RGB = 235
-
-/** Opaque mask: alpha above this counts as solid artwork (car + shadow). */
 const ALPHA_SOLID = 28
-
-/** Circular dilation radius per pass (smooth, rounded stroke). */
 const BORDER_RADIUS = 2
-
-/** How many dilation passes (total border thickness ≈ BORDER_RADIUS × passes). */
 const BORDER_PASSES = 3
-
-function parseDataUrl(dataUrl: string): Buffer | null {
-  const m = /^data:([^;]+);base64,([\s\S]+)$/.exec(dataUrl)
-  if (!m) return null
-  return Buffer.from(m[2], 'base64')
-}
 
 /** Max of mask values in a disk of radius r around (x,y). */
 function dilateDisk(mask: Uint8Array, w: number, h: number, r: number): Uint8Array {
@@ -353,7 +336,7 @@ export async function POST(request: Request) {
     }
 
     if (imageBase64 && typeof imageBase64 === 'string') {
-      const parsed = parseDataUrl(imageBase64)
+      const parsed = parseDataUrlToBuffer(imageBase64)
       if (!parsed) {
         return Response.json({ error: 'Invalid imageBase64 data URL' }, { status: 400 })
       }

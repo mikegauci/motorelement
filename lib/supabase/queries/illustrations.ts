@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { QueryResult } from "./types";
 
 interface Illustration {
   id: string;
@@ -12,11 +13,6 @@ interface Illustration {
   status: string;
   notes: string | null;
   createdAt: string;
-}
-
-interface QueryResult<T> {
-  data: T | null;
-  error: string | null;
 }
 
 function toIllustration(row: {

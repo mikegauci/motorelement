@@ -3,6 +3,7 @@
 import styles from './styles'
 import { clampAdjust, clampCarScale, clampBgScale } from './helpers'
 import { useCustomizer } from './CustomizerContext'
+import SliderRow from './parts/SliderRow'
 
 interface CompositeEditorProps {
   carAdjustYPct: number
@@ -28,153 +29,57 @@ export default function CompositeEditor({
   backgroundControlsLocked,
 }: CompositeEditorProps) {
   const { mockupPlacement, setMockupPlacement } = useCustomizer()
-  function nudgeCarAdjustY(deltaPct: number) {
-    setCarAdjustYPct(clampAdjust(carAdjustYPct + deltaPct))
-  }
-  function nudgeCarScale(delta: number) {
-    setCarScale(clampCarScale(carScale + delta))
-  }
 
   return (
     <div className={styles.compositeBlock}>
       <p className={styles.compositeLabel}>Adjust composition</p>
       <div className={styles.compositeAdjustRow}>
-        <div className={styles.compositeAdjustControl}>
-          <div className={styles.compositeAdjustHead}>
-            <span>Car vertical adjust</span>
-            <span className={styles.compositeAdjustValue}>
-              {Math.round(carAdjustYPct * 100)}
-            </span>
-          </div>
-          <div className={styles.compositeAdjustInputRow}>
-            <button
-              type="button"
-              className={styles.compositeNudgeBtn}
-              onClick={() => nudgeCarAdjustY(-0.01)}
-              disabled={backgroundControlsLocked}
-            >
-              -
-            </button>
-            <input
-              type="range"
-              min={-30}
-              max={30}
-              value={Math.round(carAdjustYPct * 100)}
-              onChange={(e) => setCarAdjustYPct(clampAdjust(Number(e.target.value) / 100))}
-              disabled={backgroundControlsLocked}
-            />
-            <button
-              type="button"
-              className={styles.compositeNudgeBtn}
-              onClick={() => nudgeCarAdjustY(0.01)}
-              disabled={backgroundControlsLocked}
-            >
-              +
-            </button>
-          </div>
-        </div>
-        <div className={styles.compositeAdjustControl}>
-          <div className={styles.compositeAdjustHead}>
-            <span>Car size</span>
-            <span className={styles.compositeAdjustValue}>
-              {Math.round(carScale * 100)}%
-            </span>
-          </div>
-          <div className={styles.compositeAdjustInputRow}>
-            <button
-              type="button"
-              className={styles.compositeNudgeBtn}
-              onClick={() => nudgeCarScale(-0.01)}
-              disabled={backgroundControlsLocked}
-            >
-              -
-            </button>
-            <input
-              type="range"
-              min={70}
-              max={140}
-              value={Math.round(carScale * 100)}
-              onChange={(e) => setCarScale(clampCarScale(Number(e.target.value) / 100))}
-              disabled={backgroundControlsLocked}
-            />
-            <button
-              type="button"
-              className={styles.compositeNudgeBtn}
-              onClick={() => nudgeCarScale(0.01)}
-              disabled={backgroundControlsLocked}
-            >
-              +
-            </button>
-          </div>
-        </div>
-        <div className={styles.compositeAdjustControl}>
-          <div className={styles.compositeAdjustHead}>
-            <span>Background size</span>
-            <span className={styles.compositeAdjustValue}>
-              {Math.round(bgScale * 100)}%
-            </span>
-          </div>
-          <div className={styles.compositeAdjustInputRow}>
-            <button
-              type="button"
-              className={styles.compositeNudgeBtn}
-              onClick={() => setBgScale(clampBgScale(bgScale - 0.05))}
-              disabled={backgroundControlsLocked || bgScale <= 0.5}
-            >
-              -
-            </button>
-            <input
-              type="range"
-              min={50}
-              max={140}
-              value={Math.round(bgScale * 100)}
-              onChange={(e) => setBgScale(clampBgScale(Number(e.target.value) / 100))}
-              disabled={backgroundControlsLocked}
-            />
-            <button
-              type="button"
-              className={styles.compositeNudgeBtn}
-              onClick={() => setBgScale(clampBgScale(bgScale + 0.05))}
-              disabled={backgroundControlsLocked || bgScale >= 1.4}
-            >
-              +
-            </button>
-          </div>
-        </div>
-        <div className={styles.compositeAdjustControl}>
-          <div className={styles.compositeAdjustHead}>
-            <span>Artwork vertical</span>
-            <span className={styles.compositeAdjustValue}>
-              {Math.round((mockupPlacement.yPct - 0.5) * 100)}
-            </span>
-          </div>
-          <div className={styles.compositeAdjustInputRow}>
-            <button
-              type="button"
-              className={styles.compositeNudgeBtn}
-              onClick={() => setMockupPlacement({ ...mockupPlacement, yPct: mockupPlacement.yPct - 0.01 })}
-              disabled={backgroundControlsLocked}
-            >
-              -
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={Math.round(mockupPlacement.yPct * 100)}
-              onChange={(e) => setMockupPlacement({ ...mockupPlacement, yPct: Number(e.target.value) / 100 })}
-              disabled={backgroundControlsLocked}
-            />
-            <button
-              type="button"
-              className={styles.compositeNudgeBtn}
-              onClick={() => setMockupPlacement({ ...mockupPlacement, yPct: mockupPlacement.yPct + 0.01 })}
-              disabled={backgroundControlsLocked}
-            >
-              +
-            </button>
-          </div>
-        </div>
+        <SliderRow
+          label="Car vertical adjust"
+          displayValue={Math.round(carAdjustYPct * 100)}
+          min={-30}
+          max={30}
+          value={Math.round(carAdjustYPct * 100)}
+          disabled={backgroundControlsLocked}
+          onNudgeDown={() => setCarAdjustYPct(clampAdjust(carAdjustYPct - 0.01))}
+          onNudgeUp={() => setCarAdjustYPct(clampAdjust(carAdjustYPct + 0.01))}
+          onChange={(v) => setCarAdjustYPct(clampAdjust(v / 100))}
+        />
+        <SliderRow
+          label="Car size"
+          displayValue={`${Math.round(carScale * 100)}%`}
+          min={70}
+          max={140}
+          value={Math.round(carScale * 100)}
+          disabled={backgroundControlsLocked}
+          onNudgeDown={() => setCarScale(clampCarScale(carScale - 0.01))}
+          onNudgeUp={() => setCarScale(clampCarScale(carScale + 0.01))}
+          onChange={(v) => setCarScale(clampCarScale(v / 100))}
+        />
+        <SliderRow
+          label="Background size"
+          displayValue={`${Math.round(bgScale * 100)}%`}
+          min={50}
+          max={140}
+          value={Math.round(bgScale * 100)}
+          disabled={backgroundControlsLocked}
+          nudgeDownDisabled={bgScale <= 0.5}
+          nudgeUpDisabled={bgScale >= 1.4}
+          onNudgeDown={() => setBgScale(clampBgScale(bgScale - 0.05))}
+          onNudgeUp={() => setBgScale(clampBgScale(bgScale + 0.05))}
+          onChange={(v) => setBgScale(clampBgScale(v / 100))}
+        />
+        <SliderRow
+          label="Artwork vertical"
+          displayValue={Math.round((mockupPlacement.yPct - 0.5) * 100)}
+          min={0}
+          max={100}
+          value={Math.round(mockupPlacement.yPct * 100)}
+          disabled={backgroundControlsLocked}
+          onNudgeDown={() => setMockupPlacement({ ...mockupPlacement, yPct: mockupPlacement.yPct - 0.01 })}
+          onNudgeUp={() => setMockupPlacement({ ...mockupPlacement, yPct: mockupPlacement.yPct + 0.01 })}
+          onChange={(v) => setMockupPlacement({ ...mockupPlacement, yPct: v / 100 })}
+        />
         <div className={styles.compositeAdjustInputRow} style={{ gap: 8 }}>
           <button
             type="button"

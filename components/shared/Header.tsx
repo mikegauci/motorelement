@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ShoppingBag, User, Menu, X } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
+import { Container } from "@/components/ui/Container";
 
 const navLinks = [
   { href: "/products", label: "SHOP ALL" },
@@ -15,7 +16,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-carbon">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <Container className="flex items-center justify-between py-4">
         <Link href="/" className="font-heading text-2xl text-white">
           MOTOR ELEMENT
         </Link>
@@ -60,7 +61,7 @@ export function Header() {
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
-      </div>
+      </Container>
 
       {mobileOpen && (
         <nav className="border-t border-border bg-carbon px-6 py-4 md:hidden">

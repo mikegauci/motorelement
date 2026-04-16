@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { SectionLabel } from "@/components/ui/SectionLabel";
 import { StepCard } from "@/components/shop/StepCard";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
+import { SectionWrapper } from "./SectionWrapper";
+import { SectionHeading } from "./SectionHeading";
 
 const steps = [
   {
@@ -30,14 +31,9 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="bg-void py-12 md:py-24 lg:mt-[-100px]">
+    <SectionWrapper id="how-it-works" className="lg:mt-[-100px]">
       <Container>
-        <div className="mb-8 text-center md:mb-12">
-          <SectionLabel>PROCESS ARCHITECTURE</SectionLabel>
-          <h2 className="mt-2 font-heading text-display text-white">
-            HOW IT WORKS
-          </h2>
-        </div>
+        <SectionHeading eyebrow="PROCESS ARCHITECTURE" title="HOW IT WORKS" />
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {steps.map((step) => (
@@ -56,6 +52,6 @@ export function HowItWorksSection() {
           </Link>
         </div>
       </Container>
-    </section>
+    </SectionWrapper>
   );
 }

@@ -96,6 +96,7 @@ Image 1 is the ONLY source for shape, angle, proportions, and details.
 - Same body proportions: wheelbase, roof height, bonnet length, rear overhang
 - Same window count and placement
 - Same wheel size ratio and visibility
+- Reproduce the exact wheel design, spoke pattern, spoke count, and colour from Image 1
 - Same number plate position (left-offset, right-offset, or centered — match Image 1 exactly)
 - Do not rotate, recompose, or normalize the view
 ${numberPlateLine}${notesLine}
@@ -112,7 +113,7 @@ STYLE (from Image 2 only):
 CRITICAL — NO PURE WHITE INSIDE THE ILLUSTRATION:
 - Use off-white or light grey (not #FFFFFF) for smoke, highlights, exhaust, and any light-coloured elements inside the illustration
 - Pure white is reserved for the background only
-- Window highlight streaks should be light grey, not pure white
+- Windows must still be very dark tinted, near black — only the tiny highlight streak changes from white to light grey
 
 White background, flat black shadow beneath.`
 }
@@ -212,18 +213,7 @@ Keep the existing composition, style, and circular crop intact.
 Only apply the requested changes.`
 }
 
-function parseDataUrl(dataUrl: string) {
-  const m = /^data:([^;]+);base64,([\s\S]+)$/.exec(dataUrl)
-  if (!m) throw new Error('Invalid image data URL')
-  return { mime: m[1], base64: m[2] }
-}
-
-async function uploadDataUrl(dataUrl: string) {
-  const { mime, base64 } = parseDataUrl(dataUrl)
-  const buffer = Buffer.from(base64, 'base64')
-  const blob = new Blob([buffer], { type: mime })
-  return fal.storage.upload(blob)
-}
+import { uploadDataUrl } from '@/lib/api/fal'
 
 function resolvePersistKind({
   mode,

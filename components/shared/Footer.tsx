@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { Container } from "@/components/ui/Container";
 
 const shopLinks = [
   { href: "/products", label: "Shop" },
@@ -18,7 +19,7 @@ const supportLinks = [
 export function Footer() {
   return (
     <footer className="bg-obsidian border-t border-border">
-      <div className="mx-auto max-w-7xl px-6 py-12">
+      <Container className="py-12">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div>
             <span className="font-heading text-2xl text-white">
@@ -147,7 +148,7 @@ export function Footer() {
             </Link>
           </div>
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }

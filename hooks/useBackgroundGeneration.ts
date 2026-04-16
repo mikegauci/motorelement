@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef, type RefObject } from 'react'
+import { useState, type RefObject } from 'react'
 import type { SavedCustomBackground } from '@/components/shop/customizer/types'
 import { PENDING_BACKGROUND_KEY, CUSTOM_BACKGROUND_PREFIX } from '@/components/shop/customizer/constants'
 import { loadImageElement, getBackgroundArtworkBounds } from '@/components/shop/customizer/helpers'
+import { useGenerationJob, writePending, clearPending } from './useGenerationJob'
 
 interface BackgroundGenerationDeps {
   customBackgroundImageDataUrl: string | null
@@ -16,48 +17,12 @@ interface BackgroundGenerationDeps {
 }
 
 export function useBackgroundGeneration(deps: BackgroundGenerationDeps) {
+  const job = useGenerationJob(PENDING_BACKGROUND_KEY, 'background')
+
   const [savedCustomBackgrounds, setSavedCustomBackgrounds] = useState<SavedCustomBackground[]>([])
-  const [customBackgroundGenerating, setCustomBackgroundGenerating] = useState(false)
   const [customBackgroundRemoving, setCustomBackgroundRemoving] = useState(false)
-  const [customBackgroundElapsed, setCustomBackgroundElapsed] = useState(0)
   const [customBackgroundError, setCustomBackgroundError] = useState('')
   const [backgroundTweakNotes, setBackgroundTweakNotes] = useState('')
-  const [activeBackgroundRequest, setActiveBackgroundRequest] = useState<{ requestId: string; endpointId: string } | null>(null)
-
-  const customBackgroundTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const backgroundPollRunRef = useRef(0)
-
-  function startBackgroundTimer() {
-    if (customBackgroundTimerRef.current) clearInterval(customBackgroundTimerRef.current)
-    let t = 0
-    setCustomBackgroundElapsed(0)
-    customBackgroundTimerRef.current = setInterval(() => { t++; setCustomBackgroundElapsed(t) }, 1000)
-  }
-
-  function stopBackgroundTimer() {
-    if (customBackgroundTimerRef.current) clearInterval(customBackgroundTimerRef.current)
-    customBackgroundTimerRef.current = null
-  }
-
-  async function pollBackgroundUntilComplete({ requestId, endpointId, runId }: { requestId: string; endpointId: string; runId: number }) {
-    while (backgroundPollRunRef.current === runId) {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'status', requestId, endpointId, mode: 'background' }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || `Status check failed (${res.status})`)
-      const st = String(data.status || '').toUpperCase()
-      if (st === 'COMPLETED') {
-        if (!data.url) throw new Error('No image URL in completed background result')
-        return data.url as string
-      }
-      if (st === 'FAILED' || st === 'CANCELED') throw new Error(data.error || `Background generation ${st.toLowerCase()}`)
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-    }
-    throw new Error('Background generation polling cancelled')
-  }
 
   async function removeBackgroundForCustomBackground(sourceUrlOrDataUrl: string) {
     setCustomBackgroundRemoving(true)
@@ -148,58 +113,35 @@ export function useBackgroundGeneration(deps: BackgroundGenerationDeps) {
   }
 
   async function resumePendingBackgroundGeneration(pending: { requestId: string; endpointId: string; kind: string; combinedValue?: string; baseLabel?: string; tweakText?: string; originalValue?: string }) {
-    setCustomBackgroundGenerating(true)
-    startBackgroundTimer()
     setCustomBackgroundError('')
-    const runId = Date.now()
-    backgroundPollRunRef.current = runId
-    setActiveBackgroundRequest({ requestId: pending.requestId, endpointId: pending.endpointId })
+    const runId = job.beginRun()
+    job.setActiveRequest({ requestId: pending.requestId, endpointId: pending.endpointId })
     try {
-      const rawUrl = await pollBackgroundUntilComplete({ requestId: pending.requestId, endpointId: pending.endpointId, runId })
-      if (backgroundPollRunRef.current !== runId) return
+      const rawUrl = await job.poll(pending.requestId, pending.endpointId, runId)
+      if (!job.isRunActive(runId)) return
       if (pending.kind === 'tweak') {
         await finalizeBackgroundTweakResult(rawUrl, pending.combinedValue || '', pending.baseLabel || 'Custom', pending.tweakText || '')
       } else {
         await finalizeCustomBackgroundResult(rawUrl, pending.originalValue || '')
       }
-      sessionStorage.removeItem(PENDING_BACKGROUND_KEY)
+      clearPending(PENDING_BACKGROUND_KEY)
     } catch (err: unknown) {
-      if (backgroundPollRunRef.current !== runId) return
+      if (!job.isRunActive(runId)) return
       setCustomBackgroundError((err as Error).message || 'Background generation failed')
-      sessionStorage.removeItem(PENDING_BACKGROUND_KEY)
+      clearPending(PENDING_BACKGROUND_KEY)
     } finally {
-      if (backgroundPollRunRef.current === runId) {
-        stopBackgroundTimer()
-        setCustomBackgroundGenerating(false)
-        setActiveBackgroundRequest(null)
-      }
+      job.endRun(runId)
     }
   }
 
   async function cancelBackgroundGeneration() {
-    const req = activeBackgroundRequest
-    backgroundPollRunRef.current++
-    stopBackgroundTimer()
-    setCustomBackgroundElapsed(0)
-    setCustomBackgroundGenerating(false)
-    setActiveBackgroundRequest(null)
-    try { sessionStorage.removeItem(PENDING_BACKGROUND_KEY) } catch (_) { /* ignore */ }
-    if (!req?.requestId || !req?.endpointId) return
-    try {
-      await fetch('/api/generate', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel', requestId: req.requestId, endpointId: req.endpointId }),
-      })
-    } catch (_) { /* ignore */ }
+    await job.cancel()
   }
 
   async function runCustomBackgroundGeneration() {
     if (!deps.customBackgroundValue.trim()) { setCustomBackgroundError('Enter a value for Location/Theme'); return }
-    setCustomBackgroundGenerating(true)
-    const runId = Date.now()
-    backgroundPollRunRef.current = runId
-    startBackgroundTimer()
     setCustomBackgroundError('')
+    const runId = job.beginRun()
     try {
       const res = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -209,31 +151,28 @@ export function useBackgroundGeneration(deps: BackgroundGenerationDeps) {
       const originalValue = deps.customBackgroundValue.trim()
       const data = await res.json()
       if (!res.ok || !data.requestId || !data.endpointId) { setCustomBackgroundError(data.error || 'Background generation failed'); return }
-      setActiveBackgroundRequest({ requestId: data.requestId, endpointId: data.endpointId })
-      sessionStorage.setItem(PENDING_BACKGROUND_KEY, JSON.stringify({ kind: 'custom', requestId: data.requestId, endpointId: data.endpointId, originalValue }))
-      const rawUrl = await pollBackgroundUntilComplete({ requestId: data.requestId, endpointId: data.endpointId, runId })
-      if (backgroundPollRunRef.current !== runId) return
+      job.setActiveRequest({ requestId: data.requestId, endpointId: data.endpointId })
+      writePending(PENDING_BACKGROUND_KEY, { kind: 'custom', requestId: data.requestId, endpointId: data.endpointId, originalValue })
+      const rawUrl = await job.poll(data.requestId, data.endpointId, runId)
+      if (!job.isRunActive(runId)) return
       await finalizeCustomBackgroundResult(rawUrl, originalValue)
-      sessionStorage.removeItem(PENDING_BACKGROUND_KEY)
+      clearPending(PENDING_BACKGROUND_KEY)
     } catch (err: unknown) {
-      if (backgroundPollRunRef.current === runId) {
+      if (job.isRunActive(runId)) {
         setCustomBackgroundError((err as Error).message || 'Background generation failed')
-        sessionStorage.removeItem(PENDING_BACKGROUND_KEY)
+        clearPending(PENDING_BACKGROUND_KEY)
       }
     } finally {
-      if (backgroundPollRunRef.current === runId) { stopBackgroundTimer(); setCustomBackgroundGenerating(false); setActiveBackgroundRequest(null) }
+      job.endRun(runId)
     }
   }
 
   async function runBackgroundTweak(selectedCustomBg: SavedCustomBackground | null) {
     if (!selectedCustomBg || !backgroundTweakNotes.trim()) return
-    if (customBackgroundGenerating || customBackgroundRemoving) return
+    if (job.generating || customBackgroundRemoving) return
     const tweakText = backgroundTweakNotes.trim()
-    setCustomBackgroundGenerating(true)
-    const runId = Date.now()
-    backgroundPollRunRef.current = runId
-    startBackgroundTimer()
     setCustomBackgroundError('')
+    const runId = job.beginRun()
     try {
       const res = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -241,44 +180,39 @@ export function useBackgroundGeneration(deps: BackgroundGenerationDeps) {
       })
       const data = await res.json()
       if (!res.ok || !data.requestId || !data.endpointId) { setCustomBackgroundError(data.error || 'Background tweak failed'); return }
-      setActiveBackgroundRequest({ requestId: data.requestId, endpointId: data.endpointId })
-      sessionStorage.setItem(PENDING_BACKGROUND_KEY, JSON.stringify({
+      job.setActiveRequest({ requestId: data.requestId, endpointId: data.endpointId })
+      writePending(PENDING_BACKGROUND_KEY, {
         kind: 'tweak', requestId: data.requestId, endpointId: data.endpointId,
         combinedValue: tweakText, baseLabel: selectedCustomBg.label, tweakText,
-      }))
-      const rawUrl = await pollBackgroundUntilComplete({ requestId: data.requestId, endpointId: data.endpointId, runId })
-      if (backgroundPollRunRef.current !== runId) return
+      })
+      const rawUrl = await job.poll(data.requestId, data.endpointId, runId)
+      if (!job.isRunActive(runId)) return
       await finalizeBackgroundTweakResult(rawUrl, tweakText, selectedCustomBg.label, tweakText)
-      sessionStorage.removeItem(PENDING_BACKGROUND_KEY)
+      clearPending(PENDING_BACKGROUND_KEY)
     } catch (err: unknown) {
-      if (backgroundPollRunRef.current === runId) {
+      if (job.isRunActive(runId)) {
         setCustomBackgroundError((err as Error).message || 'Background tweak failed')
-        sessionStorage.removeItem(PENDING_BACKGROUND_KEY)
+        clearPending(PENDING_BACKGROUND_KEY)
       }
     } finally {
-      if (backgroundPollRunRef.current === runId) { stopBackgroundTimer(); setCustomBackgroundGenerating(false); setActiveBackgroundRequest(null) }
+      job.endRun(runId)
     }
   }
 
   function resetBackgroundGeneration() {
+    job.reset()
     setSavedCustomBackgrounds([])
-    setCustomBackgroundGenerating(false)
     setCustomBackgroundRemoving(false)
-    setCustomBackgroundElapsed(0)
     setCustomBackgroundError('')
     setBackgroundTweakNotes('')
-    setActiveBackgroundRequest(null)
-    backgroundPollRunRef.current++
-    stopBackgroundTimer()
-    try { sessionStorage.removeItem(PENDING_BACKGROUND_KEY) } catch (_) { /* ignore */ }
   }
 
   return {
     savedCustomBackgrounds,
     setSavedCustomBackgrounds,
-    customBackgroundGenerating,
+    customBackgroundGenerating: job.generating,
     customBackgroundRemoving,
-    customBackgroundElapsed,
+    customBackgroundElapsed: job.elapsed,
     customBackgroundError,
     setCustomBackgroundError,
     backgroundTweakNotes,

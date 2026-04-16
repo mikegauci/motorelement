@@ -1,10 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Product, ProductType } from "@/types/product";
-
-interface QueryResult<T> {
-  data: T | null;
-  error: string | null;
-}
+import type { QueryResult } from "./types";
 
 function toProduct(row: {
   id: string;

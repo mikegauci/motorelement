@@ -2,6 +2,7 @@
 
 import type { TextLayer, FontOption } from './types'
 import styles from './styles'
+import SliderRow from './parts/SliderRow'
 
 interface TextLayerEditorProps {
   textLayers: TextLayer[]
@@ -133,38 +134,17 @@ export default function TextLayerEditor({
             </div>
           </div>
           <div className={styles.setupBlock}>
-            <div className={styles.compositeAdjustHead}>
-              <span>Font size</span>
-              <span className={styles.compositeAdjustValue}>
-                {Math.round(selectedTextLayer.fontSizePct * 100)}%
-              </span>
-            </div>
-            <div className={styles.compositeAdjustInputRow}>
-              <button
-                type="button"
-                className={styles.compositeNudgeBtn}
-                onClick={() => onNudgeTextFontSize(selectedTextLayer.id, -0.005)}
-                disabled={backgroundControlsLocked}
-              >
-                -
-              </button>
-              <input
-                type="range"
-                min={3}
-                max={25}
-                value={Math.round(selectedTextLayer.fontSizePct * 100)}
-                onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { fontSizePct: Number(e.target.value) / 100 })}
-                disabled={backgroundControlsLocked}
-              />
-              <button
-                type="button"
-                className={styles.compositeNudgeBtn}
-                onClick={() => onNudgeTextFontSize(selectedTextLayer.id, 0.005)}
-                disabled={backgroundControlsLocked}
-              >
-                +
-              </button>
-            </div>
+            <SliderRow
+              label="Font size"
+              displayValue={`${Math.round(selectedTextLayer.fontSizePct * 100)}%`}
+              min={3}
+              max={25}
+              value={Math.round(selectedTextLayer.fontSizePct * 100)}
+              disabled={backgroundControlsLocked}
+              onNudgeDown={() => onNudgeTextFontSize(selectedTextLayer.id, -0.005)}
+              onNudgeUp={() => onNudgeTextFontSize(selectedTextLayer.id, 0.005)}
+              onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { fontSizePct: v / 100 })}
+            />
           </div>
           <div className={styles.setupBlock}>
             <label className={styles.label}>Text vertical alignment</label>
@@ -185,38 +165,17 @@ export default function TextLayerEditor({
             </div>
           </div>
           <div className={styles.setupBlock}>
-            <div className={styles.compositeAdjustHead}>
-              <span>Vertical position</span>
-              <span className={styles.compositeAdjustValue}>
-                {Math.round(selectedTextLayer.yPct * 100)}
-              </span>
-            </div>
-            <div className={styles.compositeAdjustInputRow}>
-              <button
-                type="button"
-                className={styles.compositeNudgeBtn}
-                onClick={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
-                disabled={backgroundControlsLocked}
-              >
-                -
-              </button>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(selectedTextLayer.yPct * 100)}
-                onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { yPct: Number(e.target.value) / 100 })}
-                disabled={backgroundControlsLocked}
-              />
-              <button
-                type="button"
-                className={styles.compositeNudgeBtn}
-                onClick={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
-                disabled={backgroundControlsLocked}
-              >
-                +
-              </button>
-            </div>
+            <SliderRow
+              label="Vertical position"
+              displayValue={Math.round(selectedTextLayer.yPct * 100)}
+              min={0}
+              max={100}
+              value={Math.round(selectedTextLayer.yPct * 100)}
+              disabled={backgroundControlsLocked}
+              onNudgeDown={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
+              onNudgeUp={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
+              onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { yPct: v / 100 })}
+            />
           </div>
           <div className={styles.styleRow}>
             <div className={styles.shadowSwatchGroup}>

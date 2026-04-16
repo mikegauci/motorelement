@@ -1,4 +1,5 @@
 import { fal } from '@fal-ai/client'
+import { uploadDataUrl, requireFalKey, FalKeyMissingError, jsonError } from '@/lib/api/fal'
 
 const MODEL_ID = 'fal-ai/moondream3-preview/query'
 
@@ -8,19 +9,6 @@ Respond with ONLY valid JSON (no markdown, no code fences), one line:
 {"model":"<short text like Honda Civic Type R>","year":"<exactly four digits like 2022, or empty string if unknown>"}
 
 If you cannot identify the car at all, respond with: {"model":"","year":""}`
-
-function parseDataUrl(dataUrl: string) {
-  const m = /^data:([^;]+);base64,([\s\S]+)$/.exec(dataUrl)
-  if (!m) throw new Error('Invalid image data URL')
-  return { mime: m[1], base64: m[2] }
-}
-
-async function uploadDataUrl(dataUrl: string) {
-  const { mime, base64 } = parseDataUrl(dataUrl)
-  const buffer = Buffer.from(base64, 'base64')
-  const blob = new Blob([buffer], { type: mime })
-  return fal.storage.upload(blob)
-}
 
 function normalizeYear(raw: unknown) {
   if (raw == null) return ''
@@ -53,18 +41,14 @@ function parseGuessOutput(output: unknown) {
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.FAL_API_KEY
   const body = (await request.json()) as { carImageDataUrl?: string }
 
-  if (!apiKey || typeof apiKey !== 'string') {
-    return Response.json({ error: 'Server missing FAL_API_KEY' }, { status: 500 })
-  }
   if (!body.carImageDataUrl || typeof body.carImageDataUrl !== 'string') {
     return Response.json({ error: 'Missing car image' }, { status: 400 })
   }
 
   try {
-    fal.config({ credentials: apiKey.trim() })
+    fal.config({ credentials: requireFalKey() })
     const imageUrl = await uploadDataUrl(body.carImageDataUrl)
 
     const result = await fal.subscribe(MODEL_ID, {
@@ -81,6 +65,7 @@ export async function POST(request: Request) {
 
     return Response.json({ model, year })
   } catch (err: unknown) {
+    if (err instanceof FalKeyMissingError) return jsonError(err, 500)
     const message = err instanceof Error ? err.message : String(err)
     return Response.json({ error: message, model: '', year: '' }, { status: 500 })
   }

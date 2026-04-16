@@ -21,6 +21,7 @@ import VehicleInputForm from './VehicleInputForm'
 import BackgroundPresets from './BackgroundPresets'
 import CompositeEditor from './CompositeEditor'
 import TextLayerEditor from './TextLayerEditor'
+import CollapsibleTweak from './parts/CollapsibleTweak'
 
 import { useCustomizer } from './CustomizerContext'
 import { useTextLayers } from '@/hooks/useTextLayers'
@@ -308,24 +309,23 @@ export default function ProductCustomizer() {
               <div>
                 {vehicleLocked && (
                   <div className={styles.tweakPanel}>
-                    <button type="button" className={styles.collapseToggle} aria-expanded={isVehicleTweakOpen} onClick={() => setIsVehicleTweakOpen((v) => !v)}>
-                      {isVehicleTweakOpen ? '▼' : '►'} Tweak vehicle (optional)
-                    </button>
-                    {isVehicleTweakOpen && (
-                      <>
-                        <div className={styles.setupBlock}>
-                          <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the generated vehicle." value={tweakNotes} onChange={(e) => setTweakNotes(e.target.value)} />
-                        </div>
-                        <div className={styles.tweakPanelActions}>
-                          <button className={styles.btnPrimary} onClick={carGen.runGeneration} disabled={!canRun}>
-                            {carGen.running ? 'Generating…' : 'Tweak'}
-                          </button>
-                          {carGen.running && (
-                            <button type="button" className={styles.btn} onClick={carGen.cancelCarGeneration}>Cancel request</button>
-                          )}
-                        </div>
-                      </>
-                    )}
+                    <CollapsibleTweak
+                      label="Tweak vehicle (optional)"
+                      isOpen={isVehicleTweakOpen}
+                      onToggle={() => setIsVehicleTweakOpen((v) => !v)}
+                    >
+                      <div className={styles.setupBlock}>
+                        <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the generated vehicle." value={tweakNotes} onChange={(e) => setTweakNotes(e.target.value)} />
+                      </div>
+                      <div className={styles.tweakPanelActions}>
+                        <button className={styles.btnPrimary} onClick={carGen.runGeneration} disabled={!canRun}>
+                          {carGen.running ? 'Generating…' : 'Tweak'}
+                        </button>
+                        {carGen.running && (
+                          <button type="button" className={styles.btn} onClick={carGen.cancelCarGeneration}>Cancel request</button>
+                        )}
+                      </div>
+                    </CollapsibleTweak>
                   </div>
                 )}
 

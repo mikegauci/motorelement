@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useCustomizer } from './CustomizerContext'
 import { loadImageElement } from './helpers'
 import { getMockupPrintZone } from './constants'
+import { clampDpr, letterbox, printZoneRect, drawArtworkClipped } from './canvas'
 
 /**
  * 2D t-shirt mockup that overlays the generated artwork onto the Printify
@@ -43,7 +44,7 @@ export default function MockupPreview() {
     if (!canvas || !container) return
 
     const rect = container.getBoundingClientRect()
-    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2))
+    const dpr = clampDpr()
     const w = Math.round(rect.width * dpr)
     const h = Math.round(rect.width * dpr)
     if (canvas.width !== w) canvas.width = w
@@ -61,15 +62,8 @@ export default function MockupPreview() {
 
     const baseImg = baseImgRef.current
     if (baseImg) {
-      const imgAspect = baseImg.naturalWidth / baseImg.naturalHeight
-      let drawW = w
-      let drawH = w / imgAspect
-      if (drawH > h) {
-        drawH = h
-        drawW = h * imgAspect
-      }
-      const drawX = (w - drawW) / 2
-      const drawY = (h - drawH) / 2
+      const baseRect = letterbox(baseImg.naturalWidth, baseImg.naturalHeight, w)
+      const { x: drawX, y: drawY, w: drawW, h: drawH } = baseRect
 
       const isLocalMockup = tshirtBaseImage?.startsWith('/images/mockups/')
       const needsTint = !isLocalMockup && selectedColorHex && !/^#?f{3,6}$/i.test(selectedColorHex)
@@ -94,34 +88,13 @@ export default function MockupPreview() {
         ctx.drawImage(baseImg, drawX, drawY, drawW, drawH)
       }
 
-      // Draw artwork overlay within the print zone
       const artworkImg = artworkImgRef.current
-      const pzX = drawX + pz.xPct * drawW
-      const pzY = drawY + pz.yPct * drawH
-      const pzW = pz.widthPct * drawW
-      const pzH = pz.heightPct * drawH
+      const pzr = printZoneRect(baseRect, pz)
 
       if (artworkImg) {
-        const artAspect = artworkImg.naturalWidth / artworkImg.naturalHeight
-        const baseArtW = pzW * mockupPlacement.scale
-        const baseArtH = baseArtW / artAspect
-
-        const artX = pzX + mockupPlacement.xPct * pzW - baseArtW / 2
-        const artY = pzY + mockupPlacement.yPct * pzH - baseArtH / 2
-
-        // Clip artwork to print zone so nothing bleeds outside
-        ctx.save()
-        ctx.beginPath()
-        ctx.rect(pzX, pzY, pzW, pzH)
-        ctx.clip()
-
-        ctx.globalAlpha = 0.92
-        ctx.drawImage(artworkImg, artX, artY, baseArtW, baseArtH)
-        ctx.globalAlpha = 1.0
-        ctx.restore()
+        drawArtworkClipped(ctx, artworkImg, pzr, mockupPlacement)
       }
 
-      // Print zone boundary (visible dashed outline)
       if (artworkImg) {
         const isWhiteMockup =
           tshirtBaseImage?.includes('-white-') ||
@@ -131,23 +104,22 @@ export default function MockupPreview() {
           : 'rgba(255,255,255,0.25)'
         ctx.lineWidth = 1.5
         ctx.setLineDash([8, 5])
-        ctx.strokeRect(pzX, pzY, pzW, pzH)
+        ctx.strokeRect(pzr.x, pzr.y, pzr.w, pzr.h)
         ctx.setLineDash([])
       }
 
-      // Generate a cropped print-zone thumbnail for the mobile dock
-      if (artworkImg && pzW > 0 && pzH > 0) {
+      if (artworkImg && pzr.w > 0 && pzr.h > 0) {
         try {
           const thumbSize = 280
           if (!thumbCanvasRef.current) thumbCanvasRef.current = document.createElement('canvas')
           const tc = thumbCanvasRef.current
-          const aspect = pzW / pzH
+          const aspect = pzr.w / pzr.h
           const tw = aspect >= 1 ? thumbSize : Math.round(thumbSize * aspect)
           const th = aspect >= 1 ? Math.round(thumbSize / aspect) : thumbSize
           if (tc.width !== tw) tc.width = tw
           if (tc.height !== th) tc.height = th
           const tctx = tc.getContext('2d', { alpha: false })!
-          tctx.drawImage(canvas, pzX, pzY, pzW, pzH, 0, 0, tw, th)
+          tctx.drawImage(canvas, pzr.x, pzr.y, pzr.w, pzr.h, 0, 0, tw, th)
           setMockupThumbnailUrl(tc.toDataURL('image/jpeg', 0.85))
         } catch { /* ignore */ }
       }

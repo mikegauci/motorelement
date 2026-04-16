@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
-import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Container } from "@/components/ui/Container";
+import { SectionWrapper } from "./SectionWrapper";
+import { SectionHeading } from "./SectionHeading";
 
 const faqs = [
   {
@@ -37,14 +38,9 @@ const faqs = [
 
 export function FAQSection() {
   return (
-    <section className="bg-void py-12 md:py-24">
+    <SectionWrapper>
       <Container size="narrow">
-        <div className="mb-8 text-center md:mb-12">
-          <SectionLabel>SUPPORT</SectionLabel>
-          <h2 className="mt-2 font-heading text-display text-white">
-            FREQUENTLY ASKED
-          </h2>
-        </div>
+        <SectionHeading eyebrow="SUPPORT" title="FREQUENTLY ASKED" />
 
         <div className="border-t border-border">
           {faqs.map((faq, index) => (
@@ -72,6 +68,6 @@ export function FAQSection() {
           ))}
         </div>
       </Container>
-    </section>
+    </SectionWrapper>
   );
 }

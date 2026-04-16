@@ -83,7 +83,7 @@ export async function getProduct(productId: string) {
   return printifyFetch(shopPath(`/products/${productId}.json`)  );
 }
 
-export async function getProductThumbnail(
+async function getProductThumbnail(
   productId: string
 ): Promise<string | null> {
   try {

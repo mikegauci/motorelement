@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Container } from "@/components/ui/Container";
+import { SectionWrapper } from "./SectionWrapper";
 
 const featuredProducts = [
   {
@@ -32,7 +33,7 @@ const featuredProducts = [
 
 export function FeaturedBuildsSection() {
   return (
-    <section className="bg-void py-12 md:py-24">
+    <SectionWrapper>
       <Container>
         <h2 className="mb-8 text-center font-heading text-display text-white md:mb-12">
           FEATURED ITEMS
@@ -63,6 +64,6 @@ export function FeaturedBuildsSection() {
           ))}
         </div>
       </Container>
-    </section>
+    </SectionWrapper>
   );
 }

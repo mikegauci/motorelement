@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import type { TextLayer, Revision, SavedCustomBackground } from '@/components/shop/customizer/types'
 import { SESSION_KEY, PENDING_GENERATION_KEY, PENDING_BACKGROUND_KEY } from '@/components/shop/customizer/constants'
 import { normalizeTextLayer, clampCompositeZoom, clampBgScale } from '@/components/shop/customizer/helpers'
+import { readPending } from './useGenerationJob'
 
 interface SessionState {
   carModel: string
@@ -127,32 +128,15 @@ export function useSession(state: SessionState, setters: SessionSetters) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Resume pending generations on mount
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(PENDING_GENERATION_KEY)
-      if (!raw) return
-      const pending = JSON.parse(raw)
-      if (!pending?.requestId || !pending?.endpointId) {
-        sessionStorage.removeItem(PENDING_GENERATION_KEY)
-        return
-      }
-      setters.resumePendingGeneration(pending)
-    } catch (_) { /* ignore */ }
+    const pending = readPending(PENDING_GENERATION_KEY)
+    if (pending) setters.resumePendingGeneration(pending)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(PENDING_BACKGROUND_KEY)
-      if (!raw) return
-      const pending = JSON.parse(raw)
-      if (!pending?.requestId || !pending?.endpointId || !pending?.kind) {
-        sessionStorage.removeItem(PENDING_BACKGROUND_KEY)
-        return
-      }
-      setters.resumePendingBackgroundGeneration(pending)
-    } catch (_) { /* ignore */ }
+    const pending = readPending<{ requestId: string; endpointId: string; kind: string }>(PENDING_BACKGROUND_KEY)
+    if (pending?.kind) setters.resumePendingBackgroundGeneration(pending)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

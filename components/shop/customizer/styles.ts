@@ -1,4 +1,11 @@
-/** Tailwind class map — dark-theme classes matching the sitewide design system. */
+function checkered(size: number): string {
+  const half = size / 2
+  return `[background-color:#333] [background-image:linear-gradient(45deg,#444_25%,transparent_25%),linear-gradient(-45deg,#444_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#444_75%),linear-gradient(-45deg,transparent_75%,#444_75%)] [background-size:${size}px_${size}px] [background-position:0_0,0_${half}px,${half}px_-${half}px,-${half}px_0px]`
+}
+
+const btnPrimaryBase = 'h-10 bg-ignition text-white border-none text-xs font-sub font-bold uppercase tracking-widest cursor-pointer transition-colors hover:bg-ignition/90'
+const captionLabel = 'font-sub text-xs font-bold uppercase tracking-widest text-muted'
+
 const styles: Record<string, string> = {
   main: 'font-body',
   header: 'mb-8',
@@ -28,7 +35,7 @@ const styles: Record<string, string> = {
   shadowSwatchBlack: '',
   shadowSwatchWhite: '',
   shadowSwatchPreview: 'w-[18px] h-[18px] rounded-full border border-border',
-  label: 'font-sub text-xs font-bold uppercase tracking-widest text-muted',
+  label: captionLabel,
   input: 'h-10 border border-border bg-carbon px-3 text-sm text-white w-full box-border transition-colors focus:outline-none focus:border-ignition disabled:opacity-50 disabled:cursor-not-allowed',
   hint: 'text-xs text-muted m-0 [&_a]:text-white [&_a]:underline-offset-2',
   uploadZone: 'border-[1.5px] border-dashed border-border min-h-[140px] flex items-center justify-center cursor-pointer bg-carbon transition-colors hover:bg-white/5 hover:border-white/20 overflow-hidden',
@@ -40,7 +47,7 @@ const styles: Record<string, string> = {
   textarea: 'border border-border bg-carbon px-3 py-2.5 text-sm font-mono text-white w-full box-border resize-y leading-relaxed transition-colors focus:outline-none focus:border-ignition disabled:opacity-50 disabled:cursor-not-allowed',
   tweakBlock: 'mb-6 flex flex-col gap-1.5',
   actions: 'flex gap-2.5 items-center',
-  btnPrimary: 'h-10 px-5 bg-ignition text-white border-none text-xs font-sub font-bold uppercase tracking-widest cursor-pointer transition-colors hover:bg-ignition/90 disabled:opacity-35 disabled:cursor-not-allowed',
+  btnPrimary: `${btnPrimaryBase} px-5 disabled:opacity-35 disabled:cursor-not-allowed`,
   btn: 'h-10 px-4 bg-carbon text-white border border-border text-sm cursor-pointer transition-colors hover:bg-white/10',
   results: 'mt-2',
   resultsTitle: 'text-lg font-heading text-white mb-5',
@@ -66,11 +73,11 @@ const styles: Record<string, string> = {
   spinnerText: 'text-sm text-muted m-0',
   resultImg: 'w-full block',
   resultImgWrap: 'w-full leading-[0] max-md:max-w-[360px] max-md:mx-auto',
-  checkered: '[background-color:#333] [background-image:linear-gradient(45deg,#444_25%,transparent_25%),linear-gradient(-45deg,#444_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#444_75%),linear-gradient(-45deg,transparent_75%,#444_75%)] [background-size:16px_16px] [background-position:0_0,0_8px,8px_-8px,-8px_0px]',
+  checkered: checkered(16),
   approveRow: 'flex flex-wrap items-center gap-3 px-4 py-3 border-t border-border bg-obsidian',
-  btnApprove: 'h-10 px-[18px] bg-ignition text-white border-none text-xs font-sub font-bold uppercase tracking-widest cursor-pointer transition-colors hover:bg-ignition/90 disabled:opacity-45 disabled:cursor-not-allowed',
+  btnApprove: `${btnPrimaryBase} px-[18px] disabled:opacity-45 disabled:cursor-not-allowed`,
   approveHint: 'text-xs text-muted max-w-[420px] leading-relaxed',
-  revThumbCheckered: '[background-color:#333] [background-image:linear-gradient(45deg,#444_25%,transparent_25%),linear-gradient(-45deg,#444_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#444_75%),linear-gradient(-45deg,transparent_75%,#444_75%)] [background-size:8px_8px] [background-position:0_0,0_4px,4px_-4px,-4px_0px]',
+  revThumbCheckered: checkered(8),
   resultFrame: 'relative w-full self-stretch',
   resultFrameComposite: '',
   generatingOverlay: 'absolute inset-0 flex flex-col items-center justify-center gap-3 bg-void/60 backdrop-blur-sm',
@@ -111,8 +118,8 @@ const styles: Record<string, string> = {
   compositeAdjustValue: 'font-semibold text-white',
   compositeAdjustInputRow: 'flex items-center gap-2 [&_input[type=range]]:w-full [&_input[type=range]]:min-w-0 [&_input[type=range]]:accent-ignition',
   compositeNudgeBtn: 'w-8 h-8 border border-border bg-carbon text-white text-lg leading-[1] cursor-pointer hover:bg-white/10 disabled:opacity-45 disabled:cursor-not-allowed',
-  compositeLabel: 'text-xs font-sub font-bold uppercase tracking-widest text-muted mb-2.5',
-  compositeStage: 'relative w-full max-w-[720px] mx-auto [background-color:#333] [background-image:linear-gradient(45deg,#444_25%,transparent_25%),linear-gradient(-45deg,#444_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#444_75%),linear-gradient(-45deg,transparent_75%,#444_75%)] [background-size:16px_16px] [background-position:0_0,0_8px,8px_-8px,-8px_0px] overflow-hidden border border-border shadow-lg aspect-square touch-none cursor-grab max-md:[touch-action:pan-y_pinch-zoom] max-md:cursor-default',
+  compositeLabel: `${captionLabel} mb-2.5`,
+  compositeStage: `relative w-full max-w-[720px] mx-auto ${checkered(16)} overflow-hidden border border-border shadow-lg aspect-square touch-none cursor-grab max-md:[touch-action:pan-y_pinch-zoom] max-md:cursor-default`,
   canvasSpaceControls: 'absolute top-2.5 right-2.5 z-[2] flex flex-col items-center gap-1.5 p-1.5 rounded-lg bg-black/80 border border-border backdrop-blur-sm max-md:top-2 max-md:right-2 [&>button]:w-7 [&>button]:h-7 [&>button]:text-base max-md:[&>button]:w-[30px] max-md:[&>button]:h-[30px] max-md:[&>button]:text-lg',
   canvasSpaceValue: 'min-w-[34px] text-center text-[11px] font-semibold text-white',
   compositeCanvas: 'block w-full h-auto',
@@ -131,7 +138,7 @@ const styles: Record<string, string> = {
   alignBtnRow: 'flex gap-2 mb-2',
   alignBtn: 'h-[34px] min-w-[78px] px-2.5 border border-border bg-carbon text-white text-sm cursor-pointer hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed',
   alignBtnActive: '!border-ignition bg-ignition/10 font-semibold',
-  mobileResultDock: 'hidden max-md:block fixed right-3.5 bottom-3.5 w-[140px] h-[140px] p-0 border-2 border-ignition overflow-hidden [background-color:#333] [background-image:linear-gradient(45deg,#444_25%,transparent_25%),linear-gradient(-45deg,#444_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#444_75%),linear-gradient(-45deg,transparent_75%,#444_75%)] [background-size:12px_12px] [background-position:0_0,0_6px,6px_-6px,-6px_0px] shadow-[0_10px_20px_rgba(0,0,0,0.4)] z-[60] cursor-pointer opacity-0 translate-y-4 translate-x-2.5 pointer-events-none transition-all duration-200 [&_img]:w-full [&_img]:h-full [&_img]:object-contain [&_img]:block max-[380px]:w-[100px] max-[380px]:h-[100px]',
+  mobileResultDock: `hidden max-md:block fixed right-3.5 bottom-3.5 w-[140px] h-[140px] p-0 border-2 border-ignition overflow-hidden ${checkered(12)} shadow-[0_10px_20px_rgba(0,0,0,0.4)] z-[60] cursor-pointer opacity-0 translate-y-4 translate-x-2.5 pointer-events-none transition-all duration-200 [&_img]:w-full [&_img]:h-full [&_img]:object-contain [&_img]:block max-[380px]:w-[100px] max-[380px]:h-[100px]`,
   mobileResultDockVisible: '!opacity-100 !translate-y-0 !translate-x-0 !pointer-events-auto',
   mockupContainer: 'relative w-full aspect-square bg-carbon border border-border overflow-hidden',
   mockupCanvas: 'absolute inset-0 w-full h-full',

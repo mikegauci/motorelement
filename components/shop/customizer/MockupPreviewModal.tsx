@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { useCustomizer } from './CustomizerContext'
 import { loadImageElement } from './helpers'
 import { getMockupPrintZone } from './constants'
+import { clampDpr, letterbox, printZoneRect, drawArtworkClipped } from './canvas'
 
 interface Props {
   open: boolean
@@ -40,7 +41,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     const artworkImg = artworkImgRef.current
 
     const size = Math.min(1200, window.innerWidth - 48, window.innerHeight - 120)
-    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2))
+    const dpr = clampDpr()
     const px = Math.round(size * dpr)
     if (canvas.width !== px) canvas.width = px
     if (canvas.height !== px) canvas.height = px
@@ -55,7 +56,6 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
 
     if (!baseImg) return
 
-    // Draw full mockup to an offscreen canvas, then crop around the print zone
     const fullSize = px * 2
     if (!offscreenRef.current) offscreenRef.current = document.createElement('canvas')
     const off = offscreenRef.current
@@ -67,45 +67,18 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     offCtx.fillStyle = '#111'
     offCtx.fillRect(0, 0, fullSize, fullSize)
 
-    const imgAspect = baseImg.naturalWidth / baseImg.naturalHeight
-    let drawW = fullSize
-    let drawH = fullSize / imgAspect
-    if (drawH > fullSize) { drawH = fullSize; drawW = fullSize * imgAspect }
-    const drawX = (fullSize - drawW) /2
-    const drawY = (fullSize - drawH) / 2
-    offCtx.drawImage(baseImg, drawX, drawY, drawW, drawH)
+    const baseRect = letterbox(baseImg.naturalWidth, baseImg.naturalHeight, fullSize)
+    offCtx.drawImage(baseImg, baseRect.x, baseRect.y, baseRect.w, baseRect.h)
 
+    const pzr = printZoneRect(baseRect, pz)
     if (artworkImg) {
-      const pzX = drawX + pz.xPct * drawW
-      const pzY = drawY + pz.yPct * drawH
-      const pzW = pz.widthPct * drawW
-      const pzH = pz.heightPct * drawH
-
-      const artAspect = artworkImg.naturalWidth / artworkImg.naturalHeight
-      const baseArtW = pzW * mockupPlacement.scale
-      const baseArtH = baseArtW / artAspect
-      const artX = pzX + mockupPlacement.xPct * pzW - baseArtW / 2
-      const artY = pzY + mockupPlacement.yPct * pzH - baseArtH / 2
-
-      offCtx.save()
-      offCtx.beginPath()
-      offCtx.rect(pzX, pzY, pzW, pzH)
-      offCtx.clip()
-      offCtx.globalAlpha = 0.92
-      offCtx.drawImage(artworkImg, artX, artY, baseArtW, baseArtH)
-      offCtx.globalAlpha = 1.0
-      offCtx.restore()
+      drawArtworkClipped(offCtx, artworkImg, pzr, mockupPlacement)
     }
 
-    // Crop: centre on the print zone with padding so the artwork fills the view
-    const cropPzX = drawX + pz.xPct * drawW
-    const cropPzY = drawY + pz.yPct * drawH
-    const cropPzW = pz.widthPct * drawW
-    const cropPzH = pz.heightPct * drawH
     const padding = 1
-    const cropCx = cropPzX + cropPzW / 2
-    const cropCy = cropPzY + cropPzH / 2
-    const cropSide = Math.max(cropPzW, cropPzH) * (1 + padding)
+    const cropCx = pzr.x + pzr.w / 2
+    const cropCy = pzr.y + pzr.h / 2
+    const cropSide = Math.max(pzr.w, pzr.h) * (1 + padding)
     const sx = Math.max(0, Math.min(cropCx - cropSide / 2, fullSize - cropSide))
     const sy = Math.max(0, Math.min(cropCy - cropSide / 2, fullSize - cropSide))
 

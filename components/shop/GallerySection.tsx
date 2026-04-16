@@ -1,5 +1,6 @@
-import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Container } from "@/components/ui/Container";
+import { SectionWrapper } from "./SectionWrapper";
+import { SectionHeading } from "./SectionHeading";
 
 const galleryItems = [
   { id: 1, label: "SUPRA MK4", span: "col-span-1 row-span-1" },
@@ -12,17 +13,13 @@ const galleryItems = [
 
 export function GallerySection() {
   return (
-    <section className="bg-void py-12 md:py-24">
+    <SectionWrapper>
       <Container>
-        <div className="mb-8 text-center md:mb-12">
-          <SectionLabel>COMMUNITY SHOWCASE</SectionLabel>
-          <h2 className="mt-2 font-heading text-display text-white">
-            FROM GARAGE TO GALLERY
-          </h2>
-          <p className="mx-auto mt-4 max-w-lg text-muted">
-            Real designs created by our community. Upload your ride and see what our AI can do.
-          </p>
-        </div>
+        <SectionHeading
+          eyebrow="COMMUNITY SHOWCASE"
+          title="FROM GARAGE TO GALLERY"
+          subtitle="Real designs created by our community. Upload your ride and see what our AI can do."
+        />
 
         <div className="grid auto-rows-[200px] grid-cols-2 gap-3 md:grid-cols-3 lg:auto-rows-[240px]">
           {galleryItems.map((item) => (
@@ -45,6 +42,6 @@ export function GallerySection() {
           ))}
         </div>
       </Container>
-    </section>
+    </SectionWrapper>
   );
 }

@@ -1,8 +1,9 @@
 import { Star } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Badge } from "@/components/ui/Badge";
 import { Container, containerGutter } from "@/components/ui/Container";
+import { SectionWrapper } from "./SectionWrapper";
+import { SectionHeading } from "./SectionHeading";
 
 const reviews = [
   {
@@ -80,14 +81,9 @@ export function ReviewsSection() {
   const doubled = [...reviews, ...reviews];
 
   return (
-    <section className="bg-obsidian py-12 md:py-24">
+    <SectionWrapper bg="obsidian">
       <Container>
-        <div className="mb-8 text-center md:mb-12">
-          <SectionLabel>VERIFIED REVIEWS</SectionLabel>
-          <h2 className="mt-2 font-heading text-display text-white">
-            WHAT THE COMMUNITY SAYS
-          </h2>
-        </div>
+        <SectionHeading eyebrow="VERIFIED REVIEWS" title="WHAT THE COMMUNITY SAYS" />
       </Container>
 
       <div className="overflow-hidden">
@@ -97,6 +93,6 @@ export function ReviewsSection() {
           ))}
         </div>
       </div>
-    </section>
+    </SectionWrapper>
   );
 }

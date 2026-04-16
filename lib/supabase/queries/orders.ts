@@ -1,10 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Order, OrderItem, OrderStatus } from "@/types/order";
-
-interface QueryResult<T> {
-  data: T | null;
-  error: string | null;
-}
+import type { QueryResult } from "./types";
 
 function toOrder(row: {
   id: string;
