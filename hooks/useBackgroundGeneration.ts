@@ -106,12 +106,28 @@ export function useBackgroundGeneration(deps: BackgroundGenerationDeps) {
     } catch (_) { return resultUrl }
   }
 
+  async function persistToSupabase(dataUrl: string, label: string): Promise<string> {
+    try {
+      const res = await fetch('/api/save-background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageDataUrl: dataUrl, label }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.publicUrl) return data.publicUrl
+      }
+    } catch (_) { /* fall back to data URL */ }
+    return dataUrl
+  }
+
   async function finalizeCustomBackgroundResult(rawUrl: string, originalValue: string) {
     const cleaned = await removeBackgroundForCustomBackground(rawUrl)
+    const label = (originalValue || '').slice(0, 30) || 'Custom'
+    const resultUrl = await persistToSupabase(cleaned, label)
     const thumb = await generateCustomThumb(cleaned)
     const newId = `${CUSTOM_BACKGROUND_PREFIX}${Date.now()}`
-    const label = (originalValue || '').slice(0, 30) || 'Custom'
-    setSavedCustomBackgrounds((prev) => [...prev, { id: newId, resultUrl: cleaned, thumbUrl: thumb, label, value: originalValue || '' }])
+    setSavedCustomBackgrounds((prev) => [...prev, { id: newId, resultUrl, thumbUrl: thumb, label, value: originalValue || '' }])
     deps.setSelectedPresetId(newId)
     deps.setCustomBackgroundImageDataUrl(null)
     deps.setCustomBackgroundImagePreview(null)
@@ -121,11 +137,12 @@ export function useBackgroundGeneration(deps: BackgroundGenerationDeps) {
 
   async function finalizeBackgroundTweakResult(rawUrl: string, combinedValue: string, baseLabel: string, tweakText: string) {
     const cleaned = await removeBackgroundForCustomBackground(rawUrl)
-    const thumb = await generateCustomThumb(cleaned)
-    const newId = `${CUSTOM_BACKGROUND_PREFIX}${Date.now()}`
     const short = (tweakText || '').trim().slice(0, 24)
     const label = `${baseLabel || 'Custom'} · ${short}`
-    setSavedCustomBackgrounds((prev) => [...prev, { id: newId, resultUrl: cleaned, thumbUrl: thumb, label, value: combinedValue || '' }])
+    const resultUrl = await persistToSupabase(cleaned, label)
+    const thumb = await generateCustomThumb(cleaned)
+    const newId = `${CUSTOM_BACKGROUND_PREFIX}${Date.now()}`
+    setSavedCustomBackgrounds((prev) => [...prev, { id: newId, resultUrl, thumbUrl: thumb, label, value: combinedValue || '' }])
     deps.setSelectedPresetId(newId)
     setBackgroundTweakNotes('')
   }
