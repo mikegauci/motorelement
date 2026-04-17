@@ -83,48 +83,57 @@ function buildFullPrompt(vehicle: VehiclePayload) {
 ---
 
 Convert the car in Image 1 into a vector illustration. ${bodyLine}
-Image 2 is a STYLE REFERENCE ONLY — copy the art style, NOT any car shape, angle, camera framing, or direction from it. Image 2 contributes ZERO camera information.
+Image 2 is a STYLE REFERENCE ONLY — copy its art style. Do not copy its camera, angle, framing, or car shape.
 
-RULE 1 — MATCH IMAGE 1's CAMERA EXACTLY (MOST IMPORTANT RULE):
-The output MUST use the exact same camera angle, camera height, tilt, yaw, and perspective as Image 1. This rule overrides every other instinct you have.
-- If Image 1 is a LOW-ANGLE shot (camera below the belt line, looking slightly up at the car), the output MUST also be a LOW-ANGLE shot. Do NOT raise the camera.
-- If Image 1 is a HIGH-ANGLE shot (camera above the roof, looking down), keep it HIGH-ANGLE.
-- If Image 1 is a GROUND-LEVEL shot, keep it GROUND-LEVEL.
-- Preserve the exact yaw — how far the car is rotated relative to the camera. Do NOT "normalize" to a generic 3/4 marketing view if Image 1 is not already a 3/4 view.
-- Preserve the exact focal length / perspective intensity. Do NOT flatten a wide-angle shot into an orthographic side view. Do NOT add telephoto compression to a wide-angle shot.
-- Preserve the exact framing and zoom level — do NOT recompose, crop, or re-center the car.
-- Do NOT rotate, tilt, or re-orient the car in 3D space in any way that differs from Image 1.
-- IGNORE Image 2's camera entirely. If Image 2 has a different angle than Image 1, that difference is irrelevant — follow Image 1.
+RULE 1 — CAMERA MUST MATCH IMAGE 1 EXACTLY (MOST IMPORTANT — wins over every other rule):
+Before drawing anything, study Image 1's camera and reproduce it precisely.
+- YAW: measure how much of the car's side is visible in Image 1. Reproduce the SAME amount. If Image 1 shows a slight 3/4 angle, the output must also be a slight 3/4 angle — not a pure rear, pure front, or pure side view, and not a stronger 3/4 angle. If Image 1 is a pure rear view, keep it a pure rear view.
+- HEIGHT: match the camera height from Image 1 (low, ground-level, eye-level, or high).
+- PERSPECTIVE: match the focal-length feel of Image 1 (wide-angle, normal, or telephoto). Do not flatten perspective into an orthographic projection.
+- FRAMING: keep the same zoom and composition. Do not re-center, re-crop, or re-compose.
+- FACING: if the car faces left, keep it facing left; if right, keep it right. Never mirror or flip.
+- Do NOT use Image 2 for any camera information.
 
-RULE 2 — DO NOT MIRROR OR FLIP THE CAR:
-If the car in Image 1 faces left, the output MUST face left.
-If the car in Image 1 faces right, the output MUST face right.
-NEVER mirror, flip, or reverse the car's facing direction.
+RULE 2 — PRESERVE EVERY DETAIL FROM IMAGE 1 (DO NOT GENERALISE TO A STOCK CAR):
+Before drawing, scan Image 1 and inventory every feature. The output must match the SPECIFIC car in Image 1, not a generic/stock version of that model. If a feature exists in Image 1, it MUST exist in the output. If it does not exist in Image 1, it MUST NOT be added.
 
-RULE 3 — COPY ALL GEOMETRY FROM IMAGE 1 EXACTLY:
-Image 1 is the ONLY source for shape, proportions, and details.
-- Same body proportions: wheelbase, roof height, bonnet length, rear overhang
-- Same window count and placement
-- Same wheel size ratio and visibility
-- Reproduce the exact wheel design, spoke pattern, spoke count, and colour from Image 1
-- Same number plate position (left-offset, right-offset, or centered — match Image 1 exactly)
-${numberPlateLine}${notesLine}
+Check each of these categories and reproduce exactly what you see:
+- BODY COLOUR: Match the exact paint colour (hue, saturation, lightness). A blue car must stay that exact blue, not a generic blue. A matte car must stay matte.
+- AERO / BODY KIT: Spoilers (roof spoiler, boot spoiler, ducktail, GT wing), splitters, diffusers, side skirts, canards, vents, hood scoops, bonnet bulges, roof scoops, fender flares, widebody kits. If ANY of these are present in Image 1, include them. If absent, do NOT add them.
+- MIRRORS: Match the exact shape, style, colour, and mounting of the side mirrors (e.g. body-colour vs black vs carbon, stalk-mounted vs door-mounted, standard vs aftermarket). Do not swap for a generic mirror.
+- BADGES & TRIM: Keep all visible badges, emblems, model letters, and trim pieces in their exact positions. Do not reposition, resize, remove, or add badges.
+- LIGHTS: Match the exact shape and layout of headlights, taillights, fog lights, and indicators visible in Image 1.
+- BUMPERS & GRILLE: Match the specific front/rear bumper design and grille pattern — including any aftermarket bumpers, lips, or grille meshes.
+- WHEELS: Match size, design, spoke pattern, spoke count, and colour exactly. If wheels are hidden in Image 1, keep them hidden — do NOT rotate the car even slightly to expose a wheel. It is better to show zero wheels than to change the camera angle.
+- WINDOWS & DOORS: Only render windows, door handles, and trim that are visible in Image 1. Match the number and layout of doors/windows.
+- NUMBER PLATE POSITION: The plate must appear in the EXACT SAME position on the bumper as in Image 1. If it is offset to one side (e.g. left of centre), keep it offset in the same direction by the same amount. If it is centred, keep it centred. Do not relocate it.
+- PROPORTIONS: Match body proportions exactly as they appear in Image 1's camera view. Do NOT infer or extrapolate proportions (wheelbase, bonnet length, rear overhang) not visible from Image 1's angle. If Image 1 is a rear view, you are drawing a rear view — do not rotate the car.
+
+RULE OF THUMB: If you catch yourself thinking "the standard [Model Name] has X", stop. Only draw what THIS specific car in Image 1 has. Stock features may be missing; aftermarket features may be added. Trust Image 1, not your training data.
+
+- ${numberPlateLine}${notesLine}
+
+RULE 3 — ISOLATE THE CAR:
+Render only the car. Remove everything else from Image 1 — buildings, streets, pavements, walls, people, other vehicles, signs, trees, sky, and ground textures. Do not render shadows cast by surrounding objects — only the car's own flat shadow directly beneath it. The area around the car must be pure solid white (#FFFFFF), with no ghost outlines, sketches, or grey shapes.
+
+RULE 4 — CAR MUST SIT LEVEL ON A FLAT PLANE:
+The car must sit level on a flat, horizontal ground plane in the output.
+- If both wheels on the same side are visible, they must rest on the same horizontal line. The line connecting the bottom of the front and rear wheels must be perfectly horizontal (0° tilt).
+- The car's roll axis must be level — no diagonal tilt, no leaning left or right, no "pasted at an angle" look.
+- If the uploaded photo was taken on a slope, off-camber, or slightly rotated, correct the car so it appears level on flat ground. This is the ONLY correction allowed to the camera — yaw, pitch, framing, and facing from Rule 1 must still be preserved exactly.
+- The car's own flat shadow beneath it must also be horizontal, aligned with the flat ground plane.
 
 STYLE (from Image 2 only):
 - Bold thick black outlines around all panels
 - Flat solid colour fills, minimal shading, hard sharp edges
-- ALL windows very dark tinted, near black — no visible interior
-- One subtle white highlight streak per window only
-- Windshield: dark tint band across top, fading slightly toward bottom
-- Satin/matte paint finish, no glossy flares or specular hotspots
-- Only render details visible in Image 1 — do not hallucinate or add extras
+- All windows very dark tinted, near black — no visible interior. One subtle light-grey highlight streak per window.
+- Windshield: dark tint band across the top, fading slightly toward the bottom.
+- Satin/matte paint finish — no glossy flares or specular hotspots.
 
-CRITICAL — NO PURE WHITE INSIDE THE ILLUSTRATION:
-- Use off-white or light grey (not #FFFFFF) for smoke, highlights, exhaust, and any light-coloured elements inside the illustration
-- Pure white is reserved for the background only
-- Windows must still be very dark tinted, near black — only the tiny highlight streak changes from white to light grey
+OUTPUT COLOURS — PURE WHITE IS FOR THE BACKGROUND ONLY:
+The background behind the car must be pure solid white (#FFFFFF). Every element that is part of the car or its shadow must use a non-white colour. If the customer notes request smoke, exhaust vapour, or any other light-coloured element, render it in off-white or light grey (for example #F5F5F5), never pure white. This keeps the car safe when the white background is later removed for transparency.
 
-White background, flat black shadow beneath.`
+Background: pure white. Shadow: flat black, directly beneath the car.`
 }
 
 function buildBackgroundPrompt(backgroundValue: string) {
