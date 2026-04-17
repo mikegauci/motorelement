@@ -407,16 +407,15 @@ export async function POST(request: Request) {
 
       if (tweakImageUrl && typeof tweakImageUrl === 'string') {
         const notes = typeof customerNotes === 'string' ? customerNotes.trim() : ''
-        const prompt = `Edit this car illustration based on these instructions:\n${notes}\n\nKeep the existing art style, proportions, and composition intact.\nOnly apply the requested changes.\nThe background MUST be solid white. Do not add any other background colour.`
-        const queued = await fal.queue.submit(MODEL_TWEAK, {
+        const prompt = `Edit this car illustration based on these instructions:\n${notes}\n\nKeep the existing art style, proportions, and composition intact.\nOnly apply the requested changes.\nThe background MUST be solid white. Do not add any other background colour.\nCRITICAL: Preserve the white sticker-style outline/border around the entire car. Do not crop, remove, or thin this outline.`
+        const queued = await fal.queue.submit(FAL_MODEL, {
           input: {
             prompt,
             image_urls: [String(tweakImageUrl)],
-            output_format: 'png',
           },
         })
         const queuedId = getFalQueueId(queued)
-        return Response.json({ requestId: queuedId, endpointId: MODEL_TWEAK, status: 'IN_QUEUE' })
+        return Response.json({ requestId: queuedId, endpointId: FAL_MODEL, status: 'IN_QUEUE' })
       }
 
       if (typeof carImageDataUrl !== 'string' || !carImageDataUrl) {
