@@ -83,22 +83,31 @@ function buildFullPrompt(vehicle: VehiclePayload) {
 ---
 
 Convert the car in Image 1 into a vector illustration. ${bodyLine}
-Image 2 is a STYLE REFERENCE ONLY — copy the art style, NOT any car shape, angle, or direction from it.
+Image 2 is a STYLE REFERENCE ONLY — copy the art style, NOT any car shape, angle, camera framing, or direction from it. Image 2 contributes ZERO camera information.
 
-RULE 1 — DO NOT MIRROR OR FLIP THE CAR:
+RULE 1 — MATCH IMAGE 1's CAMERA EXACTLY (MOST IMPORTANT RULE):
+The output MUST use the exact same camera angle, camera height, tilt, yaw, and perspective as Image 1. This rule overrides every other instinct you have.
+- If Image 1 is a LOW-ANGLE shot (camera below the belt line, looking slightly up at the car), the output MUST also be a LOW-ANGLE shot. Do NOT raise the camera.
+- If Image 1 is a HIGH-ANGLE shot (camera above the roof, looking down), keep it HIGH-ANGLE.
+- If Image 1 is a GROUND-LEVEL shot, keep it GROUND-LEVEL.
+- Preserve the exact yaw — how far the car is rotated relative to the camera. Do NOT "normalize" to a generic 3/4 marketing view if Image 1 is not already a 3/4 view.
+- Preserve the exact focal length / perspective intensity. Do NOT flatten a wide-angle shot into an orthographic side view. Do NOT add telephoto compression to a wide-angle shot.
+- Preserve the exact framing and zoom level — do NOT recompose, crop, or re-center the car.
+- Do NOT rotate, tilt, or re-orient the car in 3D space in any way that differs from Image 1.
+- IGNORE Image 2's camera entirely. If Image 2 has a different angle than Image 1, that difference is irrelevant — follow Image 1.
+
+RULE 2 — DO NOT MIRROR OR FLIP THE CAR:
 If the car in Image 1 faces left, the output MUST face left.
 If the car in Image 1 faces right, the output MUST face right.
 NEVER mirror, flip, or reverse the car's facing direction.
 
-RULE 2 — COPY ALL GEOMETRY FROM IMAGE 1 EXACTLY:
-Image 1 is the ONLY source for shape, angle, proportions, and details.
-- Same angle, perspective, and camera height
+RULE 3 — COPY ALL GEOMETRY FROM IMAGE 1 EXACTLY:
+Image 1 is the ONLY source for shape, proportions, and details.
 - Same body proportions: wheelbase, roof height, bonnet length, rear overhang
 - Same window count and placement
 - Same wheel size ratio and visibility
 - Reproduce the exact wheel design, spoke pattern, spoke count, and colour from Image 1
 - Same number plate position (left-offset, right-offset, or centered — match Image 1 exactly)
-- Do not rotate, recompose, or normalize the view
 ${numberPlateLine}${notesLine}
 
 STYLE (from Image 2 only):
@@ -407,11 +416,22 @@ export async function POST(request: Request) {
 
       if (tweakImageUrl && typeof tweakImageUrl === 'string') {
         const notes = typeof customerNotes === 'string' ? customerNotes.trim() : ''
-        const prompt = `Edit this car illustration based on these instructions:\n${notes}\n\nKeep the existing art style, proportions, and composition intact.\nOnly apply the requested changes.\nThe background MUST be solid white. Do not add any other background colour.\nCRITICAL: Preserve the white sticker-style outline/border around the entire car. Do not crop, remove, or thin this outline.`
+        const hasOriginalPhoto =
+          typeof carImageDataUrl === 'string' && carImageDataUrl.length > 0
+        const originalPhotoUrl = hasOriginalPhoto
+          ? await uploadDataUrl(String(carImageDataUrl))
+          : null
+        const referenceLine = originalPhotoUrl
+          ? `\n\nImage 1 is the current illustration — this is what you must edit.\nImage 2 is the original photo of the real car — use it ONLY as a reference to correct shape, proportions, wheels, badges, or details the illustration got wrong. Do NOT copy its photographic style, lighting, or background.`
+          : ''
+        const prompt = `Edit this car illustration based on these instructions:\n${notes}${referenceLine}\n\nKeep the existing art style, proportions, and composition intact.\nOnly apply the requested changes.\nThe background MUST be solid white. Do not add any other background colour.\nCRITICAL: Preserve the white sticker-style outline/border around the entire car. Do not crop, remove, or thin this outline.`
+        const imageUrls = originalPhotoUrl
+          ? [String(tweakImageUrl), originalPhotoUrl]
+          : [String(tweakImageUrl)]
         const queued = await fal.queue.submit(MODEL_TWEAK, {
           input: {
             prompt,
-            image_urls: [String(tweakImageUrl)],
+            image_urls: imageUrls,
             output_format: 'png',
           },
         })
