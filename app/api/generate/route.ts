@@ -295,6 +295,7 @@ export async function POST(request: Request) {
     backgroundValue,
     backgroundTweakImageUrl,
     tweakImageUrl,
+    autoRefine,
   } = body
 
   const persistKindForStatus = resolvePersistKind({ mode, endpointId })
@@ -430,7 +431,11 @@ export async function POST(request: Request) {
       }
 
       if (tweakImageUrl && typeof tweakImageUrl === 'string') {
-        const notes = typeof customerNotes === 'string' ? customerNotes.trim() : ''
+        const REFINE_LINE = 'Refine the illustration to match the reference car\'s camera angle, perspective, wheel design if they show, and fine details exactly. Keep the existing vector illustration style'
+        const rawNotes = typeof customerNotes === 'string' ? customerNotes.trim() : ''
+        const notes = autoRefine
+          ? [REFINE_LINE, rawNotes].filter(Boolean).join('\n')
+          : rawNotes
         const hasOriginalPhoto =
           typeof carImageDataUrl === 'string' && carImageDataUrl.length > 0
         const originalPhotoUrl = hasOriginalPhoto
