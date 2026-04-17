@@ -82,20 +82,3 @@ export async function createPrintifyOrder({
 export async function getProduct(productId: string) {
   return printifyFetch(shopPath(`/products/${productId}.json`)  );
 }
-
-async function getProductThumbnail(
-  productId: string
-): Promise<string | null> {
-  try {
-    const product = await printifyFetch<{
-      images: Array<{ src: string; position: string; is_default: boolean }>;
-    }>(shopPath(`/products/${productId}.json`));
-
-    const frontDefault = product.images.find(
-      (img) => img.position === "front" && img.is_default
-    );
-    return frontDefault?.src ?? product.images[0]?.src ?? null;
-  } catch {
-    return null;
-  }
-}
