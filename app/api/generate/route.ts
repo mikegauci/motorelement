@@ -374,6 +374,8 @@ export async function POST(request: Request) {
 
         if (backgroundTweakImageUrl && typeof backgroundTweakImageUrl === 'string') {
           const prompt = buildBackgroundTweakPrompt(String(backgroundValue ?? ''))
+          console.log(`\n[generate-background-tweak] Prompt sent to Fal (${MODEL_TWEAK}):\n`)
+          console.log(prompt)
           const queued = await fal.queue.submit(MODEL_TWEAK, {
             input: {
               prompt,
@@ -389,6 +391,8 @@ export async function POST(request: Request) {
         if (backgroundImageDataUrl && typeof backgroundImageDataUrl === 'string') {
           const imageUrl = await uploadDataUrl(backgroundImageDataUrl)
           const prompt = buildBackgroundPrompt(String(backgroundValue ?? ''))
+          console.log(`\n[generate-background-edit] Prompt sent to Fal (${IMAGE_BACKGROUNDS}):\n`)
+          console.log(prompt)
           const queued = await fal.queue.submit(IMAGE_BACKGROUNDS, {
             input: {
               prompt,
@@ -403,6 +407,8 @@ export async function POST(request: Request) {
         }
 
         const prompt = buildNanoBananaBackgroundPrompt(String(backgroundValue ?? ''))
+        console.log(`\n[generate-background-text] Prompt sent to Fal (${TEXT_BACKGROUNDS}):\n`)
+        console.log(prompt)
         const queued = await fal.queue.submit(TEXT_BACKGROUNDS, {
           input: { prompt },
         })
@@ -425,6 +431,8 @@ export async function POST(request: Request) {
           ? `\n\nImage 1 is the current illustration — this is what you must edit.\nImage 2 is the original photo of the real car — use it ONLY as a reference to correct shape, proportions, wheels, badges, or details the illustration got wrong. Do NOT copy its photographic style, lighting, or background.`
           : ''
         const prompt = `Edit this car illustration based on these instructions:\n${notes}${referenceLine}\n\nKeep the existing art style, proportions, and composition intact.\nOnly apply the requested changes.\nThe background MUST be solid white. Do not add any other background colour.\nCRITICAL: Preserve the white sticker-style outline/border around the entire car. Do not crop, remove, or thin this outline.`
+        console.log(`\n[generate-car-tweak] Prompt sent to Fal (${MODEL_TWEAK}):\n`)
+        console.log(prompt)
         const imageUrls = originalPhotoUrl
           ? [String(tweakImageUrl), originalPhotoUrl]
           : [String(tweakImageUrl)]
@@ -453,6 +461,8 @@ export async function POST(request: Request) {
         numberPlate: typeof numberPlate === 'string' ? numberPlate : undefined,
         customerNotes: typeof customerNotes === 'string' ? customerNotes : undefined,
       })
+      console.log(`\n[generate-car] Prompt sent to Fal (${FAL_MODEL}):\n`)
+      console.log(prompt)
       const queued = await fal.queue.submit(FAL_MODEL, {
         input: {
           prompt,
@@ -470,7 +480,7 @@ export async function POST(request: Request) {
       if (backgroundImageDataUrl && typeof backgroundImageDataUrl === 'string') {
         const imageUrl = await uploadDataUrl(backgroundImageDataUrl)
         const prompt = buildBackgroundPrompt(String(backgroundValue ?? ''))
-        console.log('\n[generate-background-edit] Prompt sent to Fal (gpt-image-1.5):\n')
+        console.log(`\n[generate-background-edit] Prompt sent to Fal (${IMAGE_BACKGROUNDS}):\n`)
         console.log(prompt)
         result = await fal.subscribe(IMAGE_BACKGROUNDS, {
           input: {
@@ -484,7 +494,7 @@ export async function POST(request: Request) {
         })
       } else {
         const prompt = buildNanoBananaBackgroundPrompt(String(backgroundValue ?? ''))
-        console.log('\n[generate-background-text] Prompt sent to Fal (nano-banana-2 ):\n')
+        console.log(`\n[generate-background-text] Prompt sent to Fal (${TEXT_BACKGROUNDS}):\n`)
         console.log(prompt)
         result = await fal.subscribe(TEXT_BACKGROUNDS, {
           input: {
@@ -508,7 +518,7 @@ export async function POST(request: Request) {
         numberPlate: typeof numberPlate === 'string' ? numberPlate : undefined,
         customerNotes: typeof customerNotes === 'string' ? customerNotes : undefined,
       })
-      console.log('\n[generate] Prompt sent to Fal:\n')
+      console.log(`\n[generate] Prompt sent to Fal (${FAL_MODEL}):\n`)
       console.log(prompt)
       result = await fal.subscribe(FAL_MODEL, {
         input: {
