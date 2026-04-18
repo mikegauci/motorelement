@@ -74,52 +74,16 @@ export function useCarGeneration(deps: CarGenerationDeps) {
     }
   }
 
-  async function runAutoRefineStage(rawUrl: string, runId: number): Promise<string> {
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'submit',
-        tweakImageUrl: rawUrl,
-        carImageDataUrl: deps.carImageDataUrl,
-        customerNotes: deps.customerNotes,
-        autoRefine: true,
-      }),
-    })
-    const data = await res.json()
-    if (!data.requestId || !data.endpointId) throw new Error(data.error || 'Failed to start auto-refine')
-    job.setActiveRequest({ requestId: data.requestId, endpointId: data.endpointId })
-    writePending(PENDING_GENERATION_KEY, {
-      stage: 'autoRefine',
-      requestId: data.requestId,
-      endpointId: data.endpointId,
-      wasLocked: false,
-      notesForPrompt: deps.customerNotes,
-      tweakNotes: '',
-    })
-    return job.poll(data.requestId, data.endpointId, runId)
-  }
-
-  async function resumePendingGeneration(pending: { requestId: string; endpointId: string; notesForPrompt?: string; wasLocked?: boolean; tweakNotes?: string; stage?: string }) {
+  async function resumePendingGeneration(pending: { requestId: string; endpointId: string; notesForPrompt?: string; wasLocked?: boolean; tweakNotes?: string }) {
     setStatus('running')
     const runId = job.beginRun()
     job.setActiveRequest({ requestId: pending.requestId, endpointId: pending.endpointId })
     try {
       const generatedUrl = await job.poll(pending.requestId, pending.endpointId, runId)
       if (!job.isRunActive(runId)) return
-
-      const needsAutoRefine = pending.stage === 'initial' && !pending.wasLocked
-      if (needsAutoRefine) {
-        const refinedUrl = await runAutoRefineStage(generatedUrl, runId)
-        if (!job.isRunActive(runId)) return
-        job.stopTimer()
-        clearPending(PENDING_GENERATION_KEY)
-        await finalizeGenerationFromUrl(refinedUrl, pending.notesForPrompt || '', false, '')
-      } else {
-        job.stopTimer()
-        clearPending(PENDING_GENERATION_KEY)
-        await finalizeGenerationFromUrl(generatedUrl, pending.notesForPrompt || '', !!pending.wasLocked, pending.tweakNotes || '')
-      }
+      job.stopTimer()
+      clearPending(PENDING_GENERATION_KEY)
+      await finalizeGenerationFromUrl(generatedUrl, pending.notesForPrompt || '', !!pending.wasLocked, pending.tweakNotes || '')
     } catch (err: unknown) {
       if (!job.isRunActive(runId)) return
       job.stopTimer()
@@ -162,21 +126,14 @@ export function useCarGeneration(deps: CarGenerationDeps) {
       if (!data.requestId || !data.endpointId) throw new Error(data.error || 'Failed to start generation')
       job.setActiveRequest({ requestId: data.requestId, endpointId: data.endpointId })
       writePending(PENDING_GENERATION_KEY, {
-        stage: isTweak ? 'tweak' : 'initial',
         requestId: data.requestId, endpointId: data.endpointId,
         wasLocked: deps.vehicleLocked, notesForPrompt, tweakNotes: deps.tweakNotes,
       })
       const generatedUrl = await job.poll(data.requestId, data.endpointId, runId)
       if (!job.isRunActive(runId)) return
-
-      let finalRawUrl = generatedUrl
-      if (!isTweak) {
-        finalRawUrl = await runAutoRefineStage(generatedUrl, runId)
-        if (!job.isRunActive(runId)) return
-      }
       job.stopTimer()
       clearPending(PENDING_GENERATION_KEY)
-      await finalizeGenerationFromUrl(finalRawUrl, notesForPrompt, deps.vehicleLocked, deps.tweakNotes)
+      await finalizeGenerationFromUrl(generatedUrl, notesForPrompt, deps.vehicleLocked, deps.tweakNotes)
     } catch (err: unknown) {
       if (job.isRunActive(runId)) {
         job.stopTimer()
