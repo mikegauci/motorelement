@@ -19,6 +19,7 @@ interface CarGenerationDeps {
   setComposedPromptNotes: (v: string | ((prev: string) => string)) => void
   tweakNotes: string
   setTweakNotes: (v: string) => void
+  tweakModel: string
 }
 
 export function useCarGeneration(deps: CarGenerationDeps) {
@@ -74,7 +75,7 @@ export function useCarGeneration(deps: CarGenerationDeps) {
     }
   }
 
-  async function resumePendingGeneration(pending: { requestId: string; endpointId: string; notesForPrompt?: string; wasLocked?: boolean; tweakNotes?: string }) {
+  async function resumePendingGeneration(pending: { requestId: string; endpointId: string; notesForPrompt?: string; wasLocked?: boolean; tweakNotes?: string; tweakModel?: string }) {
     setStatus('running')
     const runId = job.beginRun()
     job.setActiveRequest({ requestId: pending.requestId, endpointId: pending.endpointId })
@@ -118,7 +119,7 @@ export function useCarGeneration(deps: CarGenerationDeps) {
           showNumberPlate: deps.showNumberPlate,
           numberPlate: deps.numberPlate,
           customerNotes: notesForPrompt,
-          ...(currentIllustrationUrl ? { tweakImageUrl: currentIllustrationUrl } : {}),
+          ...(currentIllustrationUrl ? { tweakImageUrl: currentIllustrationUrl, tweakModel: deps.tweakModel } : {}),
         }),
       })
       if (res.status === 413) { setStatus('error:Image too large — try a smaller photo or lower resolution'); return }
@@ -128,6 +129,7 @@ export function useCarGeneration(deps: CarGenerationDeps) {
       writePending(PENDING_GENERATION_KEY, {
         requestId: data.requestId, endpointId: data.endpointId,
         wasLocked: deps.vehicleLocked, notesForPrompt, tweakNotes: deps.tweakNotes,
+        tweakModel: deps.tweakModel,
       })
       const generatedUrl = await job.poll(data.requestId, data.endpointId, runId)
       if (!job.isRunActive(runId)) return

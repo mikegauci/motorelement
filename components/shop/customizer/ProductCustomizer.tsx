@@ -43,6 +43,7 @@ export default function ProductCustomizer() {
   const [vehicleLocked, setVehicleLocked] = useState(false)
   const [composedPromptNotes, setComposedPromptNotes] = useState('')
   const [tweakNotes, setTweakNotes] = useState('')
+  const [tweakModel, setTweakModel] = useState<'gpt-image-1.5' | 'nano-banana-2' | 'gemini-3-pro-image-preview'>('gpt-image-1.5')
 
   // ---- Background selection state ----
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
@@ -74,7 +75,7 @@ export default function ProductCustomizer() {
   const carGen = useCarGeneration({
     carImageDataUrl, carModel, showNumberPlate, numberPlate, customerNotes,
     vehicleLocked, setVehicleLocked, composedPromptNotes, setComposedPromptNotes,
-    tweakNotes, setTweakNotes,
+    tweakNotes, setTweakNotes, tweakModel,
   })
 
   const bgGen = useBackgroundGeneration({
@@ -314,6 +315,19 @@ export default function ProductCustomizer() {
                       isOpen={isVehicleTweakOpen}
                       onToggle={() => setIsVehicleTweakOpen((v) => !v)}
                     >
+                      <div className={styles.tweakModelRow}>
+                        {(['gpt-image-1.5', 'nano-banana-2', 'gemini-3-pro-image-preview'] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            className={`${styles.tweakModelBtn} ${tweakModel === m ? styles.tweakModelBtnActive : ''}`}
+                            onClick={() => setTweakModel(m)}
+                            disabled={carGen.running}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
                       <div className={styles.setupBlock}>
                         <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the generated vehicle." value={tweakNotes} onChange={(e) => setTweakNotes(e.target.value)} />
                       </div>

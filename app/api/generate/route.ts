@@ -23,6 +23,14 @@ const FAL_MODEL = 'fal-ai/gpt-image-1.5/edit'
 const IMAGE_BACKGROUNDS = 'fal-ai/nano-banana-2/edit'
 const TEXT_BACKGROUNDS = 'fal-ai/nano-banana-2'
 const MODEL_TWEAK = 'fal-ai/gemini-3-pro-image-preview/edit'
+
+const CAR_TWEAK_MODELS = {
+  'gpt-image-1.5': 'fal-ai/gpt-image-1.5/edit',
+  'nano-banana-2': 'fal-ai/nano-banana-2/edit',
+  'gemini-3-pro-image-preview': 'fal-ai/gemini-3-pro-image-preview/edit',
+} as const
+type CarTweakModel = keyof typeof CAR_TWEAK_MODELS
+const DEFAULT_CAR_TWEAK_MODEL: CarTweakModel = 'gpt-image-1.5'
 const STYLE_REFERENCE_ROOT = path.join(process.cwd(), 'public', 'style-reference')
 const STYLE_REFERENCE_PATH = path.join(STYLE_REFERENCE_ROOT, 'front', 'hatchback', 'front-01.jpg')
 function detectExpectedBodyStyle({ carModel, customerNotes }: VehiclePayload) {
@@ -295,6 +303,7 @@ export async function POST(request: Request) {
     backgroundValue,
     backgroundTweakImageUrl,
     tweakImageUrl,
+    tweakModel,
   } = body
 
   const persistKindForStatus = resolvePersistKind({ mode, endpointId })
@@ -430,6 +439,10 @@ export async function POST(request: Request) {
       }
 
       if (tweakImageUrl && typeof tweakImageUrl === 'string') {
+        const selectedTweakModel = (typeof tweakModel === 'string' && tweakModel in CAR_TWEAK_MODELS)
+          ? (tweakModel as CarTweakModel)
+          : DEFAULT_CAR_TWEAK_MODEL
+        const tweakEndpoint = CAR_TWEAK_MODELS[selectedTweakModel]
         const notes = typeof customerNotes === 'string' ? customerNotes.trim() : ''
         const hasOriginalPhoto =
           typeof carImageDataUrl === 'string' && carImageDataUrl.length > 0
@@ -440,12 +453,12 @@ export async function POST(request: Request) {
           ? `\n\nImage 1 is the current illustration — this is what you must edit. The output must stay in the SAME vector illustration art style as Image 1.\nImage 2 is the original photo of the real car — use it ONLY as a visual reference to correct the car's shape, proportions, wheels, badges, mirrors, spoilers, or other details the illustration got wrong.\n\nCRITICAL — Image 2 IS NOT A SCENE TO RECREATE:\n- Do NOT copy anything from Image 2 except the car itself.\n- Do NOT include Image 2's background, buildings, street, pavement, road markings, sky, trees, people, other vehicles, signs, or any scenery.\n- Do NOT copy Image 2's photographic style, lighting, shadows, or colours of surroundings.\n- The output must show ONLY the car on a pure solid white (#FFFFFF) background — exactly like Image 1.`
           : ''
         const prompt = `Edit this car illustration based on these instructions:\n${notes}${referenceLine}\n\nKeep the existing art style, proportions, and composition intact.\nOnly apply the requested changes.\n\nOUTPUT REQUIREMENTS:\n- The output must contain ONLY the car illustration on a pure solid white (#FFFFFF) background.\n- Do NOT add any scenery, buildings, streets, pavements, roads, skies, trees, people, other vehicles, signs, or environment of any kind.\n- Do NOT render shadows cast by surrounding objects — only the car's own flat shadow directly beneath it.\n- The area around the car must be pure solid white (#FFFFFF), with no ghost outlines, sketches, grey shapes, or photographic elements.\n\nSHADOW COLOUR (STRICT):\n- The car's shadow MUST be flat solid black (#000000) or a neutral dark grey. No other colour is allowed.\n- Do NOT tint the shadow with yellow, brown, red, or any colour bled from the original photo's ground, road markings, pavement, or surroundings.\n- If the existing illustration (Image 1) already has a black shadow, keep it exactly as it is — do not change its colour, shape, or position.`
-        console.log(`\n[generate-car-tweak] Prompt sent to Fal (${MODEL_TWEAK}):\n`)
+        console.log(`\n[generate-car-tweak] Prompt sent to Fal (${tweakEndpoint}):\n`)
         console.log(prompt)
         const imageUrls = originalPhotoUrl
           ? [String(tweakImageUrl), originalPhotoUrl]
           : [String(tweakImageUrl)]
-        const queued = await fal.queue.submit(MODEL_TWEAK, {
+        const queued = await fal.queue.submit(tweakEndpoint, {
           input: {
             prompt,
             image_urls: imageUrls,
@@ -453,7 +466,7 @@ export async function POST(request: Request) {
           },
         })
         const queuedId = getFalQueueId(queued)
-        return Response.json({ requestId: queuedId, endpointId: MODEL_TWEAK, status: 'IN_QUEUE' })
+        return Response.json({ requestId: queuedId, endpointId: tweakEndpoint, status: 'IN_QUEUE' })
       }
 
       if (typeof carImageDataUrl !== 'string' || !carImageDataUrl) {
