@@ -174,6 +174,42 @@ export function loadImageElement(src: string): Promise<HTMLImageElement> {
   })
 }
 
+export async function splitCarPhotoVertically(
+  dataUrl: string,
+  upscale: number = 1.5,
+): Promise<[string, string, string]> {
+  const img = await loadImageElement(dataUrl)
+  const sliceW = Math.floor(img.naturalWidth / 3)
+  const slices: string[] = []
+  for (let i = 0; i < 3; i++) {
+    const sx = i === 2 ? img.naturalWidth - sliceW : i * sliceW
+    const c = document.createElement('canvas')
+    c.width = Math.round(sliceW * upscale)
+    c.height = Math.round(img.naturalHeight * upscale)
+    const ctx = c.getContext('2d')!
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(img, sx, 0, sliceW, img.naturalHeight, 0, 0, c.width, c.height)
+    slices.push(c.toDataURL('image/jpeg', 0.92))
+  }
+  return [slices[0], slices[1], slices[2]]
+}
+
+export async function flattenToWhite(
+  src: string,
+  quality: number = 0.95,
+): Promise<string> {
+  const img = await loadImageElement(src)
+  const c = document.createElement('canvas')
+  c.width = img.naturalWidth
+  c.height = img.naturalHeight
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillRect(0, 0, c.width, c.height)
+  ctx.drawImage(img, 0, 0)
+  return c.toDataURL('image/jpeg', quality)
+}
+
 export async function removeWhiteBackground(src: string): Promise<string> {
   let body: string
   if (src.startsWith('http://') || src.startsWith('https://')) {

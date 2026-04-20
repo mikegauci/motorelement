@@ -315,6 +315,23 @@ export default function ProductCustomizer() {
                       isOpen={isVehicleTweakOpen}
                       onToggle={() => setIsVehicleTweakOpen((v) => !v)}
                     >
+                      {carGen.revisions.length > 0 && (
+                        <div className={styles.tweakHistoryRow}>
+                          {carGen.revisions.map((rev, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className={`${styles.tweakHistoryItem} ${carGen.viewIndex === idx ? styles.tweakHistoryItemActive : ''}`}
+                              onClick={() => carGen.setViewIndex(idx)}
+                              disabled={carGen.running}
+                              title={rev.label}
+                            >
+                              <img src={rev.url} alt={rev.label} className={styles.tweakHistoryThumb} />
+                              <span className={styles.tweakHistoryLabel}>{rev.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <div className={styles.tweakModelRow}>
                         {(['gpt-image-1.5', 'nano-banana-2', 'gemini-3-pro-image-preview'] as const).map((m) => (
                           <button

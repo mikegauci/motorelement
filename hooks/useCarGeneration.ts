@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Revision } from '@/components/shop/customizer/types'
 import { PENDING_GENERATION_KEY } from '@/components/shop/customizer/constants'
-import { removeWhiteBackground, joinNotes } from '@/components/shop/customizer/helpers'
+import { removeWhiteBackground, joinNotes, splitCarPhotoVertically, flattenToWhite } from '@/components/shop/customizer/helpers'
 import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
 import { useGenerationJob, writePending, clearPending } from './useGenerationJob'
 
@@ -107,14 +107,27 @@ export function useCarGeneration(deps: CarGenerationDeps) {
     const runId = job.beginRun()
     try {
       const isTweak = deps.vehicleLocked && revisions.length > 0
-      const notesForPrompt = isTweak ? joinNotes(deps.composedPromptNotes, deps.tweakNotes) : deps.customerNotes
-      const currentIllustrationUrl = isTweak ? revisions[viewIndex]?.url : undefined
+      const notesForPrompt = isTweak ? deps.tweakNotes : deps.customerNotes
+      const baseIllustrationUrl = isTweak ? revisions[viewIndex]?.url : undefined
+      const currentIllustrationUrl = baseIllustrationUrl
+        ? await flattenToWhite(baseIllustrationUrl)
+        : undefined
+      const carImageSliceDataUrls = !isTweak && deps.carImageDataUrl
+        ? await splitCarPhotoVertically(deps.carImageDataUrl)
+        : null
+      if (carImageSliceDataUrls) {
+        const kb = (s: string) => `${Math.round(s.length / 1024)} KB`
+        console.log(
+          `[generate-car] split car photo into 3 slices — left: ${kb(carImageSliceDataUrls[0])}, mid: ${kb(carImageSliceDataUrls[1])}, right: ${kb(carImageSliceDataUrls[2])}`,
+        )
+      }
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'submit',
           carImageDataUrl: deps.carImageDataUrl,
+          ...(carImageSliceDataUrls ? { carImageSliceDataUrls } : {}),
           carModel: deps.carModel,
           showNumberPlate: deps.showNumberPlate,
           numberPlate: deps.numberPlate,
