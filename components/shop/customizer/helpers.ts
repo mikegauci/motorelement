@@ -210,6 +210,43 @@ export async function flattenToWhite(
   return c.toDataURL('image/jpeg', quality)
 }
 
+export async function removeCarBackground(src: string): Promise<string> {
+  let body: string
+  if (src.startsWith('http://') || src.startsWith('https://')) {
+    body = JSON.stringify({ imageUrl: src })
+  } else if (src.startsWith('data:')) {
+    body = JSON.stringify({ imageBase64: src })
+  } else {
+    const blob = await fetch(src).then((r) => r.blob())
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const fr = new FileReader()
+      fr.onload = () => resolve(fr.result as string)
+      fr.onerror = reject
+      fr.readAsDataURL(blob)
+    })
+    body = JSON.stringify({ imageBase64: dataUrl })
+  }
+
+  const res = await fetch('/api/remove-bg-fal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Background removal failed (${res.status})`)
+  }
+
+  const blob = await res.blob()
+  return new Promise<string>((resolve, reject) => {
+    const fr = new FileReader()
+    fr.onload = () => resolve(fr.result as string)
+    fr.onerror = reject
+    fr.readAsDataURL(blob)
+  })
+}
+
 export async function removeWhiteBackground(src: string): Promise<string> {
   let body: string
   if (src.startsWith('http://') || src.startsWith('https://')) {
