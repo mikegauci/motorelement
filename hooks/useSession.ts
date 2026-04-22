@@ -7,9 +7,6 @@ import { normalizeTextLayer, clampCompositeZoom, clampBgScale } from '@/componen
 import { readPending } from './useGenerationJob'
 
 interface SessionState {
-  carModel: string
-  showNumberPlate: boolean
-  numberPlate: string
   customerNotes: string
   carImageDataUrl: string | null
   carImagePreview: string | null
@@ -33,9 +30,6 @@ interface SessionState {
 }
 
 interface SessionSetters {
-  setCarModel: (v: string) => void
-  setShowNumberPlate: (v: boolean) => void
-  setNumberPlate: (v: string) => void
   setCustomerNotes: (v: string) => void
   setCarImageDataUrl: (v: string | null) => void
   setCarImagePreview: (v: string | null) => void
@@ -57,7 +51,7 @@ interface SessionSetters {
   setTextLayers: (v: TextLayer[]) => void
   setSelectedTextLayerId: (v: string | null) => void
   setStatus: (v: string) => void
-  resumePendingGeneration: (pending: { requestId: string; endpointId: string; notesForPrompt?: string; wasLocked?: boolean; tweakNotes?: string; tweakModel?: string }) => void
+  resumePendingGeneration: (pending: { requestId: string; endpointId: string; notesForPrompt?: string; wasLocked?: boolean; tweakNotes?: string }) => void
   resumePendingBackgroundGeneration: (pending: { requestId: string; endpointId: string; kind: string; combinedValue?: string; baseLabel?: string; tweakText?: string; originalValue?: string }) => void
 }
 
@@ -70,13 +64,6 @@ export function useSession(state: SessionState, setters: SessionSetters) {
       const raw = sessionStorage.getItem(SESSION_KEY)
       if (raw) {
         const s = JSON.parse(raw)
-        if (typeof s.carModel === 'string' || typeof s.year === 'string') {
-          const model = typeof s.carModel === 'string' ? s.carModel.trim() : ''
-          const yearFromOldSession = typeof s.year === 'string' ? s.year.trim() : ''
-          setters.setCarModel([model, yearFromOldSession].filter(Boolean).join(', '))
-        }
-        if (typeof s.showNumberPlate === 'boolean') setters.setShowNumberPlate(s.showNumberPlate)
-        if (typeof s.numberPlate === 'string') setters.setNumberPlate(s.numberPlate)
         if (typeof s.customerNotes === 'string') setters.setCustomerNotes(s.customerNotes)
         if (typeof s.carImageDataUrl === 'string') {
           setters.setCarImageDataUrl(s.carImageDataUrl)

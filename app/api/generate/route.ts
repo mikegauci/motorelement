@@ -7,9 +7,6 @@ import {
 } from '@/lib/customizer/persistGeneratedToSupabase'
 
 type VehiclePayload = {
-  carModel?: string
-  showNumberPlate?: boolean
-  numberPlate?: string
   customerNotes?: string
 }
 
@@ -19,135 +16,72 @@ function getFalQueueId(queued: unknown): string | undefined {
 }
 
 // const FAL_MODEL = 'fal-ai/reve/fast/remix'
-const FAL_MODEL = 'fal-ai/gpt-image-1.5/edit'
+const FAL_MODEL = 'openai/gpt-image-2/edit'
 const IMAGE_BACKGROUNDS = 'fal-ai/nano-banana-2/edit'
 const TEXT_BACKGROUNDS = 'fal-ai/nano-banana-2'
 const MODEL_TWEAK = 'fal-ai/gemini-3-pro-image-preview/edit'
 
-const CAR_TWEAK_MODELS = {
-  'gpt-image-1.5': 'fal-ai/gpt-image-1.5/edit',
-  'nano-banana-2': 'fal-ai/nano-banana-2/edit',
-  'gemini-3-pro-image-preview': 'fal-ai/gemini-3-pro-image-preview/edit',
-} as const
-type CarTweakModel = keyof typeof CAR_TWEAK_MODELS
-const DEFAULT_CAR_TWEAK_MODEL: CarTweakModel = 'gpt-image-1.5'
 const STYLE_REFERENCE_ROOT = path.join(process.cwd(), 'public', 'style-reference')
 const STYLE_REFERENCE_PATH = path.join(STYLE_REFERENCE_ROOT, 'front', 'hatchback', 'front-01.jpg')
-function detectExpectedBodyStyle({ carModel, customerNotes }: VehiclePayload) {
-  const text = `${carModel || ''} ${customerNotes || ''}`.toLowerCase()
-  if (!text.trim()) return null
-  const checks: [string, RegExp][] = [
-    ['hatchback', /\bhatch(back)?\b/],
-    ['sedan', /\b(sedan|saloon)\b/],
-    ['wagon', /\b(wagon|estate)\b/],
-    ['coupe', /\bcoupe\b/],
-    ['ute', /\bute\b/],
-    ['pickup', /\b(pickup|pick-up|truck)\b/],
-    ['suv', /\b(suv|crossover)\b/],
-    ['van', /\bvan\b/],
-  ]
-  for (const [bodyStyle, re] of checks) {
-    if (re.test(text)) return bodyStyle
-  }
-  return null
-}
 
 async function loadStyleReference() {
   return loadStyleReferenceDataUrl(STYLE_REFERENCE_PATH)
 }
 
-function buildVehicleDetailsBlock({
-  carModel,
-  showNumberPlate,
-  numberPlate,
-  customerNotes,
-}: VehiclePayload) {
-  const vehicle = typeof carModel === 'string' ? carModel.trim() : ''
-  const lines = [
-    `  - Car Model + Year: ${vehicle}`,
-  ]
-  if (showNumberPlate) {
-    const plate = typeof numberPlate === 'string' ? numberPlate.trim() : ''
-    if (plate) lines.push(`  - Number Plate: ${plate}`)
-  }
-  const notes = typeof customerNotes === 'string' ? customerNotes.trim() : ''
-  if (notes) lines.push(`  - Customer Notes: ${notes}`)
-  return `VEHICLE DETAILS:\n${lines.join('\n')}`
+function getCustomerNotesValue({ customerNotes }: VehiclePayload) {
+  return typeof customerNotes === 'string' ? customerNotes.trim() : ''
 }
 
 function buildFullPrompt(vehicle: VehiclePayload) {
-  const details = buildVehicleDetailsBlock(vehicle)
-  const resolvedBodyStyle = detectExpectedBodyStyle(vehicle)
-  const bodyLabel = resolvedBodyStyle ? resolvedBodyStyle.toUpperCase() : null
-  const bodyLine = bodyLabel ? `This is a ${bodyLabel}.` : ''
-  const numberPlateLine = vehicle.showNumberPlate
-    ? 'Reproduce the number plate text and POSITION exactly from Image 1. The plate must be in the same location on the bumper as in Image 1 (e.g. if it is offset to one side, keep it offset — do NOT center it). If unreadable, leave blank.'
-    : 'Remove any number plate. Fill the area with the car body colour.'
-  const customerNotes = typeof vehicle.customerNotes === 'string' ? vehicle.customerNotes.trim() : ''
-  const notesLine = customerNotes ? `\nApply these customer notes: ${customerNotes}` : ''
+  const notes = getCustomerNotesValue(vehicle)
+  return `Transform the car in Image 1 into a cartoon vector 
+illustration that matches the EXACT style of the 
+vehicle in Image 2.
 
-  return `${details}
+Image 2 is a STYLE REFERENCE ONLY — do not copy 
+any shapes, wheels, proportions, or details from it.
 
----
+CRITICAL — ANGLE & COMPOSITION:
+- Maintain the EXACT angle from Image 1
+- Keep the exact same camera height and perspective
+- Do not rotate, mirror, or recompose the car
 
-Convert the car in Image 1 into a vector illustration. ${bodyLine}
-Image 2 is a STYLE REFERENCE ONLY — copy its art style. Do not copy its camera, angle, framing, or car shape.
+CRITICAL — WHEELS:
+- If the wheels are clearly visible in Image 1, copy the exact wheel design from Image 1 precisely
+- Do not substitute or simplify them
+- If no wheels are visible in Image 1, 
+  do not add or invent one under any circumstances
 
-RULE 1 — CAMERA MUST MATCH IMAGE 1 EXACTLY (MOST IMPORTANT — wins over every other rule):
-Before drawing anything, study Image 1's camera and reproduce it precisely.
-- YAW: measure how much of the car's side is visible in Image 1. Reproduce the SAME amount. If Image 1 shows a slight 3/4 angle, the output must also be a slight 3/4 angle — not a pure rear, pure front, or pure side view, and not a stronger 3/4 angle. If Image 1 is a pure rear view, keep it a pure rear view.
-- HEIGHT: match the camera height from Image 1 (low, ground-level, eye-level, or high).
-- PERSPECTIVE: match the focal-length feel of Image 1 (wide-angle, normal, or telephoto). Do not flatten perspective into an orthographic projection.
-- FRAMING: keep the same zoom and composition. Do not re-center, re-crop, or re-compose.
-- FACING: if the car faces left, keep it facing left; if right, keep it right. Never mirror or flip.
-- Do NOT use Image 2 for any camera information.
+CRITICAL — NUMBER PLATE:
+- If a number plate is clearly visible in Image 1, 
+  reproduce it exactly — same text, format, colors, if you cannot tell where it is from, leave it empty and do not hallucinate
+- If no number plate is visible in Image 1, 
+  do not add or invent one under any circumstances
 
-RULE 2 — PRESERVE EVERY DETAIL FROM IMAGE 1 (DO NOT GENERALISE TO A STOCK CAR):
-Before drawing, scan Image 1 and inventory every feature. The output must match the SPECIFIC car in Image 1, not a generic/stock version of that model. If a feature exists in Image 1, it MUST exist in the output. If it does not exist in Image 1, it MUST NOT be added.
+CRITICAL — NO HALLUCINATIONS:
+- Only render details explicitly visible in Image 1
+- If unsure whether a detail exists, leave it out
 
-Check each of these categories and reproduce exactly what you see:
-- BODY COLOUR: Match the exact paint colour (hue, saturation, lightness). A blue car must stay that exact blue, not a generic blue. A matte car must stay matte.
-- AERO / BODY KIT: Spoilers (roof spoiler, boot spoiler, ducktail, GT wing), splitters, diffusers, side skirts, canards, vents, hood scoops, bonnet bulges, roof scoops, fender flares, widebody kits. If ANY of these are present in Image 1, include them. If absent, do NOT add them.
-- MIRRORS: Match the exact shape, style, colour, and mounting of the side mirrors (e.g. body-colour vs black vs carbon, stalk-mounted vs door-mounted, standard vs aftermarket). Do not swap for a generic mirror.
-- BADGES & TRIM: Keep all visible badges, emblems, model letters, and trim pieces in their exact positions. Do not reposition, resize, remove, or add badges.
-- LIGHTS: Match the exact shape and layout of headlights, taillights, fog lights, and indicators visible in Image 1.
-- BUMPERS & GRILLE: Match the specific front/rear bumper design and grille pattern — including any aftermarket bumpers, lips, or grille meshes.
-- WHEELS: Match size, design, spoke pattern, spoke count, and colour exactly. If wheels are hidden in Image 1, keep them hidden — do NOT rotate the car even slightly to expose a wheel. It is better to show zero wheels than to change the camera angle.
-- WINDOWS & DOORS: Only render windows, door handles, and trim that are visible in Image 1. Match the number and layout of doors/windows.
-- NUMBER PLATE POSITION: The plate must appear in the EXACT SAME position on the bumper as in Image 1. If it is offset to one side (e.g. left of centre), keep it offset in the same direction by the same amount. If it is centred, keep it centred. Do not relocate it.
-- PROPORTIONS: Match body proportions exactly as they appear in Image 1's camera view. Do NOT infer or extrapolate proportions (wheelbase, bonnet length, rear overhang) not visible from Image 1's angle. If Image 1 is a rear view, you are drawing a rear view — do not rotate the car.
+GLASS — preserve exactly:
+- All side windows: very dark tinted, near black
+- One white highlight streak per window only
 
-RULE OF THUMB: If you catch yourself thinking "the standard [Model Name] has X", stop. Only draw what THIS specific car in Image 1 has. Stock features may be missing; aftermarket features may be added. Trust Image 1, not your training data.
+CRITICAL — CUSTOMER NOTES:
+- If Customer Notes are provided in the next line, apply them
+- Customer Notes: - ${notes}
+- If Customer Notes are blank, ignore this section
 
-ZOOMED DETAIL REFERENCES (Images 3, 4, 5 — only present for first generation):
-Images 3, 4, and 5 are zoomed crops of Image 1 — left third, middle third, and right third respectively. Use them ONLY to read fine details that are hard to see in Image 1 (wheel spoke patterns, badge shapes, mirror style, exact paint colour, panel lines, vent shapes, headlight/taillight detail).
-- Do NOT use Images 3-5 for camera, yaw, pitch, framing, or composition — those still come from Image 1 only (Rule 1 is unchanged).
-- Do NOT treat Images 3-5 as separate cars; they are the SAME car as Image 1.
-- If Images 3-5 are absent, ignore this section.
-
-- ${numberPlateLine}${notesLine}
-
-RULE 3 — ISOLATE THE CAR:
-Render only the car. Remove everything else from Image 1 — buildings, streets, pavements, walls, people, other vehicles, signs, trees, sky, and ground textures. Do not render shadows cast by surrounding objects — only the car's own flat shadow directly beneath it. The area around the car must be pure solid white (#FFFFFF), with no ghost outlines, sketches, or grey shapes.
-
-RULE 4 — CAR MUST SIT LEVEL ON A FLAT PLANE:
-The car must sit level on a flat, horizontal ground plane in the output.
-- If both wheels on the same side are visible, they must rest on the same horizontal line. The line connecting the bottom of the front and rear wheels must be perfectly horizontal (0° tilt).
-- The car's roll axis must be level — no diagonal tilt, no leaning left or right, no "pasted at an angle" look.
-- If the uploaded photo was taken on a slope, off-camber, or slightly rotated, correct the car so it appears level on flat ground. This is the ONLY correction allowed to the camera — yaw, pitch, framing, and facing from Rule 1 must still be preserved exactly.
-- The car's own flat shadow beneath it must also be horizontal, aligned with the flat ground plane.
-
-STYLE (from Image 2 only):
+The output must match Image 2 in style only:
 - Bold thick black outlines around all panels
-- Flat solid colour fills, minimal shading, hard sharp edges
-- All windows very dark tinted, near black — no visible interior. One subtle light-grey highlight streak per window.
-- Windshield: dark tint band across the top, fading slightly toward the bottom.
-- Satin/matte paint finish — no glossy flares or specular hotspots.
+- Body panels: use zoned flat colour —  3 to 4 distinct tones of the same base colour (mid-tone base, darker tone on recessed/lower panels, lighter tone on raised top surfaces)
+- Preserve ALL colour accent details on body panels and trim pieces
+  (coloured mirror caps, accent strips, contrasting trim — match exactly)
+- Preserve ALL rear-mounted appendages exactly as visible
+  (spoilers, wings, diffusers, lip extensions — do not omit or flatten)
 
-OUTPUT COLOURS — PURE WHITE IS FOR THE BACKGROUND ONLY:
-The background behind the car must be pure solid white (#FFFFFF). Every element that is part of the car or its shadow must use a non-white colour. If the customer notes request smoke, exhaust vapour, or any other light-coloured element, render it in off-white or light grey (for example #F5F5F5), never pure white. This keeps the car safe when the white background is later removed for transparency.
-
-Background: pure white. Shadow: flat black, directly beneath the car.`
+ALL other details from Image 1 only.
+Transparent background, flat black shadow beneath.
+No photorealism, no background, no road`
 }
 
 function buildBackgroundPrompt(backgroundValue: string) {
@@ -247,13 +181,6 @@ Only apply the requested changes.`
 
 import { uploadDataUrl } from '@/lib/api/fal'
 
-async function uploadCarSlicesIfPresent(slices: unknown): Promise<string[]> {
-  if (!Array.isArray(slices)) return []
-  const valid = slices.filter((s): s is string => typeof s === 'string' && s.length > 0)
-  if (valid.length === 0) return []
-  return await Promise.all(valid.map((s) => uploadDataUrl(s)))
-}
-
 function resolvePersistKind({
   mode,
   endpointId,
@@ -308,16 +235,11 @@ export async function POST(request: Request) {
     endpointId,
     mode,
     carImageDataUrl,
-    carModel,
-    showNumberPlate,
-    numberPlate,
     customerNotes,
     backgroundImageDataUrl,
     backgroundValue,
     backgroundTweakImageUrl,
     tweakImageUrl,
-    tweakModel,
-    carImageSliceDataUrls,
   } = body
 
   const persistKindForStatus = resolvePersistKind({ mode, endpointId })
@@ -453,62 +375,55 @@ export async function POST(request: Request) {
       }
 
       if (tweakImageUrl && typeof tweakImageUrl === 'string') {
-        const selectedTweakModel = (typeof tweakModel === 'string' && tweakModel in CAR_TWEAK_MODELS)
-          ? (tweakModel as CarTweakModel)
-          : DEFAULT_CAR_TWEAK_MODEL
-        const tweakEndpoint = CAR_TWEAK_MODELS[selectedTweakModel]
-        const notes = typeof customerNotes === 'string' ? customerNotes.trim() : ''
+        const prompt = typeof customerNotes === 'string' ? customerNotes.trim() : ''
         const hasOriginalPhoto =
           typeof carImageDataUrl === 'string' && carImageDataUrl.length > 0
         const originalPhotoUrl = hasOriginalPhoto
           ? await uploadDataUrl(String(carImageDataUrl))
           : null
-        const referenceLine = originalPhotoUrl
-          ? `\n\nImage 1 is the current illustration — this is what you must edit. The output must stay in the SAME vector illustration art style as Image 1.\nImage 2 is the original photo of the real car — it is the ground truth for what the real car looks like (camera angle, body shape, wheels, badges, mirrors, paint colour, etc.). Refer to it only when correcting something the user explicitly asked to fix.\n\nCRITICAL — Image 2 IS NOT A SCENE TO RECREATE:\n- Do NOT copy anything from Image 2 except the car itself.\n- Do NOT include Image 2's background, buildings, street, pavement, road markings, sky, trees, people, other vehicles, signs, or any scenery.\n- Do NOT copy Image 2's photographic lighting, shadows, or colours of surroundings.\n- The output must show ONLY the car on a pure solid white (#FFFFFF) background — exactly like Image 1.`
-          : ''
-        const prompt = `Edit this car illustration based on these instructions:\n${notes}${referenceLine}\n\nDEFAULT BEHAVIOUR (when the user does NOT mention it):\n- Keep Image 1's camera angle, perspective, yaw, framing, pose, proportions, and wheel visibility EXACTLY as they are.\n- Only change what the user explicitly asks to change.\n- The vector art style (line weight, flat fills, window tint, shadow style, colour palette) is always preserved.\n\nIF THE USER EXPLICITLY ASKS TO FIX PERSPECTIVE, CAMERA, ANGLE, VIEW, OR ROTATION:\n- Copy Image 2's camera EXACTLY — same yaw, same height, same framing, same side-visibility, same wheel-visibility.\n- If Image 2 is a PURE REAR view (looking straight at the back, both rear quarters roughly symmetrical, wheels hidden behind the bumper), the output MUST also be a pure rear view. Do NOT introduce a 3/4 angle. Do NOT expose wheels that Image 2 hides.\n- If Image 2 is a 3/4 view, match the SAME degree of 3/4 — neither more nor less.\n- If Image 2 is a pure side view, the output is a pure side view. If pure front, pure front.\n- Do NOT use your training data of "typical" car photos to choose the angle. Use Image 2 only. A correct match to Image 2 with hidden wheels beats a "better looking" 3/4 angle every time.\n\nOUTPUT REQUIREMENTS:\n- The output must contain ONLY the car illustration on a pure solid white (#FFFFFF) background.\n- Do NOT add any scenery, buildings, streets, pavements, roads, skies, trees, people, other vehicles, signs, or environment of any kind.\n- Do NOT render shadows cast by surrounding objects — only the car's own flat shadow directly beneath it.\n- The area around the car must be pure solid white (#FFFFFF), with no ghost outlines, sketches, grey shapes, or photographic elements.\n\nSHADOW COLOUR (STRICT):\n- If the existing illustration (Image 1) already has a black shadow, keep it exactly as it is — do not change its colour, shape, or position.`
-        console.log(`\n[generate-car-tweak] Prompt sent to Fal (${tweakEndpoint}):\n`)
-        console.log(prompt)
         const imageUrls = originalPhotoUrl
-          ? [String(tweakImageUrl), originalPhotoUrl]
+          ? [originalPhotoUrl, String(tweakImageUrl)]
           : [String(tweakImageUrl)]
-        const queued = await fal.queue.submit(tweakEndpoint, {
+        console.log(`\n[generate-car-tweak] Prompt sent to Fal (${FAL_MODEL}):\n`)
+        console.log(prompt)
+        const queued = await fal.queue.submit(FAL_MODEL, {
           input: {
             prompt,
             image_urls: imageUrls,
+            image_size: { width: 1024, height: 1024 },
+            quality: 'medium',
             output_format: 'png',
+            num_images: 1,
           },
         })
         const queuedId = getFalQueueId(queued)
-        return Response.json({ requestId: queuedId, endpointId: tweakEndpoint, status: 'IN_QUEUE' })
+        return Response.json({ requestId: queuedId, endpointId: FAL_MODEL, status: 'IN_QUEUE' })
       }
 
       if (typeof carImageDataUrl !== 'string' || !carImageDataUrl) {
         return Response.json({ error: 'Car image is required' }, { status: 400 })
       }
-      const [styleRefDataUrl, carImageUrl, sliceUrls] = await Promise.all([
+      const [styleRefDataUrl, carImageUrl] = await Promise.all([
         loadStyleReference(),
         uploadDataUrl(carImageDataUrl),
-        uploadCarSlicesIfPresent(carImageSliceDataUrls),
       ])
       const styleRefUrl = await uploadDataUrl(styleRefDataUrl)
       const prompt = buildFullPrompt({
-        carModel: typeof carModel === 'string' ? carModel : undefined,
-        showNumberPlate: Boolean(showNumberPlate),
-        numberPlate: typeof numberPlate === 'string' ? numberPlate : undefined,
         customerNotes: typeof customerNotes === 'string' ? customerNotes : undefined,
       })
-      const imageUrlsForFal = [carImageUrl, styleRefUrl, ...sliceUrls]
+      const imageUrlsForFal = [carImageUrl, styleRefUrl]
       console.log(`\n[generate-car] Prompt sent to Fal (${FAL_MODEL}) with ${imageUrlsForFal.length} image_urls:`)
-      imageUrlsForFal.forEach((u, i) => {
-        const role = i === 0 ? 'original' : i === 1 ? 'style-ref' : `slice-${['left', 'mid', 'right'][i - 2] || i - 2}`
-        console.log(`  [${i + 1}] (${role}) ${u}`)
-      })
+      console.log(`  [1] (original) ${carImageUrl}`)
+      console.log(`  [2] (style-ref) ${styleRefUrl}`)
       console.log(prompt)
       const queued = await fal.queue.submit(FAL_MODEL, {
         input: {
           prompt,
           image_urls: imageUrlsForFal,
+          image_size: { width: 1024, height: 1024 },
+          quality: 'medium',
+          output_format: 'png',
+          num_images: 1,
         },
       })
       const queuedId = getFalQueueId(queued)
@@ -549,29 +464,27 @@ export async function POST(request: Request) {
       if (typeof carImageDataUrl !== 'string' || !carImageDataUrl) {
         return Response.json({ error: 'Car image is required' }, { status: 400 })
       }
-      const [styleRefDataUrl, carImageUrl, sliceUrls] = await Promise.all([
+      const [styleRefDataUrl, carImageUrl] = await Promise.all([
         loadStyleReference(),
         uploadDataUrl(carImageDataUrl),
-        uploadCarSlicesIfPresent(carImageSliceDataUrls),
       ])
       const styleRefUrl = await uploadDataUrl(styleRefDataUrl)
       const prompt = buildFullPrompt({
-        carModel: typeof carModel === 'string' ? carModel : undefined,
-        showNumberPlate: Boolean(showNumberPlate),
-        numberPlate: typeof numberPlate === 'string' ? numberPlate : undefined,
         customerNotes: typeof customerNotes === 'string' ? customerNotes : undefined,
       })
-      const imageUrlsForFal = [carImageUrl, styleRefUrl, ...sliceUrls]
+      const imageUrlsForFal = [carImageUrl, styleRefUrl]
       console.log(`\n[generate] Prompt sent to Fal (${FAL_MODEL}) with ${imageUrlsForFal.length} image_urls:`)
-      imageUrlsForFal.forEach((u, i) => {
-        const role = i === 0 ? 'original' : i === 1 ? 'style-ref' : `slice-${['left', 'mid', 'right'][i - 2] || i - 2}`
-        console.log(`  [${i + 1}] (${role}) ${u}`)
-      })
+      console.log(`  [1] (original) ${carImageUrl}`)
+      console.log(`  [2] (style-ref) ${styleRefUrl}`)
       console.log(prompt)
       result = await fal.subscribe(FAL_MODEL, {
         input: {
           prompt,
           image_urls: imageUrlsForFal,
+          image_size: { width: 1024, height: 1024 },
+          quality: 'medium',
+          output_format: 'png',
+          num_images: 1,
         },
         logs: true,
       })
@@ -597,9 +510,6 @@ export async function POST(request: Request) {
           }
         : {
             source: 'fal_subscribe',
-            car_model: carModel != null ? String(carModel) : '',
-            show_number_plate: Boolean(showNumberPlate),
-            number_plate: numberPlate != null ? String(numberPlate) : '',
             customer_notes: customerNotes != null ? String(customerNotes) : '',
             fal_request_id: result.requestId != null ? String(result.requestId) : null,
           }

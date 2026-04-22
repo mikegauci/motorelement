@@ -34,16 +34,12 @@ export default function ProductCustomizer() {
   const { mockupThumbnailUrl } = useCustomizer()
 
   // ---- Vehicle input state (owned by this component) ----
-  const [carModel, setCarModel] = useState('')
-  const [showNumberPlate, setShowNumberPlate] = useState(false)
-  const [numberPlate, setNumberPlate] = useState('')
   const [customerNotes, setCustomerNotes] = useState('')
   const [carImageDataUrl, setCarImageDataUrl] = useState<string | null>(null)
   const [carImagePreview, setCarImagePreview] = useState<string | null>(null)
   const [vehicleLocked, setVehicleLocked] = useState(false)
   const [composedPromptNotes, setComposedPromptNotes] = useState('')
   const [tweakNotes, setTweakNotes] = useState('')
-  const [tweakModel, setTweakModel] = useState<'gpt-image-1.5' | 'nano-banana-2' | 'gemini-3-pro-image-preview'>('gpt-image-1.5')
 
   // ---- Background selection state ----
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
@@ -73,9 +69,9 @@ export default function ProductCustomizer() {
   const textLayerHook = useTextLayers(availableFontOptions)
 
   const carGen = useCarGeneration({
-    carImageDataUrl, carModel, showNumberPlate, numberPlate, customerNotes,
+    carImageDataUrl, customerNotes,
     vehicleLocked, setVehicleLocked, composedPromptNotes, setComposedPromptNotes,
-    tweakNotes, setTweakNotes, tweakModel,
+    tweakNotes, setTweakNotes,
   })
 
   const bgGen = useBackgroundGeneration({
@@ -130,7 +126,7 @@ export default function ProductCustomizer() {
   // ---- Session ----
   useSession(
     {
-      carModel, showNumberPlate, numberPlate, customerNotes,
+      customerNotes,
       carImageDataUrl, carImagePreview,
       revisions: carGen.revisions, viewIndex: carGen.viewIndex,
       vehicleLocked, composedPromptNotes, tweakNotes, selectedPresetId,
@@ -140,7 +136,7 @@ export default function ProductCustomizer() {
       textLayers: textLayerHook.textLayers, selectedTextLayerId: textLayerHook.selectedTextLayerId,
     },
     {
-      setCarModel, setShowNumberPlate, setNumberPlate, setCustomerNotes,
+      setCustomerNotes,
       setCarImageDataUrl, setCarImagePreview,
       setRevisions: carGen.setRevisions, setViewIndex: carGen.setViewIndex,
       setVehicleLocked, setComposedPromptNotes, setTweakNotes, setSelectedPresetId,
@@ -252,7 +248,7 @@ export default function ProductCustomizer() {
     try { sessionStorage.removeItem(PENDING_GENERATION_KEY); sessionStorage.removeItem(PENDING_BACKGROUND_KEY) } catch { /* ignore */ }
     if (carFileRef.current) carFileRef.current.value = ''
     if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
-    setCarModel(''); setShowNumberPlate(false); setNumberPlate(''); setCustomerNotes('')
+    setCustomerNotes('')
     setCarImageDataUrl(null); setCarImagePreview(null)
     setVehicleLocked(false); setComposedPromptNotes(''); setTweakNotes('')
     setSelectedPresetId(null)
@@ -283,9 +279,6 @@ export default function ProductCustomizer() {
       </div>
 
       <VehicleInputForm
-        carModel={carModel} setCarModel={setCarModel}
-        showNumberPlate={showNumberPlate} setShowNumberPlate={setShowNumberPlate}
-        numberPlate={numberPlate} setNumberPlate={setNumberPlate}
         customerNotes={customerNotes} setCustomerNotes={setCustomerNotes}
         carImagePreview={carImagePreview} vehicleLocked={vehicleLocked}
         running={carGen.running} canRun={canRun} isDone={isDone}
@@ -332,19 +325,6 @@ export default function ProductCustomizer() {
                           ))}
                         </div>
                       )}
-                      <div className={styles.tweakModelRow}>
-                        {(['gpt-image-1.5', 'nano-banana-2', 'gemini-3-pro-image-preview'] as const).map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            className={`${styles.tweakModelBtn} ${tweakModel === m ? styles.tweakModelBtnActive : ''}`}
-                            onClick={() => setTweakModel(m)}
-                            disabled={carGen.running}
-                          >
-                            {m}
-                          </button>
-                        ))}
-                      </div>
                       <div className={styles.setupBlock}>
                         <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the generated vehicle." value={tweakNotes} onChange={(e) => setTweakNotes(e.target.value)} />
                       </div>
