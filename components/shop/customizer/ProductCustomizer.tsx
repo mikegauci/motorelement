@@ -304,14 +304,16 @@ export default function ProductCustomizer() {
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <div>
-            <h1 className={styles.title}>Motor Element Product Customizer</h1>
+            <h1 className={styles.title}>Customizer</h1>
           </div>
-          <button type="button" className={styles.btnNewProject} onClick={reset}>
-            New project
-          </button>
+          {carGen.revisions.length > 0 && (
+            <button type="button" className={styles.btnNewProject} onClick={reset}>
+              Start Fresh
+            </button>
+          )}
         </div>
         <p className={styles.sessionHint}>
-          Upload a photo of your car and we&apos;ll generate a vector illustration of it.
+          Drop your photo and we'll create a custom illustration of your ride
         </p>
       </div>
 

@@ -70,7 +70,7 @@ export default function VehicleInputForm({
         {!vehicleLocked && (
           <div className={styles.vehicleActions}>
             <button className={styles.btnPrimary} onClick={onGenerate} disabled={!canRun}>
-              {running ? 'Generating…' : 'Generate illustration'}
+              {running ? 'Creating...' : 'Create My Illustration'}
             </button>
             {running && (
               <button type="button" className={styles.btn} onClick={onCancel}>

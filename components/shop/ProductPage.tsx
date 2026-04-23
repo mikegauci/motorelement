@@ -217,7 +217,7 @@ export default function ProductPage({
     <div className="mx-auto max-w-7xl px-6 py-16">
       <div className="grid gap-12 lg:grid-cols-2">
         {/* Image Gallery + Mockup */}
-        <div className="lg:sticky lg:top-20 lg:self-start">
+        <div className="min-w-0 lg:sticky lg:top-20 lg:self-start">
           {/* View toggle tabs */}
           <div className="flex gap-1 mb-3">
             <button
@@ -276,7 +276,7 @@ export default function ProductPage({
               </div>
 
               {allImages.length > 1 && (
-                <div className="mt-4 flex gap-3">
+                <div className="mt-4 flex flex-wrap gap-3">
                   {allImages.map((src, idx) => (
                     <button
                       key={idx}
@@ -303,7 +303,7 @@ export default function ProductPage({
         </div>
 
         {/* Product Info */}
-        <div>
+        <div className="min-w-0">
           <p className="font-sub text-xs font-bold uppercase tracking-widest text-ignition">
             {product.type}
           </p>
