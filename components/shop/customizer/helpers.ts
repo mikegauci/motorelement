@@ -18,7 +18,7 @@ export function createTextLayer(id: string, defaultFontFamily = 'Arial'): TextLa
     italic: false,
     underline: false,
     color: '#ffffff',
-    shadow: 'off',
+    shadow: 'black',
     visible: true,
   }
 }
