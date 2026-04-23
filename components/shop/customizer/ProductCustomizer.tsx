@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import styles from './styles'
@@ -313,7 +314,7 @@ export default function ProductCustomizer() {
           )}
         </div>
         <p className={styles.sessionHint}>
-          Drop your photo and we'll create a custom illustration of your ride
+          Drop your photo and we&apos;ll create a custom illustration of your ride
         </p>
       </div>
 
