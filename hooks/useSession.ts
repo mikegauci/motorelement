@@ -127,14 +127,16 @@ export function useSession(state: SessionState, setters: SessionSetters) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Persist session on change
   useEffect(() => {
     if (!sessionRestored) return
-    try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(state))
-    } catch (e) {
-      console.warn('Session save failed (storage may be full)', e)
-    }
+    const handle = setTimeout(() => {
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(state))
+      } catch (e) {
+        console.warn('Session save failed (storage may be full)', e)
+      }
+    }, 300)
+    return () => clearTimeout(handle)
   }, [sessionRestored, state])
 
   return { sessionRestored }

@@ -49,6 +49,23 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
   const [mobileCompositePreviewSrc, setMobileCompositePreviewSrc] = useState('')
   const [showMobileResultDock, setShowMobileResultDock] = useState(false)
 
+  const paintRafRef = useRef<number | null>(null)
+  function schedulePaint() {
+    if (paintRafRef.current !== null) return
+    paintRafRef.current = requestAnimationFrame(() => {
+      paintRafRef.current = null
+      compositeRenderRef.current()
+    })
+  }
+  useEffect(() => {
+    return () => {
+      if (paintRafRef.current !== null) {
+        cancelAnimationFrame(paintRafRef.current)
+        paintRafRef.current = null
+      }
+    }
+  }, [])
+
   const carDragRef = useRef({
     active: false,
     pointerId: null as number | null,
@@ -75,10 +92,10 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     carScaleRef.current = deps.carScale
     compositionZoomRef.current = deps.compositionZoom
     bgScaleRef.current = deps.bgScale
-    compositeRenderRef.current()
+    schedulePaint()
   }, [deps.carAdjustXPct, deps.carAdjustYPct, deps.carScale, deps.compositionZoom, deps.bgScale])
 
-  useEffect(() => { compositeRenderRef.current() }, [deps.textLayers])
+  useEffect(() => { schedulePaint() }, [deps.textLayers])
 
   // Canvas paint loop
   useEffect(() => {
