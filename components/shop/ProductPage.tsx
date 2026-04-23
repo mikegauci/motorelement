@@ -217,7 +217,7 @@ export default function ProductPage({
     <div className="mx-auto max-w-7xl px-6 py-16">
       <div className="grid gap-12 lg:grid-cols-2">
         {/* Image Gallery + Mockup */}
-        <div className="lg:sticky lg:top-6 lg:self-start">
+        <div className="lg:sticky lg:top-20 lg:self-start">
           {/* View toggle tabs */}
           <div className="flex gap-1 mb-3">
             <button

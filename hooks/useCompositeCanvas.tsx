@@ -140,7 +140,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       const card = resultCardRef.current
       if (!card) { setShowMobileResultDock(false); return }
       const rect = card.getBoundingClientRect()
-      setShowMobileResultDock(rect.bottom < 200)
+      setShowMobileResultDock(rect.bottom < 2400)
     }
     syncMobileDockVisibility()
     window.addEventListener('scroll', syncMobileDockVisibility, { passive: true })

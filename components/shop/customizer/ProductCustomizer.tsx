@@ -21,6 +21,7 @@ import VehicleInputForm from './VehicleInputForm'
 import BackgroundPresets from './BackgroundPresets'
 import CompositeEditor from './CompositeEditor'
 import TextLayerEditor from './TextLayerEditor'
+import MockupPreviewModal from './MockupPreviewModal'
 import CollapsibleTweak from './parts/CollapsibleTweak'
 
 import { useCustomizer } from './CustomizerContext'
@@ -58,10 +59,14 @@ export default function ProductCustomizer() {
 
   // ---- UI state ----
   const [desktopDragEnabled, setDesktopDragEnabled] = useState(false)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [mobileDockDismissed, setMobileDockDismissed] = useState(false)
   const [customFontOptions, setCustomFontOptions] = useState<FontOption[]>([])
   const carFileRef = useRef<HTMLInputElement>(null)
   const customBackgroundFileRef = useRef<HTMLInputElement>(null)
   const loadedCustomFontFamiliesRef = useRef(new Set<string>())
+  const mobileDockTouchStartXRef = useRef<number | null>(null)
+  const mobileDockDidSwipeRef = useRef(false)
 
   const availableFontOptions = customFontOptions.length > 0 ? customFontOptions : TEXT_FONTS
 
@@ -261,6 +266,38 @@ export default function ProductCustomizer() {
     textLayerHook.resetTextLayers()
   }
 
+  function handleMobileDockTouchStart(e: React.TouchEvent<HTMLButtonElement>) {
+    mobileDockTouchStartXRef.current = e.changedTouches[0]?.clientX ?? null
+    mobileDockDidSwipeRef.current = false
+  }
+
+  function handleMobileDockTouchEnd(e: React.TouchEvent<HTMLButtonElement>) {
+    const startX = mobileDockTouchStartXRef.current
+    const endX = e.changedTouches[0]?.clientX
+    mobileDockTouchStartXRef.current = null
+    if (startX == null || endX == null) return
+    const deltaX = endX - startX
+    if (deltaX > 40) {
+      setMobileDockDismissed(true)
+      mobileDockDidSwipeRef.current = true
+    }
+  }
+
+  function handleMobileDockEdgeTouchStart(e: React.TouchEvent<HTMLButtonElement>) {
+    mobileDockTouchStartXRef.current = e.changedTouches[0]?.clientX ?? null
+  }
+
+  function handleMobileDockEdgeTouchEnd(e: React.TouchEvent<HTMLButtonElement>) {
+    const startX = mobileDockTouchStartXRef.current
+    const endX = e.changedTouches[0]?.clientX
+    mobileDockTouchStartXRef.current = null
+    if (startX == null || endX == null) return
+    const deltaX = endX - startX
+    if (deltaX < -25) {
+      setMobileDockDismissed(false)
+    }
+  }
+
   // ---- JSX ----
   return (
     <main className={styles.main}>
@@ -420,16 +457,42 @@ export default function ProductCustomizer() {
       {!!mobileResultDockSrc && (
         <button
           type="button"
-          className={`${styles.mobileResultDock} ${composite.showMobileResultDock ? styles.mobileResultDockVisible : ''}`}
-          onClick={() => composite.resultCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          aria-label="Jump to result preview"
-          aria-hidden={!composite.showMobileResultDock}
-          tabIndex={composite.showMobileResultDock ? 0 : -1}
+          className={`${styles.mobileResultDock} ${composite.showMobileResultDock && !mobileDockDismissed ? styles.mobileResultDockVisible : ''}`}
+          onClick={() => {
+            if (mobileDockDidSwipeRef.current) {
+              mobileDockDidSwipeRef.current = false
+              return
+            }
+            setShowPreviewModal(true)
+          }}
+          onTouchStart={handleMobileDockTouchStart}
+          onTouchEnd={handleMobileDockTouchEnd}
+          aria-label="Open mockup preview"
+          aria-hidden={!composite.showMobileResultDock || mobileDockDismissed}
+          tabIndex={composite.showMobileResultDock && !mobileDockDismissed ? 0 : -1}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={mobileResultDockSrc} alt="" />
         </button>
       )}
+
+      {!!mobileResultDockSrc && composite.showMobileResultDock && mobileDockDismissed && (
+        <button
+          type="button"
+          className={styles.mobileResultDockEdgeHandle}
+          onClick={() => setMobileDockDismissed(false)}
+          onTouchStart={handleMobileDockEdgeTouchStart}
+          onTouchEnd={handleMobileDockEdgeTouchEnd}
+          aria-label="Show preview dock"
+        >
+          <span aria-hidden>❮</span>
+        </button>
+      )}
+
+      <MockupPreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+      />
 
       {composite.renderHiddenCanvas()}
     </main>

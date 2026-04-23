@@ -75,7 +75,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
       drawArtworkClipped(offCtx, artworkImg, pzr, mockupPlacement)
     }
 
-    const padding = 1
+    const padding = 0.3
     const cropCx = pzr.x + pzr.w / 2
     const cropCy = pzr.y + pzr.h / 2
     const cropSide = Math.max(pzr.w, pzr.h) * (1 + padding)
