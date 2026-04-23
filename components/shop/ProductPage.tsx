@@ -60,7 +60,7 @@ export default function ProductPage({
   printifyProductId: string;
   children?: React.ReactNode;
 }) {
-  const { addItem } = useCart();
+  const { addItem, openCart } = useCart();
   const {
     setTshirtBaseImage, tshirtBaseImage, artworkUrl, compositeDataUrl,
     mockupPlacement, setProductType, setSelectedColorHex,
@@ -186,6 +186,7 @@ export default function ProductPage({
       ...(persistedThumbnailUrl ? { thumbnailUrl: persistedThumbnailUrl } : {}),
     });
     setAdded(true);
+    openCart();
     setTimeout(() => setAdded(false), 2000);
   }
 
@@ -389,35 +390,6 @@ export default function ProductPage({
             </div>
           )}
 
-          {/* Add to Cart */}
-          <div className="mt-10">
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full sm:w-auto flex items-center justify-center gap-2"
-              onClick={handleAddToCart}
-              disabled={!selectedVariant || uploading}
-            >
-              {uploading ? (
-                "SAVING ARTWORK..."
-              ) : added ? (
-                <>
-                  <Check size={18} /> ADDED TO CART
-                </>
-              ) : (
-                <>
-                  <ShoppingBag size={18} /> ADD TO CART
-                </>
-              )}
-            </Button>
-
-            {!selectedVariant && selectedColor && selectedSize && (
-              <p className="mt-3 font-body text-xs text-redline">
-                This color/size combination is not available.
-              </p>
-            )}
-          </div>
-
           {/* Description */}
           {data?.description && (
             <div className="mt-10 border-t border-border pt-8">
@@ -432,6 +404,35 @@ export default function ProductPage({
           )}
 
           {children}
+
+          {/* Add to Cart (placed at the very bottom, after customizer) */}
+          <div className="mt-10 border-t border-border pt-8">
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={handleAddToCart}
+              disabled={!selectedVariant || uploading}
+            >
+              {uploading ? (
+                "SAVING ARTWORK..."
+              ) : added ? (
+                <>
+                  <Check size={18} /> ADDED TO CART
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={18} /> FINALISE AND ADD TO CART
+                </>
+              )}
+            </Button>
+
+            {!selectedVariant && selectedColor && selectedSize && (
+              <p className="mt-3 font-body text-xs text-redline">
+                This color/size combination is not available.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

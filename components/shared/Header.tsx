@@ -12,7 +12,7 @@ const navLinks = [
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { totalItems } = useCart();
+  const { totalItems, openCart } = useCart();
 
   return (
     <header className="sticky top-0 z-50 bg-carbon">
@@ -34,8 +34,8 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <Link
-            href="/cart"
+          <button
+            onClick={openCart}
             className="relative text-muted transition-colors hover:text-white"
             aria-label="Cart"
           >
@@ -45,7 +45,7 @@ export function Header() {
                 {totalItems}
               </span>
             )}
-          </Link>
+          </button>
           <Link
             href="/account"
             className="text-muted transition-colors hover:text-white"

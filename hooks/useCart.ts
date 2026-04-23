@@ -22,6 +22,9 @@ interface CartContextValue {
   clear: () => void;
   totalItems: number;
   totalPrice: number;
+  isOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
 }
 
 export const CartContext = createContext<CartContextValue | null>(null);

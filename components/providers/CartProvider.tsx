@@ -30,6 +30,7 @@ function itemKey(productId: string, size: string, color?: string) {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     setItems(loadCart());
@@ -39,6 +40,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loaded) saveCart(items);
   }, [items, loaded]);
+
+  const openCart = useCallback(() => setIsOpen(true), []);
+  const closeCart = useCallback(() => setIsOpen(false), []);
 
   const addItem = useCallback((item: Omit<CartItem, "quantity">) => {
     setItems((prev) => {
@@ -89,8 +93,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ items, addItem, removeItem, updateQuantity, clear, totalItems, totalPrice }),
-    [items, addItem, removeItem, updateQuantity, clear, totalItems, totalPrice]
+    () => ({
+      items,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clear,
+      totalItems,
+      totalPrice,
+      isOpen,
+      openCart,
+      closeCart,
+    }),
+    [
+      items,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clear,
+      totalItems,
+      totalPrice,
+      isOpen,
+      openCart,
+      closeCart,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -43,62 +43,75 @@ export default function CartPage() {
           {items.map((item) => (
             <div
               key={`${item.productId}-${item.size}-${item.color}`}
-              className="flex items-center gap-6 border border-border bg-obsidian p-6"
+              className="flex flex-col gap-4 border border-border bg-obsidian p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
             >
-              <div className="relative h-20 w-20 shrink-0 overflow-hidden bg-carbon">
-                {item.thumbnailUrl ? (
-                  <Image
-                    src={item.thumbnailUrl}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                    sizes="80px"
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center font-sub text-xs font-bold uppercase tracking-widest text-muted">
-                    {item.type}
-                  </span>
-                )}
+              <div className="flex items-start gap-4 sm:contents">
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden bg-carbon sm:h-20 sm:w-20">
+                  {item.thumbnailUrl ? (
+                    <Image
+                      src={item.thumbnailUrl}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center font-sub text-xs font-bold uppercase tracking-widest text-muted">
+                      {item.type}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-heading text-base text-white truncate sm:text-xl">
+                    {item.name}
+                  </h3>
+                  <p className="mt-1 font-sub text-[10px] font-bold uppercase tracking-widest text-muted sm:text-xs">
+                    {item.color && `${item.color} · `}Size: {item.size}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => removeItem(item.productId, item.size, item.color)}
+                  className="shrink-0 text-muted transition-colors hover:text-redline sm:hidden"
+                  aria-label="Remove item"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <h3 className="font-heading text-xl text-white truncate">
-                  {item.name}
-                </h3>
-                <p className="mt-1 font-sub text-xs font-bold uppercase tracking-widest text-muted">
-                  {item.color && `${item.color} · `}Size: {item.size}
+              <div className="flex items-center justify-between gap-3 border-t border-border pt-4 sm:contents sm:border-0 sm:pt-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <button
+                    onClick={() =>
+                      updateQuantity(item.productId, item.size, item.quantity - 1, item.color)
+                    }
+                    className="flex h-8 w-8 items-center justify-center border border-border text-muted transition-colors hover:text-white"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className="w-8 text-center font-mono text-sm text-white">
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() =>
+                      updateQuantity(item.productId, item.size, item.quantity + 1, item.color)
+                    }
+                    className="flex h-8 w-8 items-center justify-center border border-border text-muted transition-colors hover:text-white"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+
+                <p className="font-mono text-sm text-white sm:w-20 sm:text-right">
+                  {formatPrice(item.price * item.quantity)}
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() =>
-                    updateQuantity(item.productId, item.size, item.quantity - 1, item.color)
-                  }
-                  className="flex h-8 w-8 items-center justify-center border border-border text-muted transition-colors hover:text-white"
-                >
-                  <Minus size={14} />
-                </button>
-                <span className="w-8 text-center font-mono text-sm text-white">
-                  {item.quantity}
-                </span>
-                <button
-                  onClick={() =>
-                    updateQuantity(item.productId, item.size, item.quantity + 1, item.color)
-                  }
-                  className="flex h-8 w-8 items-center justify-center border border-border text-muted transition-colors hover:text-white"
-                >
-                  <Plus size={14} />
-                </button>
-              </div>
-
-              <p className="w-20 text-right font-mono text-sm text-white">
-                {formatPrice(item.price * item.quantity)}
-              </p>
-
               <button
                 onClick={() => removeItem(item.productId, item.size, item.color)}
-                className="text-muted transition-colors hover:text-redline"
+                className="hidden shrink-0 text-muted transition-colors hover:text-redline sm:block"
+                aria-label="Remove item"
               >
                 <Trash2 size={16} />
               </button>
@@ -106,7 +119,7 @@ export default function CartPage() {
           ))}
         </div>
 
-        <div className="border border-border bg-obsidian p-8 h-fit">
+        <div className="border border-border bg-obsidian p-6 sm:p-8 h-fit">
           <h2 className="font-heading text-2xl text-white">ORDER SUMMARY</h2>
 
           <div className="mt-6 space-y-3">

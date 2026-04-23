@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Barlow_Condensed, Inter, Space_Mono } from "next/font/google";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
+import { CartDrawer } from "@/components/shared/CartDrawer";
 import { CartProvider } from "@/components/providers/CartProvider";
 import "./globals.css";
 
@@ -53,6 +54,7 @@ export default function RootLayout({
           <Header />
           <main>{children}</main>
           <Footer />
+          <CartDrawer />
         </CartProvider>
       </body>
     </html>
