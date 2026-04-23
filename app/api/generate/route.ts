@@ -15,14 +15,13 @@ function getFalQueueId(queued: unknown): string | undefined {
   return q?.request_id ?? q?.requestId
 }
 
-// const FAL_MODEL = 'fal-ai/reve/fast/remix'
 const FAL_MODEL = 'openai/gpt-image-2/edit'
 const IMAGE_BACKGROUNDS = 'fal-ai/nano-banana-2/edit'
 const TEXT_BACKGROUNDS = 'fal-ai/nano-banana-2'
 const MODEL_TWEAK = 'fal-ai/gemini-3-pro-image-preview/edit'
 
 const STYLE_REFERENCE_ROOT = path.join(process.cwd(), 'public', 'style-reference')
-const STYLE_REFERENCE_PATH = path.join(STYLE_REFERENCE_ROOT, 'front', 'hatchback', 'front-01.jpg')
+const STYLE_REFERENCE_PATH = path.join(STYLE_REFERENCE_ROOT, 'style-reference.png')
 
 async function loadStyleReference() {
   return loadStyleReferenceDataUrl(STYLE_REFERENCE_PATH)
@@ -73,7 +72,8 @@ CRITICAL — CUSTOMER NOTES:
 
 The output must match Image 2 in style only:
 - Bold thick black outlines around all panels
-- Body panels: use zoned flat colour —  3 to 4 distinct tones of the same base colour (mid-tone base, darker tone on recessed/lower panels, lighter tone on raised top surfaces)
+- Body panels: use zoned flat colour —  3 to 4 distinct tones of the same base colour.
+- For black body panels make sure to keep very dark black tones.
 - Preserve ALL colour accent details on body panels and trim pieces
   (coloured mirror caps, accent strips, contrasting trim — match exactly)
 - Preserve ALL rear-mounted appendages exactly as visible
