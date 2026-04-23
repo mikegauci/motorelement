@@ -46,6 +46,7 @@ export default function VehicleInputForm({
           placeholder="Click to upload your car photo"
           altText="Car preview"
           locked={vehicleLocked}
+          processing={running}
           onUploadClick={onUploadClick}
           onViewImage={setLightboxSrc}
           onReplaceImage={onUploadClick}

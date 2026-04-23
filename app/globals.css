@@ -25,3 +25,106 @@
 .animate-scroll-left:hover {
   animation-play-state: paused;
 }
+
+/* Futuristic "Create My Illustration" processing animation */
+@keyframes gen-scan-sweep {
+  0% {
+    top: -12px;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes gen-grid-pan {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 -24px;
+  }
+}
+
+@keyframes gen-reticle-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gen-reticle-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes gen-corner-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes gen-label-fade {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-gen-scan-sweep {
+  animation: gen-scan-sweep 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.animate-gen-grid-pan {
+  animation: gen-grid-pan 1.8s linear infinite;
+}
+
+.animate-gen-reticle-rotate {
+  animation: gen-reticle-rotate 6s linear infinite;
+}
+
+.animate-gen-reticle-pulse {
+  animation: gen-reticle-pulse 1.6s ease-in-out infinite;
+}
+
+.animate-gen-corner-blink {
+  animation: gen-corner-blink 1.8s ease-in-out infinite;
+}
+
+.animate-gen-label-fade {
+  animation: gen-label-fade 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-gen-scan-sweep,
+  .animate-gen-grid-pan,
+  .animate-gen-reticle-rotate,
+  .animate-gen-reticle-pulse,
+  .animate-gen-corner-blink,
+  .animate-gen-label-fade {
+    animation: none !important;
+  }
+}
