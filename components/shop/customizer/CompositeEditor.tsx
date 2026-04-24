@@ -87,17 +87,6 @@ export default function CompositeEditor({
             onClick={() => {
               setCarAdjustXPct(0)
               setCarAdjustYPct(0)
-            }}
-            disabled={backgroundControlsLocked}
-          >
-            Center align
-          </button>
-          <button
-            type="button"
-            className={styles.btn}
-            onClick={() => {
-              setCarAdjustXPct(0)
-              setCarAdjustYPct(0)
               setCarScale(1)
               setCompositionZoom(1)
               setBgScale(1)

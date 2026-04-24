@@ -20,7 +20,19 @@ export default function CollapsibleTweak({ label, isOpen, onToggle, disabled, ch
         onClick={onToggle}
         disabled={disabled}
       >
-        {isOpen ? '▼' : '►'} {label}
+        <span className={styles.collapseToggleLabel}>{label}</span>
+        <svg
+          className={`${styles.collapseToggleChevron} ${isOpen ? styles.collapseToggleChevronOpen : ''}`}
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 8 10 12 14 8" />
+        </svg>
       </button>
       {isOpen && children}
     </>

@@ -93,7 +93,7 @@ export default function BackgroundPresets({
     >
       <h2 className={styles.presetSectionTitle}>Background preset</h2>
       <p className={styles.presetSectionIntro}>
-        Choose a background preset or stay transparent — then add text and download a print-ready PNG.
+        Choose a background preset or stay transparent.
       </p>
       {customBackgroundGenerating && (
         <div className={styles.backgroundProgress}>
@@ -218,7 +218,7 @@ export default function BackgroundPresets({
       {isCustomSavedSelection && selectedCustomBg && (
         <div className={styles.customBackgroundPanel}>
           <CollapsibleTweak
-            label="Tweak background (optional)"
+            label="Refine the background"
             isOpen={isBackgroundTweakOpen}
             onToggle={() => setIsBackgroundTweakOpen(!isBackgroundTweakOpen)}
             disabled={backgroundControlsLocked}
