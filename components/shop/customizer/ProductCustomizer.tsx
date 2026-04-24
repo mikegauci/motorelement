@@ -170,26 +170,26 @@ export default function ProductCustomizer() {
     let cancelled = false
     fetch('/api/fonts').then((r) => r.json()).then((data) => {
       if (!cancelled && Array.isArray(data.fonts)) setCustomFontOptions(data.fonts)
-    }).catch(() => {})
+    }).catch(() => { })
     return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
     if (!customFontOptions.length || typeof FontFace === 'undefined' || !document?.fonts) return
     let cancelled = false
-    ;(async () => {
-      for (const font of customFontOptions) {
-        if (cancelled || !font?.value || !font?.url) continue
-        if (loadedCustomFontFamiliesRef.current.has(font.value)) continue
-        try {
-          const ff = new FontFace(font.value, `url(${font.url})`)
-          await ff.load()
-          document.fonts.add(ff)
-          loadedCustomFontFamiliesRef.current.add(font.value)
-        } catch { /* ignore */ }
-      }
-      if (!cancelled) composite.compositeRenderRef.current()
-    })()
+      ; (async () => {
+        for (const font of customFontOptions) {
+          if (cancelled || !font?.value || !font?.url) continue
+          if (loadedCustomFontFamiliesRef.current.has(font.value)) continue
+          try {
+            const ff = new FontFace(font.value, `url(${font.url})`)
+            await ff.load()
+            document.fonts.add(ff)
+            loadedCustomFontFamiliesRef.current.add(font.value)
+          } catch { /* ignore */ }
+        }
+        if (!cancelled) composite.compositeRenderRef.current()
+      })()
     return () => { cancelled = true }
   }, [customFontOptions, composite.compositeRenderRef])
 
@@ -338,6 +338,23 @@ export default function ProductCustomizer() {
       {showResults && (
         <div className={styles.results}>
           <h2 className={styles.resultsTitle}>Result</h2>
+          {carGen.revisions.length > 0 && (
+            <div className={styles.tweakHistoryRow}>
+              {carGen.revisions.map((rev, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`${styles.tweakHistoryItem} ${carGen.viewIndex === idx ? styles.tweakHistoryItemActive : ''}`}
+                  onClick={() => carGen.setViewIndex(idx)}
+                  disabled={carGen.running}
+                  title={rev.label}
+                >
+                  <img src={rev.url} alt={rev.label} className={styles.tweakHistoryThumb} />
+                  <span className={styles.tweakHistoryLabel}>{rev.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div ref={composite.resultCardRef}>
             {(vehicleLocked || hasTransparentRevision) && (
               <div>
@@ -348,25 +365,8 @@ export default function ProductCustomizer() {
                       isOpen={isVehicleTweakOpen}
                       onToggle={() => setIsVehicleTweakOpen((v) => !v)}
                     >
-                      {carGen.revisions.length > 0 && (
-                        <div className={styles.tweakHistoryRow}>
-                          {carGen.revisions.map((rev, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              className={`${styles.tweakHistoryItem} ${carGen.viewIndex === idx ? styles.tweakHistoryItemActive : ''}`}
-                              onClick={() => carGen.setViewIndex(idx)}
-                              disabled={carGen.running}
-                              title={rev.label}
-                            >
-                              <img src={rev.url} alt={rev.label} className={styles.tweakHistoryThumb} />
-                              <span className={styles.tweakHistoryLabel}>{rev.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
                       <div className={styles.setupBlock}>
-                        <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the generated vehicle." value={tweakNotes} onChange={(e) => setTweakNotes(e.target.value)} />
+                        <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the artwork." value={tweakNotes} onChange={(e) => setTweakNotes(e.target.value)} />
                       </div>
                       <div className={styles.tweakPanelActions}>
                         <button className={styles.btnPrimary} onClick={carGen.runGeneration} disabled={!canRun}>

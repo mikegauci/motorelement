@@ -1,7 +1,18 @@
 'use client'
 /* eslint-disable @next/next/no-img-element */
 
+import { useEffect, useState } from 'react'
 import styles from '../styles'
+
+const GENERATION_MESSAGES = [
+  'ANALYZING IMAGE',
+  'IDENTIFYING YOUR MODEL',
+  'PICKING UP FINE DETAILS',
+  'REFINING THE ARTWORK',
+  'REMOVING THE BACKGROUND',
+  'ALMOST READY...',
+]
+const MESSAGE_INTERVAL_MS = 12000
 
 interface ImageUploadZoneProps {
   imagePreview: string | null
@@ -73,68 +84,45 @@ export default function ImageUploadZone({
 function GenerationOverlay() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden z-10">
-      <div className="absolute inset-0 bg-void/45" />
+      <div className="absolute inset-0 bg-void/55" />
 
       <div
-        className="absolute inset-0 opacity-30 animate-gen-grid-pan"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, rgba(220,38,38,0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(220,38,38,0.18) 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }}
-      />
-
-      <div
-        className="absolute inset-x-0 h-12 animate-gen-scan-sweep"
+        className="absolute inset-0 animate-gen-aurora-pulse"
         style={{
           background:
-            'linear-gradient(to bottom, rgba(220,38,38,0) 0%, rgba(220,38,38,0.18) 70%, rgba(255,90,90,0.55) 92%, rgba(255,120,120,1) 100%)',
+            'radial-gradient(circle at 50% 50%, rgba(220,38,38,0.35) 0%, rgba(220,38,38,0.12) 35%, transparent 70%)',
         }}
       />
+
       <div
-        className="absolute inset-x-0 h-[2px] animate-gen-scan-sweep"
+        className="absolute top-0 bottom-0 w-1/3 animate-gen-shimmer-diagonal"
         style={{
           background:
-            'linear-gradient(to right, transparent, rgba(255,120,120,1) 20%, rgba(255,255,255,0.9) 50%, rgba(255,120,120,1) 80%, transparent)',
-          boxShadow: '0 0 12px 2px rgba(220,38,38,0.75)',
+            'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 30%, rgba(255,200,200,0.22) 50%, rgba(255,255,255,0.06) 70%, transparent 100%)',
+          filter: 'blur(10px)',
         }}
       />
 
-      <span className="absolute top-2 left-2 w-5 h-5 border-l-2 border-t-2 border-ignition animate-gen-corner-blink" />
-      <span
-        className="absolute top-2 right-2 w-5 h-5 border-r-2 border-t-2 border-ignition animate-gen-corner-blink"
-        style={{ animationDelay: '0.2s' }}
-      />
-      <span
-        className="absolute bottom-2 left-2 w-5 h-5 border-l-2 border-b-2 border-ignition animate-gen-corner-blink"
-        style={{ animationDelay: '0.4s' }}
-      />
-      <span
-        className="absolute bottom-2 right-2 w-5 h-5 border-r-2 border-b-2 border-ignition animate-gen-corner-blink"
-        style={{ animationDelay: '0.6s' }}
-      />
+      <GenerationLabel />
+    </div>
+  )
+}
 
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="relative w-20 h-20 animate-gen-reticle-pulse">
-          <span className="absolute inset-0 rounded-full border-2 border-ignition/80" />
-          <span
-            className="absolute inset-1 rounded-full animate-gen-reticle-rotate"
-            style={{
-              backgroundImage:
-                'conic-gradient(rgba(220,38,38,0.55), transparent 35%, rgba(220,38,38,0.55) 50%, transparent 85%)',
-              WebkitMask: 'radial-gradient(closest-side, transparent 68%, #000 70%)',
-              mask: 'radial-gradient(closest-side, transparent 68%, #000 70%)',
-            }}
-          />
-          <span className="absolute top-1/2 left-1/2 w-10 h-[1px] -translate-x-1/2 -translate-y-1/2 bg-ignition/70" />
-          <span className="absolute top-1/2 left-1/2 h-10 w-[1px] -translate-x-1/2 -translate-y-1/2 bg-ignition/70" />
-          <span className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ignition shadow-[0_0_8px_2px_rgba(220,38,38,0.8)]" />
-        </div>
-      </div>
+function GenerationLabel() {
+  const [idx, setIdx] = useState(0)
 
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] tracking-[0.3em] font-mono text-ignition animate-gen-label-fade whitespace-nowrap">
-        ANALYZING IMAGE
-      </div>
+  useEffect(() => {
+    if (idx >= GENERATION_MESSAGES.length - 1) return
+    const t = setTimeout(() => setIdx((v) => v + 1), MESSAGE_INTERVAL_MS)
+    return () => clearTimeout(t)
+  }, [idx])
+
+  return (
+    <div
+      key={idx}
+      className="absolute bottom-4 left-1/2 -translate-x-1/2 font-mono font-bold text-[12px] tracking-[0.28em] text-white/90 animate-gen-label-fade whitespace-nowrap"
+    >
+      {GENERATION_MESSAGES[idx]}
     </div>
   )
 }
