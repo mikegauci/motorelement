@@ -18,7 +18,6 @@ export default function MockupPreview() {
     artworkUrl,
     compositeDataUrl,
     mockupPlacement,
-    setMockupPlacement,
     tshirtBaseImage,
     productType,
     selectedColorHex,
@@ -184,17 +183,6 @@ export default function MockupPreview() {
     return () => ro.disconnect()
   }, [paint])
 
-
-  const hasArtwork = !!overlayUrl
-  const scalePct = Math.round(mockupPlacement.scale * 100)
-
-  function nudgeScale(delta: number) {
-    setMockupPlacement({
-      ...mockupPlacement,
-      scale: mockupPlacement.scale + delta,
-    })
-  }
-
   return (
     <div className="relative w-full">
       <div
@@ -206,39 +194,6 @@ export default function MockupPreview() {
           className="absolute inset-0 w-full h-full"
           aria-label="T-shirt mockup preview"
         />
-        {hasArtwork && (
-          <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-            <button
-              type="button"
-              onClick={() => setMockupPlacement({ ...mockupPlacement, scale: 1.0 })}
-              disabled={mockupPlacement.scale === 1.0}
-              className="w-8 h-8 flex items-center justify-center rounded bg-black/70 text-white text-sm hover:bg-black/90 disabled:opacity-30 transition"
-              aria-label="Reset size"
-              title="Reset size"
-            >
-              ↻
-            </button>
-            <button
-              type="button"
-              onClick={() => nudgeScale(-0.05)}
-              disabled={mockupPlacement.scale <= 0.1}
-              className="w-8 h-8 flex items-center justify-center rounded bg-black/70 text-white text-sm hover:bg-black/90 disabled:opacity-30 transition"
-              aria-label="Decrease size"
-            >
-              −
-            </button>
-            <span className="w-8 text-center text-[10px] text-white/70 font-mono leading-tight">{scalePct}%</span>
-            <button
-              type="button"
-              onClick={() => nudgeScale(0.05)}
-              disabled={mockupPlacement.scale >= 1.0}
-              className="w-8 h-8 flex items-center justify-center rounded bg-black/70 text-white text-sm hover:bg-black/90 disabled:opacity-30 transition"
-              aria-label="Increase size"
-            >
-              +
-            </button>
-          </div>
-        )}
       </div>
       {!loaded && !tshirtBaseImage && (
         <div className="absolute inset-0 flex items-center justify-center">

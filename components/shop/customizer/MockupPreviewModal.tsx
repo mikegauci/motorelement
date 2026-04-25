@@ -34,6 +34,32 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
 
   const offscreenRef = useRef<HTMLCanvasElement | null>(null)
 
+  useEffect(() => {
+    if (!open) return
+
+    const scrollY = window.scrollY
+    const { style } = document.body
+    const previousStyles = {
+      overflow: style.overflow,
+      position: style.position,
+      top: style.top,
+      width: style.width,
+    }
+
+    style.overflow = 'hidden'
+    style.position = 'fixed'
+    style.top = `-${scrollY}px`
+    style.width = '100%'
+
+    return () => {
+      style.overflow = previousStyles.overflow
+      style.position = previousStyles.position
+      style.top = previousStyles.top
+      style.width = previousStyles.width
+      window.scrollTo(0, scrollY)
+    }
+  }, [open])
+
   const paint = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -134,7 +160,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-contain bg-black/85 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
