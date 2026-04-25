@@ -10,6 +10,8 @@ import {
 } from '@/components/shop/customizer/helpers'
 import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
 
+const COMPOSITE_EXPORT_SIZE = 2048
+
 interface CompositeCanvasDeps {
   transparentCarUrlForPreset: string | null
   selectedBackgroundSrc: string | null
@@ -112,7 +114,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       const cssSize = Math.min(Math.floor(stage!.clientWidth), 720)
       if (cssSize < 2) return
       const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
-      const pixelSize = Math.round(cssSize * dpr)
+      const pixelSize = Math.max(COMPOSITE_EXPORT_SIZE, Math.round(cssSize * dpr))
       if (canvas!.width !== pixelSize) canvas!.width = pixelSize
       if (canvas!.height !== pixelSize) canvas!.height = pixelSize
       const ctx = canvas!.getContext('2d', { alpha: true })!
