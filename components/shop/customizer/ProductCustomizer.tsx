@@ -314,7 +314,7 @@ export default function ProductCustomizer() {
           )}
         </div>
         <p className={styles.sessionHint}>
-          Upload a photo and we&apos;ll create a custom illustration of your ride
+          Drop your photo and we&apos;ll create a custom illustration of your ride
         </p>
       </div>
 
