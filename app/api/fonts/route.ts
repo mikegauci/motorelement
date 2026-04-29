@@ -31,10 +31,23 @@ async function collectFontFiles(dirPath: string, rootPath: string): Promise<stri
   return files
 }
 
+// Filename (without extension) of the font that should appear first in the
+// dropdown and be used as the default for new text layers.
+const DEFAULT_FONT_BASENAME = 'road-rage'
+
 export async function GET() {
   try {
     const fontsRoot = path.join(process.cwd(), 'public', 'fonts')
     const fontFiles = await collectFontFiles(fontsRoot, fontsRoot)
+
+    fontFiles.sort((a, b) => {
+      const aBase = path.basename(a, path.extname(a)).toLowerCase()
+      const bBase = path.basename(b, path.extname(b)).toLowerCase()
+      if (aBase === DEFAULT_FONT_BASENAME) return -1
+      if (bBase === DEFAULT_FONT_BASENAME) return 1
+      return aBase.localeCompare(bBase)
+    })
+
     const usedFamilies = new Set<string>()
     const fonts = fontFiles.map((relativePath) => {
       const baseName = path.basename(relativePath, path.extname(relativePath))
