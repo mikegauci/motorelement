@@ -62,8 +62,21 @@ export default function ProductPage({
 }) {
   const { addItem, openCart } = useCart();
   const {
-    setTshirtBaseImage, tshirtBaseImage, artworkUrl, compositeDataUrl,
-    mockupPlacement, setProductType, setSelectedColorHex, generationStatus,
+    setTshirtFrontImage,
+    setTshirtBackImage,
+    tshirtFrontImage,
+    tshirtBackImage,
+    artworkUrl,
+    frontCompositeDataUrl,
+    backCompositeDataUrl,
+    frontPlacement,
+    backPlacement,
+    selectedSide,
+    setSelectedSide,
+    backEnabled,
+    setProductType,
+    setSelectedColorHex,
+    generationStatus,
   } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,18 +133,22 @@ export default function ProductPage({
     !uploading &&
     !generationRunning;
 
-  // Use a per-color blank mockup when available; fall back to Printify's front image
+  // Per-side blank mockup image, with Printify image as fallback.
   useEffect(() => {
-    const blank = getBlankMockupImage(product.type, selectedColorObj?.title);
-    setTshirtBaseImage(blank ?? currentImages?.front ?? null);
-  }, [product.type, selectedColorObj?.title, currentImages?.front, setTshirtBaseImage]);
+    const frontBlank = getBlankMockupImage(product.type, selectedColorObj?.title, "front");
+    setTshirtFrontImage(frontBlank ?? currentImages?.front ?? null);
+  }, [product.type, selectedColorObj?.title, currentImages?.front, setTshirtFrontImage]);
 
-  // Push selected color hex into context for mockup tinting
+  useEffect(() => {
+    const backBlank = getBlankMockupImage(product.type, selectedColorObj?.title, "back");
+    setTshirtBackImage(backBlank ?? currentImages?.back ?? null);
+  }, [product.type, selectedColorObj?.title, currentImages?.back, setTshirtBackImage]);
+
   useEffect(() => {
     setSelectedColorHex(selectedColorObj?.hex ?? null);
   }, [selectedColorObj?.hex, setSelectedColorHex]);
 
-  // Auto-show mockup when artwork is generated; hide mockup tab view if generation is cleared
+  // Auto-show mockup when artwork is generated; hide when cleared
   useEffect(() => {
     if (artworkUrl) setShowMockup(true);
     else setShowMockup(false);
@@ -141,32 +158,44 @@ export default function ProductPage({
     if (!selectedVariant || !selectedSizeObj) return;
     if (!artworkUrl || generationStatus === "running") return;
 
-    let persistedArtworkUrl: string | undefined;
-    let persistedThumbnailUrl: string | undefined;
+    let frontArtworkUrl: string | undefined;
+    let frontThumbnailUrl: string | undefined;
+    let backArtworkUrl: string | undefined;
+    let backThumbnailUrl: string | undefined;
 
-    const printSource = compositeDataUrl ?? artworkUrl;
-    if (printSource) {
-      setUploading(true);
-      try {
-        const printBlob = buildPrintAreaPng(printSource, mockupPlacement, product.type);
-        const thumbBlob = tshirtBaseImage
-          ? buildMockupThumbnail(tshirtBaseImage, printSource, mockupPlacement, product.type)
+    setUploading(true);
+    try {
+      // Build and upload one side's print PNG + thumbnail.
+      const buildAndUploadSide = async (
+        side: "front" | "back",
+        base: string | null,
+        composite: string | null,
+        placement: { xPct: number; yPct: number; scale: number },
+      ): Promise<{ artworkUrl?: string; thumbnailUrl?: string }> => {
+        const printSource = composite ?? artworkUrl;
+        if (!printSource) return {};
+        const printBlobPromise = buildPrintAreaPng(printSource, placement, product.type, side);
+        const thumbBlobPromise = base
+          ? buildMockupThumbnail(base, printSource, placement, product.type, side)
           : null;
 
         const [printResult, thumbResult] = await Promise.all([
-          printBlob.then(async (blob) => {
+          printBlobPromise.then(async (blob) => {
             const fd = new FormData();
-            fd.append("file", blob, "print-area-artwork.png");
-            fd.append("metadata", JSON.stringify({ kind: "print_area", placement: mockupPlacement }));
+            fd.append("file", blob, `print-area-${side}.png`);
+            fd.append(
+              "metadata",
+              JSON.stringify({ kind: "print_area", side, placement }),
+            );
             const res = await fetch("/api/save-artwork", { method: "POST", body: fd });
             if (res.ok) return (await res.json()).publicUrl as string;
             return undefined;
           }),
-          thumbBlob
-            ? thumbBlob.then(async (blob) => {
+          thumbBlobPromise
+            ? thumbBlobPromise.then(async (blob) => {
                 const fd = new FormData();
-                fd.append("file", blob, "mockup-thumbnail.jpg");
-                fd.append("metadata", JSON.stringify({ kind: "mockup_thumbnail" }));
+                fd.append("file", blob, `mockup-thumbnail-${side}.jpg`);
+                fd.append("metadata", JSON.stringify({ kind: "mockup_thumbnail", side }));
                 const res = await fetch("/api/save-artwork", { method: "POST", body: fd });
                 if (res.ok) return (await res.json()).publicUrl as string;
                 return undefined;
@@ -174,13 +203,32 @@ export default function ProductPage({
             : Promise.resolve(undefined),
         ]);
 
-        persistedArtworkUrl = printResult;
-        persistedThumbnailUrl = thumbResult;
-      } catch (err) {
-        console.error("Failed to build artwork:", err);
-      } finally {
-        setUploading(false);
+        return { artworkUrl: printResult, thumbnailUrl: thumbResult };
+      };
+
+      const frontResult = await buildAndUploadSide(
+        "front",
+        tshirtFrontImage,
+        frontCompositeDataUrl,
+        frontPlacement,
+      );
+      frontArtworkUrl = frontResult.artworkUrl;
+      frontThumbnailUrl = frontResult.thumbnailUrl;
+
+      if (backEnabled) {
+        const backResult = await buildAndUploadSide(
+          "back",
+          tshirtBackImage,
+          backCompositeDataUrl,
+          backPlacement,
+        );
+        backArtworkUrl = backResult.artworkUrl;
+        backThumbnailUrl = backResult.thumbnailUrl;
       }
+    } catch (err) {
+      console.error("Failed to build artwork:", err);
+    } finally {
+      setUploading(false);
     }
 
     addItem({
@@ -190,15 +238,16 @@ export default function ProductPage({
       size: selectedSizeObj.title,
       color: selectedColorObj?.title ?? "",
       price: displayPrice,
-      ...(persistedArtworkUrl ? { artworkUrl: persistedArtworkUrl } : {}),
-      ...(persistedThumbnailUrl ? { thumbnailUrl: persistedThumbnailUrl } : {}),
+      ...(frontArtworkUrl ? { frontArtworkUrl } : {}),
+      ...(frontThumbnailUrl ? { frontThumbnailUrl } : {}),
+      ...(backArtworkUrl ? { backArtworkUrl } : {}),
+      ...(backThumbnailUrl ? { backThumbnailUrl } : {}),
     });
     setAdded(true);
     openCart();
     setTimeout(() => setAdded(false), 2000);
   }
 
-  // Sizes available for the selected color
   const availableSizeIds = new Set(
     data?.variants
       .filter((v) => v.colorId === selectedColor)
@@ -229,7 +278,7 @@ export default function ProductPage({
         <div className="min-w-0 lg:sticky lg:top-20 lg:self-start">
           {/* Tabs only when switching between gallery and mockup is meaningful */}
           {hasGeneratedImage && (
-            <div className="flex gap-1 mb-3">
+            <div className="flex flex-wrap gap-1 mb-3">
               <button
                 onClick={() => setShowMockup(false)}
                 className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
@@ -241,15 +290,33 @@ export default function ProductPage({
                 Product Photos
               </button>
               <button
-                onClick={() => setShowMockup(true)}
+                onClick={() => {
+                  setShowMockup(true);
+                  setSelectedSide("front");
+                }}
                 className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
-                  showMockup
+                  showMockup && selectedSide === "front"
                     ? "border-ignition bg-ignition/10 text-white"
                     : "border-border text-muted hover:border-white/30 hover:text-white"
                 }`}
               >
-                Live Mockup
+                Live Mockup (Front)
                 <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-ignition" />
+              </button>
+              <button
+                onClick={() => {
+                  setShowMockup(true);
+                  setSelectedSide("back");
+                }}
+                className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
+                  showMockup && selectedSide === "back"
+                    ? "border-ignition bg-ignition/10 text-white"
+                    : "border-border text-muted hover:border-white/30 hover:text-white"
+                } ${!backEnabled ? "opacity-60" : ""}`}
+                title={backEnabled ? "Back design" : "Add a back design from the customizer below"}
+              >
+                Live Mockup (Back){backEnabled ? "" : " +"}
+                {backEnabled && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-ignition" />}
               </button>
               <button
                 onClick={() => setShowPreviewModal(true)}

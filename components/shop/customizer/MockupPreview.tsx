@@ -14,12 +14,13 @@ export default function MockupPreview() {
     tshirtBaseImage,
     productType,
     selectedColorHex,
+    selectedSide,
     setMockupThumbnailUrl,
   } = useCustomizer()
 
   const overlayUrl = compositeDataUrl ?? artworkUrl
 
-  const pz = useMemo(() => getMockupPrintZone(productType), [productType])
+  const pz = useMemo(() => getMockupPrintZone(productType, selectedSide), [productType, selectedSide])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)

@@ -10,8 +10,10 @@ export interface CartItem {
   color: string;
   price: number;
   quantity: number;
-  artworkUrl?: string;
-  thumbnailUrl?: string;
+  frontArtworkUrl?: string;
+  frontThumbnailUrl?: string;
+  backArtworkUrl?: string;
+  backThumbnailUrl?: string;
 }
 
 interface CartContextValue {

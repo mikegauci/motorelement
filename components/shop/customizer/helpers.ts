@@ -1,4 +1,4 @@
-import type { TextLayer } from './types'
+import type { TextLayer, PrintSide } from './types'
 import { COMPOSITE, CORNER_CLEAR_RADIUS_FR } from './constants'
 
 // ---------------------------------------------------------------------------
@@ -525,11 +525,12 @@ export async function buildMockupThumbnail(
   baseSrc: string,
   artworkSrc: string,
   placement: { xPct: number; yPct: number; scale: number },
-  productType?: string
+  productType?: string,
+  side: PrintSide = 'front'
 ): Promise<Blob> {
   const { getMockupPrintZone } = await import('./constants')
   const { letterbox, printZoneRect, drawArtworkClipped } = await import('./canvas')
-  const pz = getMockupPrintZone(productType)
+  const pz = getMockupPrintZone(productType, side)
 
   const [baseImg, artImg] = await Promise.all([
     loadImageElement(baseSrc),
@@ -567,12 +568,13 @@ export async function buildMockupThumbnail(
 export async function buildPrintAreaPng(
   artworkSrc: string,
   placement: { xPct: number; yPct: number; scale: number },
-  productType?: string
+  productType?: string,
+  side: PrintSide = 'front'
 ): Promise<Blob> {
   const { getPrintifyPrintArea, getPrintScaleFactor, getPrintYOffsetPx } = await import('./constants')
-  const { width: paW, height: paH } = getPrintifyPrintArea(productType)
-  const printFactor = getPrintScaleFactor(productType)
-  const yOffset = getPrintYOffsetPx(productType)
+  const { width: paW, height: paH } = getPrintifyPrintArea(productType, side)
+  const printFactor = getPrintScaleFactor(productType, side)
+  const yOffset = getPrintYOffsetPx(productType, side)
 
   const img = await loadImageElement(artworkSrc)
 

@@ -45,3 +45,5 @@ export interface MockupPlacement {
   yPct: number
   scale: number
 }
+
+export type PrintSide = 'front' | 'back'

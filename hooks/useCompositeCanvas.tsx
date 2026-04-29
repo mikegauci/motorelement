@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useState, type ReactNode } from 'react'
-import type { TextLayer } from '@/components/shop/customizer/types'
+import type { TextLayer, PrintSide } from '@/components/shop/customizer/types'
 import {
   loadImageElement,
   drawCompositeContent,
@@ -13,6 +13,7 @@ import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
 const COMPOSITE_EXPORT_SIZE = 2048
 
 interface CompositeCanvasDeps {
+  side: PrintSide
   transparentCarUrlForPreset: string | null
   selectedBackgroundSrc: string | null
   selectedBackgroundIsCustom: boolean
@@ -37,7 +38,8 @@ interface CompositeCanvasDeps {
 }
 
 export function useCompositeCanvas(deps: CompositeCanvasDeps) {
-  const { setCompositeDataUrl } = useCustomizer()
+  const { setFrontCompositeDataUrl, setBackCompositeDataUrl } = useCustomizer()
+  const setCompositeForSide = deps.side === 'front' ? setFrontCompositeDataUrl : setBackCompositeDataUrl
   const compositeStageRef = useRef<HTMLDivElement>(null)
   const compositeCanvasRef = useRef<HTMLCanvasElement>(null)
   const compositeRenderRef = useRef(() => {})
@@ -131,7 +133,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       try {
         const dataUrl = canvas!.toDataURL('image/png')
         setMobileCompositePreviewSrc(dataUrl)
-        setCompositeDataUrl(dataUrl)
+        setCompositeForSide(dataUrl)
       } catch (_) { /* ignore */ }
     }
     compositeRenderRef.current = paint
@@ -143,14 +145,14 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     const ro = new ResizeObserver(() => paint())
     ro.observe(stage)
     return () => { cancelled = true; compositeRenderRef.current = () => {}; ro.disconnect() }
-  }, [deps.selectedBackgroundSrc, deps.selectedBackgroundIsCustom, deps.transparentCarUrlForPreset])
+  }, [deps.selectedBackgroundSrc, deps.selectedBackgroundIsCustom, deps.transparentCarUrlForPreset, deps.side])
 
   useEffect(() => {
     if (!deps.transparentCarUrlForPreset) {
       setMobileCompositePreviewSrc('')
-      setCompositeDataUrl(null)
+      setCompositeForSide(null)
     }
-  }, [deps.transparentCarUrlForPreset, setCompositeDataUrl])
+  }, [deps.transparentCarUrlForPreset, setCompositeForSide])
 
   // Mobile dock visibility
   useEffect(() => {

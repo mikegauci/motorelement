@@ -82,19 +82,35 @@ export function CartDrawer() {
                   key={`${item.productId}-${item.size}-${item.color}`}
                   className="flex gap-4 p-4"
                 >
-                  <div className="relative h-20 w-20 shrink-0 overflow-hidden bg-obsidian">
-                    {item.thumbnailUrl ? (
-                      <Image
-                        src={item.thumbnailUrl}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center font-sub text-[10px] font-bold uppercase tracking-widest text-muted">
-                        {item.type}
-                      </span>
+                  <div className="flex shrink-0 flex-col gap-1">
+                    <div className="relative h-20 w-20 overflow-hidden bg-obsidian">
+                      {item.frontThumbnailUrl ? (
+                        <Image
+                          src={item.frontThumbnailUrl}
+                          alt={`${item.name} front`}
+                          fill
+                          className="object-cover"
+                          sizes="80px"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center font-sub text-[10px] font-bold uppercase tracking-widest text-muted">
+                          {item.type}
+                        </span>
+                      )}
+                    </div>
+                    {item.backThumbnailUrl && (
+                      <div className="relative h-12 w-12 overflow-hidden bg-obsidian border border-border">
+                        <Image
+                          src={item.backThumbnailUrl}
+                          alt={`${item.name} back`}
+                          fill
+                          className="object-cover"
+                          sizes="48px"
+                        />
+                        <span className="absolute bottom-0 left-0 right-0 bg-black/70 text-center font-sub text-[8px] font-bold uppercase tracking-widest text-white">
+                          Back
+                        </span>
+                      </div>
                     )}
                   </div>
 
