@@ -82,7 +82,14 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
 
     if (!baseImg) return
 
-    const fullSize = px * 2
+    // Size the offscreen so the artwork lands in the print zone at its
+    // native resolution (no downscale). Cap for memory.
+    const MAX_OFFSCREEN_PX = 6144
+    const artNaturalW = artworkImg?.naturalWidth ?? 0
+    const required = artNaturalW > 0 && pz.widthPct > 0
+      ? Math.ceil(artNaturalW / pz.widthPct)
+      : 0
+    const fullSize = Math.min(MAX_OFFSCREEN_PX, Math.max(px * 2, required))
     if (!offscreenRef.current) offscreenRef.current = document.createElement('canvas')
     const off = offscreenRef.current
     if (off.width !== fullSize) off.width = fullSize

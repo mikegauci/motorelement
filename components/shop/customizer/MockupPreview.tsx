@@ -6,13 +6,6 @@ import { loadImageElement } from './helpers'
 import { getMockupPrintZone } from './constants'
 import { clampDpr, letterbox, printZoneRect, drawArtworkClipped } from './canvas'
 
-/**
- * 2D t-shirt mockup that overlays the generated artwork onto the Printify
- * product image. Read-only preview — positioning is fixed.
- *
- * Designed with a stable interface so the internals can be swapped for a
- * React Three Fiber 3D scene later without changing the API.
- */
 export default function MockupPreview() {
   const {
     artworkUrl,
@@ -44,8 +37,16 @@ export default function MockupPreview() {
 
     const rect = container.getBoundingClientRect()
     const dpr = clampDpr()
-    const w = Math.round(rect.width * dpr)
-    const h = Math.round(rect.width * dpr)
+    const baseW = Math.round(rect.width * dpr)
+    // Grow the backing buffer so the artwork is drawn into the print zone
+    // at its native resolution (no downscaling). Cap to keep memory sane.
+    const MAX_CANVAS_PX = 4096
+    const artNaturalW = artworkImgRef.current?.naturalWidth ?? 0
+    const required = artNaturalW > 0 && pz.widthPct > 0
+      ? Math.ceil(artNaturalW / pz.widthPct)
+      : 0
+    const w = Math.min(MAX_CANVAS_PX, Math.max(baseW, required))
+    const h = w
     if (canvas.width !== w) canvas.width = w
     if (canvas.height !== h) canvas.height = h
 
@@ -101,8 +102,9 @@ export default function MockupPreview() {
         ctx.strokeStyle = isWhiteMockup
           ? 'rgba(0,0,0,0.20)'
           : 'rgba(255,255,255,0.25)'
-        ctx.lineWidth = 1.5
-        ctx.setLineDash([8, 5])
+        const strokeScale = w / 600
+        ctx.lineWidth = 1.5 * strokeScale
+        ctx.setLineDash([8 * strokeScale, 5 * strokeScale])
         ctx.strokeRect(pzr.x, pzr.y, pzr.w, pzr.h)
         ctx.setLineDash([])
       }
