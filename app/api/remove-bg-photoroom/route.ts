@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     }
 
     const buf = Buffer.from(await res.arrayBuffer())
-    const trimmed = await trimPngToAlphaBounds(buf)
+    const trimmed = await trimPngToAlphaBounds(buf, 8, 100)
     return new Response(new Uint8Array(trimmed), {
       status: 200,
       headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' },

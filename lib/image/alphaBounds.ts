@@ -1,11 +1,8 @@
 import sharp from 'sharp'
 
-/** Region compatible with sharp.extract() */
+
 export type AlphaTrimRegion = { left: number; top: number; width: number; height: number }
 
-/**
- * Bounding box of pixels with alpha > alphaMin (Photoshop-style trim of transparent margins).
- */
 export function computeAlphaBoundsRaw(
   rgba: Buffer,
   width: number,
@@ -45,16 +42,30 @@ export function regionCoversFullImage(region: AlphaTrimRegion, width: number, he
   return region.left === 0 && region.top === 0 && region.width === width && region.height === height
 }
 
-/**
- * Decode a PNG (or other raster), crop to non-transparent bounds, re-encode as PNG.
- */
-export async function trimPngToAlphaBounds(input: Buffer, alphaMin = 8): Promise<Buffer> {
+export async function trimPngToAlphaBounds(
+  input: Buffer,
+  alphaMin = 8,
+  paddingPx = 0
+): Promise<Buffer> {
   const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   const w = info.width
   const h = info.height
   const box = computeAlphaBoundsRaw(data, w, h, alphaMin)
+
+  const pad = Math.max(0, Math.round(paddingPx))
+  const transparent = { r: 0, g: 0, b: 0, alpha: 0 }
+
   if (!box || regionCoversFullImage(box, w, h)) {
-    return sharp(input).png().toBuffer()
+    let pipeline = sharp(input)
+    if (pad > 0) {
+      pipeline = pipeline.extend({ top: pad, bottom: pad, left: pad, right: pad, background: transparent })
+    }
+    return pipeline.png().toBuffer()
   }
-  return sharp(input).extract(box).png().toBuffer()
+
+  let pipeline = sharp(input).extract(box)
+  if (pad > 0) {
+    pipeline = pipeline.extend({ top: pad, bottom: pad, left: pad, right: pad, background: transparent })
+  }
+  return pipeline.png().toBuffer()
 }
