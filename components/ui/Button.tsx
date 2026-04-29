@@ -1,5 +1,5 @@
 interface ButtonProps {
-  variant?: "primary" | "secondary" | "outline" | "ghost";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "success";
   size?: "sm" | "md" | "lg";
   children: React.ReactNode;
   onClick?: () => void;
@@ -21,6 +21,8 @@ const variantClasses: Record<string, string> = {
   outline:
     "bg-transparent border border-white text-white hover:bg-white hover:text-void",
   ghost: "bg-transparent text-muted hover:text-white",
+  success:
+    "bg-emerald-600 text-white hover:bg-emerald-500",
 };
 
 export function Button({

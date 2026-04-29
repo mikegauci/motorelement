@@ -63,7 +63,7 @@ export default function ProductPage({
   const { addItem, openCart } = useCart();
   const {
     setTshirtBaseImage, tshirtBaseImage, artworkUrl, compositeDataUrl,
-    mockupPlacement, setProductType, setSelectedColorHex,
+    mockupPlacement, setProductType, setSelectedColorHex, generationStatus,
   } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +73,7 @@ export default function ProductPage({
   const [added, setAdded] = useState(false);
   const [showMockup, setShowMockup] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     setProductType(product.type);
@@ -111,6 +112,13 @@ export default function ProductPage({
   const selectedColorObj = data?.colors.find((c) => c.id === selectedColor);
   const selectedSizeObj = data?.sizes.find((s) => s.id === selectedSize);
   const displayPrice = selectedVariant?.price ?? product.basePrice;
+  const hasGeneratedImage = Boolean(artworkUrl);
+  const generationRunning = generationStatus === "running";
+  const canFinalizeCart =
+    !!selectedVariant &&
+    !!artworkUrl &&
+    !uploading &&
+    !generationRunning;
 
   // Use a per-color blank mockup when available; fall back to Printify's front image
   useEffect(() => {
@@ -123,15 +131,15 @@ export default function ProductPage({
     setSelectedColorHex(selectedColorObj?.hex ?? null);
   }, [selectedColorObj?.hex, setSelectedColorHex]);
 
-  // Auto-show mockup when artwork is generated
+  // Auto-show mockup when artwork is generated; hide mockup tab view if generation is cleared
   useEffect(() => {
     if (artworkUrl) setShowMockup(true);
+    else setShowMockup(false);
   }, [artworkUrl]);
-
-  const [uploading, setUploading] = useState(false);
 
   async function handleAddToCart() {
     if (!selectedVariant || !selectedSizeObj) return;
+    if (!artworkUrl || generationStatus === "running") return;
 
     let persistedArtworkUrl: string | undefined;
     let persistedThumbnailUrl: string | undefined;
@@ -215,36 +223,34 @@ export default function ProductPage({
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-16">
+    <div className="mx-auto max-w-7xl p-6">
       <div className="grid gap-12 lg:grid-cols-2">
         {/* Image Gallery + Mockup */}
         <div className="min-w-0 lg:sticky lg:top-20 lg:self-start">
-          {/* View toggle tabs */}
-          <div className="flex gap-1 mb-3">
-            <button
-              onClick={() => setShowMockup(false)}
-              className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
-                !showMockup
-                  ? "border-ignition bg-ignition/10 text-white"
-                  : "border-border text-muted hover:border-white/30 hover:text-white"
-              }`}
-            >
-              Product Photos
-            </button>
-            <button
-              onClick={() => setShowMockup(true)}
-              className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
-                showMockup
-                  ? "border-ignition bg-ignition/10 text-white"
-                  : "border-border text-muted hover:border-white/30 hover:text-white"
-              }`}
-            >
-              Live Mockup
-              {artworkUrl && (
+          {/* Tabs only when switching between gallery and mockup is meaningful */}
+          {hasGeneratedImage && (
+            <div className="flex gap-1 mb-3">
+              <button
+                onClick={() => setShowMockup(false)}
+                className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
+                  !showMockup
+                    ? "border-ignition bg-ignition/10 text-white"
+                    : "border-border text-muted hover:border-white/30 hover:text-white"
+                }`}
+              >
+                Product Photos
+              </button>
+              <button
+                onClick={() => setShowMockup(true)}
+                className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
+                  showMockup
+                    ? "border-ignition bg-ignition/10 text-white"
+                    : "border-border text-muted hover:border-white/30 hover:text-white"
+                }`}
+              >
+                Live Mockup
                 <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-ignition" />
-              )}
-            </button>
-            {artworkUrl && (
+              </button>
               <button
                 onClick={() => setShowPreviewModal(true)}
                 className="px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border border-border text-muted hover:border-white/30 hover:text-white transition flex items-center gap-1.5"
@@ -252,8 +258,8 @@ export default function ProductPage({
                 <Eye size={14} />
                 Preview
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {showMockup ? (
             <MockupPreview />
@@ -408,11 +414,11 @@ export default function ProductPage({
           {/* Add to Cart (placed at the very bottom, after customizer) */}
           <div className="mt-10 border-t border-border pt-8">
             <Button
-              variant="primary"
+              variant="success"
               size="lg"
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 disabled:!opacity-35"
               onClick={handleAddToCart}
-              disabled={!selectedVariant || uploading}
+              disabled={!canFinalizeCart}
             >
               {uploading ? (
                 "SAVING ARTWORK..."
