@@ -1,4 +1,5 @@
 import { fal } from '@fal-ai/client'
+import { trimPngToAlphaBounds } from '@/lib/image/alphaBounds'
 
 const BG_REMOVE_MODEL = 'fal-ai/birefnet/v2'
 const BG_REMOVE_VARIANT = 'General Use (Heavy)'
@@ -49,8 +50,9 @@ export async function POST(request: Request) {
         { status: 502 }
       )
     }
-    const buf = await imgRes.arrayBuffer()
-    return new Response(buf, {
+    const buf = Buffer.from(await imgRes.arrayBuffer())
+    const trimmed = await trimPngToAlphaBounds(buf)
+    return new Response(new Uint8Array(trimmed), {
       status: 200,
       headers: { 'Content-Type': 'image/png' },
     })

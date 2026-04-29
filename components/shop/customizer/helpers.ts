@@ -461,10 +461,14 @@ export function drawCompositeContent(
   let carH = 0
   let carDrawSource: { minX: number; minY: number; sw: number; sh: number } | null = null
   const bounds = getCarAlphaBounds(carImg)
+  const computeBaseCarY = (baseCarH: number) =>
+    omitBackground
+      ? (size - baseCarH) / 2 + carOffsetY
+      : Math.max(0, size - baseCarH - lift) + carOffsetY
   if (bounds) {
     const { minX, minY, w: sw, h: sh } = bounds
     const baseCarH = (sh / sw) * baseCarW
-    const baseCarY = Math.max(0, size - baseCarH - lift) + carOffsetY
+    const baseCarY = computeBaseCarY(baseCarH)
     carW = baseCarW * safeCompositionZoom
     carH = baseCarH * safeCompositionZoom
     carX = center + (baseCarX - center) * safeCompositionZoom
@@ -472,7 +476,7 @@ export function drawCompositeContent(
     carDrawSource = { minX, minY, sw, sh }
   } else {
     const baseCarH = (carImg.naturalHeight / carImg.naturalWidth) * baseCarW
-    const baseCarY = Math.max(0, size - baseCarH - lift) + carOffsetY
+    const baseCarY = computeBaseCarY(baseCarH)
     carW = baseCarW * safeCompositionZoom
     carH = baseCarH * safeCompositionZoom
     carX = center + (baseCarX - center) * safeCompositionZoom

@@ -1,5 +1,6 @@
 import sharp from 'sharp'
 import { parseDataUrlToBuffer } from '@/lib/api/fal'
+import { computeAlphaBoundsRaw, regionCoversFullImage } from '@/lib/image/alphaBounds'
 
 const WHITE_THRESHOLD = 248
 const FRINGE_RGB = 235
@@ -414,12 +415,12 @@ export async function POST(request: Request) {
       }
     }
 
-    const png = await sharp(out, {
-      raw: { width: w, height: h, channels: 4 },
-    })
-      .trim()
-      .png()
-      .toBuffer()
+    let rawPipeline = sharp(out, { raw: { width: w, height: h, channels: 4 } })
+    const trimBox = computeAlphaBoundsRaw(out, w, h, 8)
+    if (trimBox && !regionCoversFullImage(trimBox, w, h)) {
+      rawPipeline = rawPipeline.extract(trimBox)
+    }
+    const png = await rawPipeline.png().toBuffer()
 
     return new Response(new Uint8Array(png), {
       headers: {

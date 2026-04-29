@@ -45,30 +45,32 @@ export default function ImageUploadZone({
       {imagePreview ? (
         <>
           <img src={imagePreview} alt={altText} className={styles.preview} />
-          <div className="absolute top-2 right-2 flex gap-1.5 z-20">
-            <button
-              type="button"
-              title="View full image"
-              className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center text-sm transition-colors"
-              onClick={(e) => { e.stopPropagation(); onViewImage?.(imagePreview) }}
-            >⤢</button>
-            {!locked && (
-              <>
-                <button
-                  type="button"
-                  title="Replace image"
-                  className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center text-sm transition-colors"
-                  onClick={(e) => { e.stopPropagation(); onReplaceImage() }}
-                >↻</button>
-                <button
-                  type="button"
-                  title="Remove image"
-                  className="w-7 h-7 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center text-sm transition-colors"
-                  onClick={(e) => { e.stopPropagation(); onRemoveImage() }}
-                >✕</button>
-              </>
-            )}
-          </div>
+          {!processing && (
+            <div className="absolute top-2 right-2 flex gap-1.5 z-20">
+              <button
+                type="button"
+                title="View full image"
+                className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center text-sm transition-colors"
+                onClick={(e) => { e.stopPropagation(); onViewImage?.(imagePreview) }}
+              >⤢</button>
+              {!locked && (
+                <>
+                  <button
+                    type="button"
+                    title="Replace image"
+                    className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center text-sm transition-colors"
+                    onClick={(e) => { e.stopPropagation(); onReplaceImage() }}
+                  >↻</button>
+                  <button
+                    type="button"
+                    title="Remove image"
+                    className="w-7 h-7 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center text-sm transition-colors"
+                    onClick={(e) => { e.stopPropagation(); onRemoveImage() }}
+                  >✕</button>
+                </>
+              )}
+            </div>
+          )}
           {processing && <GenerationOverlay />}
         </>
       ) : (

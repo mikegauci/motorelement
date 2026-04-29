@@ -43,7 +43,7 @@ export default function VehicleInputForm({
       <div className={styles.setupBlock}>
         <ImageUploadZone
           imagePreview={carImagePreview}
-          placeholder="Click to upload your car photo"
+          placeholder="Click to upload your photo"
           altText="Car preview"
           locked={vehicleLocked}
           processing={running}
