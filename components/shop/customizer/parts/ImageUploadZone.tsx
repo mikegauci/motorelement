@@ -105,7 +105,24 @@ function GenerationOverlay() {
         }}
       />
 
+      <GenerationTimer />
       <GenerationLabel />
+    </div>
+  )
+}
+
+function GenerationTimer() {
+  const [secondsLeft, setSecondsLeft] = useState(90)
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return
+    const t = setTimeout(() => setSecondsLeft((v) => v - 1), 1000)
+    return () => clearTimeout(t)
+  }, [secondsLeft])
+
+  return (
+    <div className="absolute top-2 left-2 px-2 py-1 rounded bg-black/70 font-mono font-bold text-[11px] tracking-[0.2em] text-white/90">
+      {secondsLeft}s
     </div>
   )
 }
