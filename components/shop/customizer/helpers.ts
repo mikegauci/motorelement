@@ -247,43 +247,6 @@ export async function removeCarBackground(src: string): Promise<string> {
   })
 }
 
-export async function removeWhiteBackground(src: string): Promise<string> {
-  let body: string
-  if (src.startsWith('http://') || src.startsWith('https://')) {
-    body = JSON.stringify({ imageUrl: src })
-  } else if (src.startsWith('data:')) {
-    body = JSON.stringify({ imageBase64: src })
-  } else {
-    const blob = await fetch(src).then((r) => r.blob())
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const fr = new FileReader()
-      fr.onload = () => resolve(fr.result as string)
-      fr.onerror = reject
-      fr.readAsDataURL(blob)
-    })
-    body = JSON.stringify({ imageBase64: dataUrl })
-  }
-
-  const res = await fetch('/api/approve-transparent', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-  })
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || `Background removal failed (${res.status})`)
-  }
-
-  const blob = await res.blob()
-  return new Promise<string>((resolve, reject) => {
-    const fr = new FileReader()
-    fr.onload = () => resolve(fr.result as string)
-    fr.onerror = reject
-    fr.readAsDataURL(blob)
-  })
-}
-
 export function compressImageDataUrl(
   dataUrl: string,
   { maxDim = 2048, quality = 0.82 } = {}

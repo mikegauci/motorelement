@@ -16,7 +16,8 @@ import {
   readFileAsDataUrl,
   compressImageDataUrl,
 } from './helpers'
-import type { FontOption, PrintSide } from './types'
+import type { FontOption, PrintSide, TextLayer } from './types'
+import type { Dispatch, SetStateAction } from 'react'
 
 import VehicleInputForm from './VehicleInputForm'
 import BackgroundPresets from './BackgroundPresets'
@@ -248,7 +249,7 @@ export default function ProductCustomizer() {
     const allowed = new Set(availableFontOptions.map((f) => f.value))
     if (!allowed.size) return
     const fixLayers = (
-      setLayers: typeof frontDesign.text.setTextLayers,
+      setLayers: Dispatch<SetStateAction<TextLayer[]>>,
     ) => {
       setLayers((prev) => {
         let changed = false

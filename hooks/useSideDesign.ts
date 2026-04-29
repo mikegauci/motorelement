@@ -47,5 +47,3 @@ export function useSideDesign(availableFontOptions: FontOption[]) {
     reset,
   }
 }
-
-export type SideDesignState = ReturnType<typeof useSideDesign>
