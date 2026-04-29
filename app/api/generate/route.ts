@@ -80,7 +80,7 @@ The output must match Image 2 in style only:
   (spoilers, wings, diffusers, lip extensions — do not omit or flatten)
 
 ALL other details from Image 1 only.
-Transparent background, flat black shadow beneath.
+White background, flat black shadow beneath.
 No photorealism, no background, no road`
 }
 

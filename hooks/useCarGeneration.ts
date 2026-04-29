@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Revision } from '@/components/shop/customizer/types'
 import { PENDING_GENERATION_KEY } from '@/components/shop/customizer/constants'
-import { removeCarBackground, joinNotes, splitCarPhotoVertically, flattenToWhite } from '@/components/shop/customizer/helpers'
+import { removeWhiteBackground, joinNotes, splitCarPhotoVertically, flattenToWhite } from '@/components/shop/customizer/helpers'
 import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
 import { useGenerationJob, writePending, clearPending } from './useGenerationJob'
 
@@ -19,7 +19,7 @@ interface CarGenerationDeps {
 }
 
 export function useCarGeneration(deps: CarGenerationDeps) {
-  const { setArtworkUrl, setGenerationStatus } = useCustomizer()
+  const { setArtworkUrl, setGenerationStatus, setMockupThumbnailUrl } = useCustomizer()
   const job = useGenerationJob(PENDING_GENERATION_KEY, 'car')
 
   const [status, setStatus] = useState('')
@@ -36,15 +36,18 @@ export function useCarGeneration(deps: CarGenerationDeps) {
       setGenerationStatus('done')
     } else {
       setArtworkUrl(null)
+      // Clear stale mockup thumbnail so the mobile result dock doesn't
+      // keep showing the previous project's artwork after a reset.
+      setMockupThumbnailUrl(null)
       setGenerationStatus(status === 'running' ? 'running' : 'idle')
     }
-  }, [revisions, status, setArtworkUrl, setGenerationStatus])
+  }, [revisions, status, setArtworkUrl, setGenerationStatus, setMockupThumbnailUrl])
 
   async function finalizeGenerationFromUrl(url: string, notesSnapshot: string, wasLocked: boolean, tweakSnapshot: string) {
     let finalUrl = url
     let isTransparent = false
     try {
-      finalUrl = await removeCarBackground(url)
+      finalUrl = await removeWhiteBackground(url)
       isTransparent = true
     } catch (bgErr) {
       console.warn('Auto background removal failed, keeping original:', bgErr)
