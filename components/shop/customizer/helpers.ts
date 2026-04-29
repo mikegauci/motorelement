@@ -227,7 +227,7 @@ export async function removeCarBackground(src: string): Promise<string> {
     body = JSON.stringify({ imageBase64: dataUrl })
   }
 
-  const res = await fetch('/api/remove-bg-fal', {
+  const res = await fetch('/api/remove-bg-photoroom', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body,

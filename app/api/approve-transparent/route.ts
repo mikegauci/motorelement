@@ -4,48 +4,6 @@ import { computeAlphaBoundsRaw, regionCoversFullImage } from '@/lib/image/alphaB
 
 const WHITE_THRESHOLD = 248
 const FRINGE_RGB = 235
-const ALPHA_SOLID = 28
-const BORDER_RADIUS = 2
-const BORDER_PASSES = 3
-
-/** Max of mask values in a disk of radius r around (x,y). */
-function dilateDisk(mask: Uint8Array, w: number, h: number, r: number): Uint8Array {
-  const next = new Uint8Array(w * h)
-  const r2 = r * r
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const p = y * w + x
-      if (mask[p]) {
-        next[p] = 1
-        continue
-      }
-      let hit = 0
-      for (let dy = -r; dy <= r && !hit; dy++) {
-        const ny = y + dy
-        if (ny < 0 || ny >= h) continue
-        for (let dx = -r; dx <= r; dx++) {
-          if (dx * dx + dy * dy > r2) continue
-          const nx = x + dx
-          if (nx < 0 || nx >= w) continue
-          if (mask[ny * w + nx]) {
-            hit = 1
-            break
-          }
-        }
-      }
-      next[p] = hit
-    }
-  }
-  return next
-}
-
-function buildOpaqueMaskFromBuffer(out: Buffer, w: number, h: number): Uint8Array {
-  const m = new Uint8Array(w * h)
-  for (let i = 0, p = 0; i < out.length; i += 4, p++) {
-    if (out[i + 3] > ALPHA_SOLID) m[p] = 1
-  }
-  return m
-}
 
 /** True if RGB reads as flat background white (before alpha is cleared). */
 function isNearWhite(out: Buffer, i: number): boolean {
@@ -320,15 +278,11 @@ function removeOutsideDetectedCircle(
 
 export async function POST(request: Request) {
   let buffer: Buffer
-  let addWhiteBorder = true
   let mode = 'default'
   let circleInsetPx = 0
   try {
     const body = (await request.json()) as Record<string, unknown>
     const { imageUrl, imageBase64 } = body
-    if (typeof body?.addWhiteBorder === 'boolean') {
-      addWhiteBorder = body.addWhiteBorder
-    }
     if (typeof body?.mode === 'string' && body.mode.trim()) {
       mode = body.mode.trim()
     }
@@ -382,37 +336,6 @@ export async function POST(request: Request) {
       removeEdgeConnectedWhiteBackground(out, w, h)
       // 2) Exterior halos only — not interior semi-transparent highlights
       removeExteriorWhitishFringe(out, w, h)
-    }
-
-    if (addWhiteBorder) {
-      const original = Buffer.from(out)
-      const opaque = buildOpaqueMaskFromBuffer(out, w, h)
-
-      // 3) Expand silhouette with smooth circular dilation → outer ring for stroke
-      let dilated = opaque
-      for (let pass = 0; pass < BORDER_PASSES; pass++) {
-        dilated = dilateDisk(dilated, w, h, BORDER_RADIUS)
-      }
-
-      // 4) Composite: subject on top, smooth white ring outside silhouette
-      for (let p = 0, i = 0; p < w * h; p++, i += 4) {
-        if (opaque[p]) {
-          out[i] = original[i]
-          out[i + 1] = original[i + 1]
-          out[i + 2] = original[i + 2]
-          out[i + 3] = original[i + 3]
-        } else if (dilated[p]) {
-          out[i] = 255
-          out[i + 1] = 255
-          out[i + 2] = 255
-          out[i + 3] = 255
-        } else {
-          out[i] = 0
-          out[i + 1] = 0
-          out[i + 2] = 0
-          out[i + 3] = 0
-        }
-      }
     }
 
     let rawPipeline = sharp(out, { raw: { width: w, height: h, channels: 4 } })
