@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       const customerId = session.metadata?.customerId;
+      const artworkUrl = session.metadata?.artworkUrl;
 
       const stripeLineItems = await stripe.checkout.sessions.listLineItems(
         session.id,
@@ -53,8 +54,6 @@ export async function POST(request: Request) {
           size: meta.size ?? "default",
           color: meta.color ?? "",
           price: item.amount_total,
-          frontArtworkUrl: meta.frontArtworkUrl,
-          backArtworkUrl: meta.backArtworkUrl,
         };
       });
 
@@ -63,13 +62,12 @@ export async function POST(request: Request) {
         customerId: customerId ?? "anonymous",
         total: session.amount_total ?? 0,
         stripePaymentId: session.payment_intent as string,
-        items: items.map(({ frontArtworkUrl: _f, backArtworkUrl: _b, ...rest }) => rest),
+        items,
       });
 
-      // 2. Submit to Printify if any item has artwork and we have a shipping address.
+      // 2. Submit to Printify if artwork and shipping address exist
       const shipping = session.collected_information?.shipping_details;
-      const hasAnyArtwork = items.some((it) => it.frontArtworkUrl || it.backArtworkUrl);
-      if (hasAnyArtwork && shipping?.address && supabaseOrder) {
+      if (artworkUrl && shipping?.address && supabaseOrder) {
         try {
           const addr = shipping.address;
           const name = shipping.name ?? "";
@@ -79,7 +77,6 @@ export async function POST(request: Request) {
           const printifyLineItems = (
             await Promise.all(
               items.map(async (item) => {
-                if (!item.frontArtworkUrl && !item.backArtworkUrl) return null;
                 const { data: dbProduct } = await getProductById(item.productId);
                 if (!dbProduct) {
                   console.warn(`[stripe-webhook] No DB product for id ${item.productId}`);
@@ -97,14 +94,11 @@ export async function POST(request: Request) {
                   );
                   return null;
                 }
-                const print_areas: Record<string, string> = {};
-                if (item.frontArtworkUrl) print_areas.front = item.frontArtworkUrl;
-                if (item.backArtworkUrl) print_areas.back = item.backArtworkUrl;
                 return {
                   product_id: printifyProductId,
                   variant_id: variantId,
                   quantity: item.quantity,
-                  print_areas,
+                  print_areas: { front: artworkUrl },
                 };
               })
             )

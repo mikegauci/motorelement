@@ -46,35 +46,19 @@ export default function CartPage() {
               className="flex flex-col gap-4 border border-border bg-obsidian p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
             >
               <div className="flex items-start gap-4 sm:contents">
-                <div className="flex shrink-0 flex-col gap-1">
-                  <div className="relative h-16 w-16 overflow-hidden bg-carbon sm:h-20 sm:w-20">
-                    {item.frontThumbnailUrl ? (
-                      <Image
-                        src={item.frontThumbnailUrl}
-                        alt={`${item.name} front`}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center font-sub text-xs font-bold uppercase tracking-widest text-muted">
-                        {item.type}
-                      </span>
-                    )}
-                  </div>
-                  {item.backThumbnailUrl && (
-                    <div className="relative h-10 w-10 overflow-hidden bg-carbon border border-border sm:h-12 sm:w-12">
-                      <Image
-                        src={item.backThumbnailUrl}
-                        alt={`${item.name} back`}
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                      />
-                      <span className="absolute bottom-0 left-0 right-0 bg-black/70 text-center font-sub text-[8px] font-bold uppercase tracking-widest text-white">
-                        Back
-                      </span>
-                    </div>
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden bg-carbon sm:h-20 sm:w-20">
+                  {item.thumbnailUrl ? (
+                    <Image
+                      src={item.thumbnailUrl}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center font-sub text-xs font-bold uppercase tracking-widest text-muted">
+                      {item.type}
+                    </span>
                   )}
                 </div>
 

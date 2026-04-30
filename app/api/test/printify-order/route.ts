@@ -22,8 +22,7 @@ interface TestItem {
   size: string;
   color?: string;
   quantity: number;
-  frontArtworkUrl?: string;
-  backArtworkUrl?: string;
+  artworkUrl?: string;
 }
 
 export async function POST(request: Request) {
@@ -34,8 +33,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No items provided" }, { status: 400 });
     }
 
-    const hasAnyArtwork = items.some((i) => i.frontArtworkUrl || i.backArtworkUrl);
-    if (!hasAnyArtwork) {
+    const artworkUrl = items.find((i) => i.artworkUrl)?.artworkUrl;
+    if (!artworkUrl) {
       return NextResponse.json(
         { error: "No artwork found. Customize your design before ordering." },
         { status: 400 }
@@ -45,7 +44,6 @@ export async function POST(request: Request) {
     const lineItems = (
       await Promise.all(
         items.map(async (item) => {
-          if (!item.frontArtworkUrl && !item.backArtworkUrl) return null;
           const { data: dbProduct } = await getProductById(item.productId);
           if (!dbProduct) {
             console.warn(`[test-printify] No DB product for id ${item.productId}`);
@@ -68,16 +66,12 @@ export async function POST(request: Request) {
             return null;
           }
 
-          const print_areas: Record<string, string> = {};
-          if (item.frontArtworkUrl) print_areas.front = item.frontArtworkUrl;
-          if (item.backArtworkUrl) print_areas.back = item.backArtworkUrl;
-
           return {
             blueprint_id: pfyProduct.blueprint_id,
             print_provider_id: pfyProduct.print_provider_id,
             variant_id: variantId,
             quantity: item.quantity,
-            print_areas,
+            print_areas: { front: artworkUrl },
           };
         })
       )

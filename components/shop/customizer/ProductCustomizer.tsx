@@ -16,7 +16,7 @@ import {
   readFileAsDataUrl,
   compressImageDataUrl,
 } from './helpers'
-import type { FontOption, PrintSide } from './types'
+import type { FontOption } from './types'
 
 import VehicleInputForm from './VehicleInputForm'
 import BackgroundPresets from './BackgroundPresets'
@@ -26,22 +26,16 @@ import MockupPreviewModal from './MockupPreviewModal'
 import CollapsibleTweak from './parts/CollapsibleTweak'
 
 import { useCustomizer } from './CustomizerContext'
-import { useSideDesign } from '@/hooks/useSideDesign'
+import { useTextLayers } from '@/hooks/useTextLayers'
 import { useCarGeneration } from '@/hooks/useCarGeneration'
 import { useBackgroundGeneration } from '@/hooks/useBackgroundGeneration'
 import { useCompositeCanvas } from '@/hooks/useCompositeCanvas'
 import { useSession } from '@/hooks/useSession'
 
 export default function ProductCustomizer() {
-  const {
-    mockupThumbnailUrl,
-    selectedSide,
-    setSelectedSide,
-    backEnabled,
-    setBackEnabled,
-  } = useCustomizer()
+  const { mockupThumbnailUrl } = useCustomizer()
 
-  // ---- Vehicle input state ----
+  // ---- Vehicle input state (owned by this component) ----
   const [customerNotes, setCustomerNotes] = useState('')
   const [carImageDataUrl, setCarImageDataUrl] = useState<string | null>(null)
   const [carImagePreview, setCarImagePreview] = useState<string | null>(null)
@@ -49,12 +43,20 @@ export default function ProductCustomizer() {
   const [composedPromptNotes, setComposedPromptNotes] = useState('')
   const [tweakNotes, setTweakNotes] = useState('')
 
-  // ---- Shared background generation inputs (one generation runs at a time) ----
+  // ---- Background selection state ----
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
   const [customBackgroundImageDataUrl, setCustomBackgroundImageDataUrl] = useState<string | null>(null)
   const [customBackgroundImagePreview, setCustomBackgroundImagePreview] = useState<string | null>(null)
   const [customBackgroundValue, setCustomBackgroundValue] = useState('')
   const [isVehicleTweakOpen, setIsVehicleTweakOpen] = useState(false)
   const [isBackgroundTweakOpen, setIsBackgroundTweakOpen] = useState(false)
+
+  // ---- Composite position state ----
+  const [carAdjustXPct, setCarAdjustXPct] = useState(0)
+  const [carAdjustYPct, setCarAdjustYPct] = useState(0)
+  const [carScale, setCarScale] = useState(0.70)
+  const [compositionZoom, setCompositionZoom] = useState(1)
+  const [bgScale, setBgScale] = useState(1)
 
   // ---- UI state ----
   const [desktopDragEnabled, setDesktopDragEnabled] = useState(false)
@@ -69,12 +71,9 @@ export default function ProductCustomizer() {
 
   const availableFontOptions = customFontOptions.length > 0 ? customFontOptions : TEXT_FONTS
 
-  // ---- Per-side design state ----
-  const frontDesign = useSideDesign(availableFontOptions)
-  const backDesign = useSideDesign(availableFontOptions)
-  const activeDesign = selectedSide === 'front' ? frontDesign : backDesign
-
   // ---- Hooks ----
+  const textLayerHook = useTextLayers(availableFontOptions)
+
   const carGen = useCarGeneration({
     carImageDataUrl, customerNotes,
     vehicleLocked, setVehicleLocked, composedPromptNotes, setComposedPromptNotes,
@@ -84,9 +83,7 @@ export default function ProductCustomizer() {
   const bgGen = useBackgroundGeneration({
     customBackgroundImageDataUrl, customBackgroundValue,
     setCustomBackgroundImageDataUrl, setCustomBackgroundImagePreview,
-    setCustomBackgroundValue,
-    setSelectedPresetId: activeDesign.setSelectedPresetId,
-    customBackgroundFileRef,
+    setCustomBackgroundValue, setSelectedPresetId, customBackgroundFileRef,
   })
 
   // ---- Derived state ----
@@ -107,35 +104,26 @@ export default function ProductCustomizer() {
     return null
   }, [carGen.revisions, carGen.viewIndex])
 
-  const selectedPreset = BACKGROUND_PRESETS.find((p) => p.id === activeDesign.selectedPresetId)
+  const selectedPreset = BACKGROUND_PRESETS.find((p) => p.id === selectedPresetId)
   const isCustomSavedSelection =
-    typeof activeDesign.selectedPresetId === 'string' &&
-    activeDesign.selectedPresetId.startsWith(CUSTOM_BACKGROUND_PREFIX) &&
-    activeDesign.selectedPresetId !== CUSTOM_BACKGROUND_NEW
-  const selectedCustomBg = isCustomSavedSelection
-    ? bgGen.savedCustomBackgrounds.find((bg) => bg.id === activeDesign.selectedPresetId) ?? null
-    : null
-  const selectedBackgroundSrc = isCustomSavedSelection
-    ? selectedCustomBg?.resultUrl ?? null
-    : selectedPreset?.src ?? null
+    typeof selectedPresetId === 'string' &&
+    selectedPresetId.startsWith(CUSTOM_BACKGROUND_PREFIX) &&
+    selectedPresetId !== CUSTOM_BACKGROUND_NEW
+  const selectedCustomBg = isCustomSavedSelection ? bgGen.savedCustomBackgrounds.find((bg) => bg.id === selectedPresetId) ?? null : null
+  const selectedBackgroundSrc = isCustomSavedSelection ? selectedCustomBg?.resultUrl ?? null : selectedPreset?.src ?? null
   const selectedBackgroundIsCustom = isCustomSavedSelection
-  const showCustomPanel = activeDesign.selectedPresetId === CUSTOM_BACKGROUND_NEW
+  const showCustomPanel = selectedPresetId === CUSTOM_BACKGROUND_NEW
   const backgroundControlsLocked = bgGen.customBackgroundGenerating
-  const canGenerateCustomBackground =
-    !!customBackgroundValue.trim() && !bgGen.customBackgroundGenerating && !bgGen.customBackgroundRemoving
+  const canGenerateCustomBackground = !!customBackgroundValue.trim() && !bgGen.customBackgroundGenerating && !bgGen.customBackgroundRemoving
 
   const composite = useCompositeCanvas({
-    side: selectedSide,
     transparentCarUrlForPreset, selectedBackgroundSrc, selectedBackgroundIsCustom,
     selectedPreset, isCustomSavedSelection, selectedCustomBg,
-    carAdjustXPct: activeDesign.carAdjustXPct, setCarAdjustXPct: activeDesign.setCarAdjustXPct,
-    carAdjustYPct: activeDesign.carAdjustYPct, setCarAdjustYPct: activeDesign.setCarAdjustYPct,
-    carScale: activeDesign.carScale,
-    compositionZoom: activeDesign.compositionZoom, setCompositionZoom: activeDesign.setCompositionZoom,
-    bgScale: activeDesign.bgScale,
-    textLayersRef: activeDesign.text.textLayersRef, textLayers: activeDesign.text.textLayers,
-    selectedTextLayerId: activeDesign.text.selectedTextLayerId,
-    updateTextLayer: activeDesign.text.updateTextLayer,
+    carAdjustXPct, setCarAdjustXPct, carAdjustYPct, setCarAdjustYPct,
+    carScale, compositionZoom, setCompositionZoom, bgScale,
+    textLayersRef: textLayerHook.textLayersRef, textLayers: textLayerHook.textLayers,
+    selectedTextLayerId: textLayerHook.selectedTextLayerId,
+    updateTextLayer: textLayerHook.updateTextLayer,
     backgroundControlsLocked, showResults, desktopDragEnabled,
   })
 
@@ -147,59 +135,21 @@ export default function ProductCustomizer() {
       customerNotes,
       carImageDataUrl, carImagePreview,
       revisions: carGen.revisions, viewIndex: carGen.viewIndex,
-      vehicleLocked, composedPromptNotes, tweakNotes,
+      vehicleLocked, composedPromptNotes, tweakNotes, selectedPresetId,
       savedCustomBackgrounds: bgGen.savedCustomBackgrounds,
       customBackgroundImageDataUrl, customBackgroundImagePreview, customBackgroundValue,
-      selectedSide, backEnabled,
-      front: {
-        selectedPresetId: frontDesign.selectedPresetId,
-        carAdjustXPct: frontDesign.carAdjustXPct,
-        carAdjustYPct: frontDesign.carAdjustYPct,
-        carScale: frontDesign.carScale,
-        compositionZoom: frontDesign.compositionZoom,
-        bgScale: frontDesign.bgScale,
-        textLayers: frontDesign.text.textLayers,
-        selectedTextLayerId: frontDesign.text.selectedTextLayerId,
-      },
-      back: {
-        selectedPresetId: backDesign.selectedPresetId,
-        carAdjustXPct: backDesign.carAdjustXPct,
-        carAdjustYPct: backDesign.carAdjustYPct,
-        carScale: backDesign.carScale,
-        compositionZoom: backDesign.compositionZoom,
-        bgScale: backDesign.bgScale,
-        textLayers: backDesign.text.textLayers,
-        selectedTextLayerId: backDesign.text.selectedTextLayerId,
-      },
+      carAdjustXPct, carAdjustYPct, carScale, compositionZoom, bgScale,
+      textLayers: textLayerHook.textLayers, selectedTextLayerId: textLayerHook.selectedTextLayerId,
     },
     {
       setCustomerNotes,
       setCarImageDataUrl, setCarImagePreview,
       setRevisions: carGen.setRevisions, setViewIndex: carGen.setViewIndex,
-      setVehicleLocked, setComposedPromptNotes, setTweakNotes,
+      setVehicleLocked, setComposedPromptNotes, setTweakNotes, setSelectedPresetId,
       setSavedCustomBackgrounds: bgGen.setSavedCustomBackgrounds,
       setCustomBackgroundImageDataUrl, setCustomBackgroundImagePreview, setCustomBackgroundValue,
-      setSelectedSide, setBackEnabled,
-      setFrontDesign: {
-        setSelectedPresetId: frontDesign.setSelectedPresetId,
-        setCarAdjustXPct: frontDesign.setCarAdjustXPct,
-        setCarAdjustYPct: frontDesign.setCarAdjustYPct,
-        setCarScale: frontDesign.setCarScale,
-        setCompositionZoom: frontDesign.setCompositionZoom,
-        setBgScale: frontDesign.setBgScale,
-        setTextLayers: frontDesign.text.setTextLayers,
-        setSelectedTextLayerId: frontDesign.text.setSelectedTextLayerId,
-      },
-      setBackDesign: {
-        setSelectedPresetId: backDesign.setSelectedPresetId,
-        setCarAdjustXPct: backDesign.setCarAdjustXPct,
-        setCarAdjustYPct: backDesign.setCarAdjustYPct,
-        setCarScale: backDesign.setCarScale,
-        setCompositionZoom: backDesign.setCompositionZoom,
-        setBgScale: backDesign.setBgScale,
-        setTextLayers: backDesign.text.setTextLayers,
-        setSelectedTextLayerId: backDesign.text.setSelectedTextLayerId,
-      },
+      setCarAdjustXPct, setCarAdjustYPct, setCarScale, setCompositionZoom, setBgScale,
+      setTextLayers: textLayerHook.setTextLayers, setSelectedTextLayerId: textLayerHook.setSelectedTextLayerId,
       setStatus: carGen.setStatus,
       resumePendingGeneration: carGen.resumePendingGeneration,
       resumePendingBackgroundGeneration: bgGen.resumePendingBackgroundGeneration,
@@ -247,29 +197,22 @@ export default function ProductCustomizer() {
     if (!customFontOptions.length) return
     const allowed = new Set(availableFontOptions.map((f) => f.value))
     if (!allowed.size) return
-    const fixLayers = (
-      setLayers: typeof frontDesign.text.setTextLayers,
-    ) => {
-      setLayers((prev) => {
-        let changed = false
-        const next = prev.map((layer) => {
-          if (allowed.has(layer.fontFamily)) return layer
-          changed = true
-          return { ...layer, fontFamily: availableFontOptions[0].value }
-        })
-        return changed ? next : prev
+    textLayerHook.setTextLayers((prev) => {
+      let changed = false
+      const next = prev.map((layer) => {
+        if (allowed.has(layer.fontFamily)) return layer
+        changed = true
+        return { ...layer, fontFamily: availableFontOptions[0].value }
       })
-    }
-    fixLayers(frontDesign.text.setTextLayers)
-    fixLayers(backDesign.text.setTextLayers)
-  }, [customFontOptions, availableFontOptions, frontDesign.text, backDesign.text])
+      return changed ? next : prev
+    })
+  }, [customFontOptions, availableFontOptions, textLayerHook])
 
   useEffect(() => {
-    const text = activeDesign.text
-    if (!text.selectedTextLayerId) return
-    if (text.textLayers.some((l) => l.id === text.selectedTextLayerId)) return
-    text.setSelectedTextLayerId(text.textLayers[0]?.id ?? null)
-  }, [activeDesign.text])
+    if (!textLayerHook.selectedTextLayerId) return
+    if (textLayerHook.textLayers.some((l) => l.id === textLayerHook.selectedTextLayerId)) return
+    textLayerHook.setSelectedTextLayerId(textLayerHook.textLayers[0]?.id ?? null)
+  }, [textLayerHook])
 
   // ---- File handlers ----
   function handleCarFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -293,7 +236,7 @@ export default function ProductCustomizer() {
     readFileAsDataUrl(file, async (dataUrl) => {
       setCustomBackgroundImagePreview(dataUrl)
       bgGen.setCustomBackgroundError('')
-      activeDesign.setSelectedPresetId(CUSTOM_BACKGROUND_NEW)
+      setSelectedPresetId(CUSTOM_BACKGROUND_NEW)
       if (!customBackgroundValue.trim()) setCustomBackgroundValue('Use this image as reference')
       try {
         const compressed = await compressImageDataUrl(dataUrl)
@@ -314,21 +257,14 @@ export default function ProductCustomizer() {
     setCustomerNotes('')
     setCarImageDataUrl(null); setCarImagePreview(null)
     setVehicleLocked(false); setComposedPromptNotes(''); setTweakNotes('')
+    setSelectedPresetId(null)
     setCustomBackgroundImageDataUrl(null); setCustomBackgroundImagePreview(null)
     setCustomBackgroundValue('')
     setIsVehicleTweakOpen(false); setIsBackgroundTweakOpen(false)
-    frontDesign.reset()
-    backDesign.reset()
-    setSelectedSide('front')
-    setBackEnabled(false)
+    setCarAdjustXPct(0); setCarAdjustYPct(0); setCarScale(1); setCompositionZoom(1); setBgScale(1)
     carGen.resetCarGeneration()
     bgGen.resetBackgroundGeneration()
-  }
-
-  // ---- Side switch helpers ----
-  function selectSide(side: PrintSide) {
-    if (side === 'back' && !backEnabled) setBackEnabled(true)
-    setSelectedSide(side)
+    textLayerHook.resetTextLayers()
   }
 
   function handleMobileDockTouchStart(e: React.TouchEvent<HTMLButtonElement>) {
@@ -452,49 +388,8 @@ export default function ProductCustomizer() {
 
                 {hasTransparentRevision && (
                   <>
-                    {/* Front / Back side tabs */}
-                    <div className="flex items-center gap-1 mt-4 mb-3">
-                      <button
-                        type="button"
-                        onClick={() => selectSide('front')}
-                        className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
-                          selectedSide === 'front'
-                            ? 'border-ignition bg-ignition/10 text-white'
-                            : 'border-border text-muted hover:border-white/30 hover:text-white'
-                        }`}
-                      >
-                        Front design
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => selectSide('back')}
-                        className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
-                          selectedSide === 'back'
-                            ? 'border-ignition bg-ignition/10 text-white'
-                            : 'border-border text-muted hover:border-white/30 hover:text-white'
-                        }`}
-                      >
-                        Back design{backEnabled ? '' : ' +'}
-                      </button>
-                      {backEnabled && selectedSide === 'back' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            backDesign.reset()
-                            setBackEnabled(false)
-                            setSelectedSide('front')
-                          }}
-                          className="ml-auto px-3 py-2 text-[10px] font-sub font-bold uppercase tracking-widest border border-border text-muted hover:text-redline hover:border-redline/40 transition"
-                          title="Remove the back design"
-                        >
-                          Remove back
-                        </button>
-                      )}
-                    </div>
-
                     <BackgroundPresets
-                      selectedPresetId={activeDesign.selectedPresetId}
-                      setSelectedPresetId={activeDesign.setSelectedPresetId}
+                      selectedPresetId={selectedPresetId} setSelectedPresetId={setSelectedPresetId}
                       savedCustomBackgrounds={bgGen.savedCustomBackgrounds}
                       transparentCarUrl={transparentCarUrlForPreset}
                       backgroundControlsLocked={backgroundControlsLocked}
@@ -523,7 +418,7 @@ export default function ProductCustomizer() {
                         setCustomBackgroundValue('')
                         bgGen.setCustomBackgroundError('')
                         if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
-                        activeDesign.setSelectedPresetId(CUSTOM_BACKGROUND_NEW)
+                        setSelectedPresetId(CUSTOM_BACKGROUND_NEW)
                       }}
                       onRemoveCustomImage={() => {
                         setCustomBackgroundImageDataUrl(null)
@@ -537,26 +432,26 @@ export default function ProductCustomizer() {
                     {transparentCarUrlForPreset && (
                       <>
                         <CompositeEditor
-                          carAdjustYPct={activeDesign.carAdjustYPct} setCarAdjustYPct={activeDesign.setCarAdjustYPct}
-                          carScale={activeDesign.carScale} setCarScale={activeDesign.setCarScale}
-                          bgScale={activeDesign.bgScale} setBgScale={activeDesign.setBgScale}
-                          setCompositionZoom={activeDesign.setCompositionZoom}
-                          setCarAdjustXPct={activeDesign.setCarAdjustXPct}
+                          carAdjustYPct={carAdjustYPct} setCarAdjustYPct={setCarAdjustYPct}
+                          carScale={carScale} setCarScale={setCarScale}
+                          bgScale={bgScale} setBgScale={setBgScale}
+                          setCompositionZoom={setCompositionZoom}
+                          setCarAdjustXPct={setCarAdjustXPct}
                           backgroundControlsLocked={backgroundControlsLocked}
                         />
                         <TextLayerEditor
-                          textLayers={activeDesign.text.textLayers}
-                          selectedTextLayerId={activeDesign.text.selectedTextLayerId}
-                          setSelectedTextLayerId={activeDesign.text.setSelectedTextLayerId}
-                          selectedTextLayer={activeDesign.text.selectedTextLayer}
+                          textLayers={textLayerHook.textLayers}
+                          selectedTextLayerId={textLayerHook.selectedTextLayerId}
+                          setSelectedTextLayerId={textLayerHook.setSelectedTextLayerId}
+                          selectedTextLayer={textLayerHook.selectedTextLayer}
                           availableFontOptions={availableFontOptions}
                           backgroundControlsLocked={backgroundControlsLocked}
-                          onAddTextLayer={activeDesign.text.addTextLayer}
-                          onUpdateTextLayer={activeDesign.text.updateTextLayer}
-                          onRemoveTextLayer={activeDesign.text.removeTextLayer}
-                          onMoveTextLayer={activeDesign.text.moveTextLayer}
-                          onNudgeTextFontSize={activeDesign.text.nudgeTextFontSize}
-                          onAlignTextLayerToCanvasVertical={activeDesign.text.alignTextLayerToCanvasVertical}
+                          onAddTextLayer={textLayerHook.addTextLayer}
+                          onUpdateTextLayer={textLayerHook.updateTextLayer}
+                          onRemoveTextLayer={textLayerHook.removeTextLayer}
+                          onMoveTextLayer={textLayerHook.moveTextLayer}
+                          onNudgeTextFontSize={textLayerHook.nudgeTextFontSize}
+                          onAlignTextLayerToCanvasVertical={textLayerHook.alignTextLayerToCanvasVertical}
                         />
                       </>
                     )}

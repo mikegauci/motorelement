@@ -3,7 +3,7 @@ import { createCheckoutSession } from "@/lib/stripe/helpers";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { items, customerId } = body;
+  const { items, customerId, artworkUrl } = body;
 
   if (!items?.length) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -15,6 +15,7 @@ export async function POST(request: Request) {
     const session = await createCheckoutSession({
       items,
       customerId,
+      artworkUrl,
       origin,
     });
 

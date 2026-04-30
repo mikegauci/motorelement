@@ -23,11 +23,10 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     mockupPlacement,
     tshirtBaseImage,
     productType,
-    selectedSide,
   } = useCustomizer()
 
   const overlayUrl = compositeDataUrl ?? artworkUrl
-  const pz = getMockupPrintZone(productType, selectedSide)
+  const pz = getMockupPrintZone(productType)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const baseImgRef = useRef<HTMLImageElement | null>(null)

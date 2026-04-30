@@ -4,42 +4,36 @@ import type { CartItem } from "@/hooks/useCart";
 export async function createCheckoutSession({
   items,
   customerId,
+  artworkUrl,
   origin,
 }: {
   items: CartItem[];
   customerId?: string;
+  artworkUrl?: string;
   origin: string;
 }) {
   const stripe = getStripe();
 
-  // Per-line-item metadata: front/back artwork URLs travel here so the Stripe
-  // webhook can route each item's prints to the correct Printify print_areas.
-  // Stripe metadata is per-product, with a 500-char limit per value.
-  const lineItems = items.map((item) => {
-    const productMetadata: Record<string, string> = {
-      productId: item.productId,
-      size: item.size,
-      color: item.color,
-      type: item.type,
-    };
-    if (item.frontArtworkUrl) productMetadata.frontArtworkUrl = item.frontArtworkUrl;
-    if (item.backArtworkUrl) productMetadata.backArtworkUrl = item.backArtworkUrl;
-
-    return {
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: item.name,
-          metadata: productMetadata,
+  const lineItems = items.map((item) => ({
+    price_data: {
+      currency: "usd",
+      product_data: {
+        name: item.name,
+        metadata: {
+          productId: item.productId,
+          size: item.size,
+          color: item.color,
+          type: item.type,
         },
-        unit_amount: item.price,
       },
-      quantity: item.quantity,
-    };
-  });
+      unit_amount: item.price,
+    },
+    quantity: item.quantity,
+  }));
 
   const metadata: Record<string, string> = {};
   if (customerId) metadata.customerId = customerId;
+  if (artworkUrl) metadata.artworkUrl = artworkUrl;
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
