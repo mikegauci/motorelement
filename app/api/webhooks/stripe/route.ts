@@ -63,13 +63,7 @@ export async function POST(request: Request) {
         customerId: customerId ?? "anonymous",
         total: session.amount_total ?? 0,
         stripePaymentId: session.payment_intent as string,
-        items: items.map((it) => ({
-          productId: it.productId,
-          quantity: it.quantity,
-          size: it.size,
-          color: it.color,
-          price: it.price,
-        })),
+        items: items.map(({ frontArtworkUrl: _f, backArtworkUrl: _b, ...rest }) => rest),
       });
 
       // 2. Submit to Printify if any item has artwork and we have a shipping address.

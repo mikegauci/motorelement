@@ -1,7 +1,7 @@
 import sharp from 'sharp'
 
 
-type AlphaTrimRegion = { left: number; top: number; width: number; height: number }
+export type AlphaTrimRegion = { left: number; top: number; width: number; height: number }
 
 export function computeAlphaBoundsRaw(
   rgba: Buffer,
@@ -32,6 +32,10 @@ export function computeAlphaBoundsRaw(
     width: maxX - minX + 1,
     height: maxY - minY + 1,
   }
+}
+
+export function fullImageRegion(width: number, height: number): AlphaTrimRegion {
+  return { left: 0, top: 0, width, height }
 }
 
 export function regionCoversFullImage(region: AlphaTrimRegion, width: number, height: number): boolean {
