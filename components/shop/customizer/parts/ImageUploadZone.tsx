@@ -12,7 +12,7 @@ const GENERATION_MESSAGES = [
   'REMOVING THE BACKGROUND',
   'ALMOST READY...',
 ]
-const MESSAGE_INTERVAL_MS = 12000
+const MESSAGE_INTERVAL_MS = 16000
 
 interface ImageUploadZoneProps {
   imagePreview: string | null

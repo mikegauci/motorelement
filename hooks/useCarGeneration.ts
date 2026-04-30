@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { Revision } from '@/components/shop/customizer/types'
-import { PENDING_GENERATION_KEY } from '@/components/shop/customizer/constants'
 import { removeCarBackground, joinNotes, splitCarPhotoVertically, flattenToWhite } from '@/components/shop/customizer/helpers'
-import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
 import { useGenerationJob, writePending, clearPending } from './useGenerationJob'
 
 interface CarGenerationDeps {
+  pendingKey: string
   carImageDataUrl: string | null
   customerNotes: string
   vehicleLocked: boolean
@@ -19,29 +18,11 @@ interface CarGenerationDeps {
 }
 
 export function useCarGeneration(deps: CarGenerationDeps) {
-  const { setArtworkUrl, setGenerationStatus, setMockupThumbnailUrl } = useCustomizer()
-  const job = useGenerationJob(PENDING_GENERATION_KEY, 'car')
+  const job = useGenerationJob(deps.pendingKey, 'car')
 
   const [status, setStatus] = useState('')
   const [revisions, setRevisions] = useState<Revision[]>([])
   const [viewIndex, setViewIndex] = useState(0)
-
-  useEffect(() => {
-    const transparentRev = revisions.find((r) => r.transparent)
-    if (transparentRev) {
-      setArtworkUrl(transparentRev.url)
-      setGenerationStatus('done')
-    } else if (revisions.length > 0) {
-      setArtworkUrl(revisions[revisions.length - 1].url)
-      setGenerationStatus('done')
-    } else {
-      setArtworkUrl(null)
-      // Clear stale mockup thumbnail so the mobile result dock doesn't
-      // keep showing the previous project's artwork after a reset.
-      setMockupThumbnailUrl(null)
-      setGenerationStatus(status === 'running' ? 'running' : 'idle')
-    }
-  }, [revisions, status, setArtworkUrl, setGenerationStatus, setMockupThumbnailUrl])
 
   async function finalizeGenerationFromUrl(url: string, notesSnapshot: string, wasLocked: boolean, tweakSnapshot: string) {
     let finalUrl = url
@@ -82,13 +63,13 @@ export function useCarGeneration(deps: CarGenerationDeps) {
       const generatedUrl = await job.poll(pending.requestId, pending.endpointId, runId)
       if (!job.isRunActive(runId)) return
       job.stopTimer()
-      clearPending(PENDING_GENERATION_KEY)
+      clearPending(deps.pendingKey)
       await finalizeGenerationFromUrl(generatedUrl, pending.notesForPrompt || '', !!pending.wasLocked, pending.tweakNotes || '')
     } catch (err: unknown) {
       if (!job.isRunActive(runId)) return
       job.stopTimer()
       setStatus('error:' + ((err as Error).message || 'Generation failed'))
-      clearPending(PENDING_GENERATION_KEY)
+      clearPending(deps.pendingKey)
     } finally {
       job.endRun(runId)
     }
@@ -135,19 +116,19 @@ export function useCarGeneration(deps: CarGenerationDeps) {
       const data = await res.json()
       if (!data.requestId || !data.endpointId) throw new Error(data.error || 'Failed to start generation')
       job.setActiveRequest({ requestId: data.requestId, endpointId: data.endpointId })
-      writePending(PENDING_GENERATION_KEY, {
+      writePending(deps.pendingKey, {
         requestId: data.requestId, endpointId: data.endpointId,
         wasLocked: deps.vehicleLocked, notesForPrompt, tweakNotes: deps.tweakNotes,
       })
       const generatedUrl = await job.poll(data.requestId, data.endpointId, runId)
       if (!job.isRunActive(runId)) return
       job.stopTimer()
-      clearPending(PENDING_GENERATION_KEY)
+      clearPending(deps.pendingKey)
       await finalizeGenerationFromUrl(generatedUrl, notesForPrompt, deps.vehicleLocked, deps.tweakNotes)
     } catch (err: unknown) {
       if (job.isRunActive(runId)) {
         job.stopTimer()
-        clearPending(PENDING_GENERATION_KEY)
+        clearPending(deps.pendingKey)
         setStatus('error:' + (err as Error).message)
       }
     } finally {

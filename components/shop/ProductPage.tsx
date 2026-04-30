@@ -125,7 +125,11 @@ export default function ProductPage({
   const selectedColorObj = data?.colors.find((c) => c.id === selectedColor);
   const selectedSizeObj = data?.sizes.find((s) => s.id === selectedSize);
   const displayPrice = selectedVariant?.price ?? product.basePrice;
-  const hasGeneratedImage = Boolean(artworkUrl);
+  // True when ANY side has produced artwork. Used to keep the Live Mockup
+  // tabs visible even when switching to a side that has no design yet.
+  const hasGeneratedImage = Boolean(
+    artworkUrl || frontCompositeDataUrl || backCompositeDataUrl
+  );
   const generationRunning = generationStatus === "running";
   const canFinalizeCart =
     !!selectedVariant &&
@@ -148,11 +152,10 @@ export default function ProductPage({
     setSelectedColorHex(selectedColorObj?.hex ?? null);
   }, [selectedColorObj?.hex, setSelectedColorHex]);
 
-  // Auto-show mockup when artwork is generated; hide when cleared
   useEffect(() => {
-    if (artworkUrl) setShowMockup(true);
+    if (hasGeneratedImage) setShowMockup(true);
     else setShowMockup(false);
-  }, [artworkUrl]);
+  }, [hasGeneratedImage]);
 
   async function handleAddToCart() {
     if (!selectedVariant || !selectedSizeObj) return;

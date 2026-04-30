@@ -5,7 +5,8 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import styles from './styles'
 import {
   SESSION_KEY,
-  PENDING_GENERATION_KEY,
+  PENDING_GENERATION_KEY_FRONT,
+  PENDING_GENERATION_KEY_BACK,
   PENDING_BACKGROUND_KEY,
   BACKGROUND_PRESETS,
   CUSTOM_BACKGROUND_NEW,
@@ -28,7 +29,7 @@ import CollapsibleTweak from './parts/CollapsibleTweak'
 
 import { useCustomizer } from './CustomizerContext'
 import { useSideDesign } from '@/hooks/useSideDesign'
-import { useCarGeneration } from '@/hooks/useCarGeneration'
+import { useSideVehicle } from '@/hooks/useSideVehicle'
 import { useBackgroundGeneration } from '@/hooks/useBackgroundGeneration'
 import { useCompositeCanvas } from '@/hooks/useCompositeCanvas'
 import { useSession } from '@/hooks/useSession'
@@ -36,19 +37,14 @@ import { useSession } from '@/hooks/useSession'
 export default function ProductCustomizer() {
   const {
     mockupThumbnailUrl,
+    setArtworkUrl,
+    setGenerationStatus,
+    setMockupThumbnailUrl,
     selectedSide,
     setSelectedSide,
     backEnabled,
     setBackEnabled,
   } = useCustomizer()
-
-  // ---- Vehicle input state ----
-  const [customerNotes, setCustomerNotes] = useState('')
-  const [carImageDataUrl, setCarImageDataUrl] = useState<string | null>(null)
-  const [carImagePreview, setCarImagePreview] = useState<string | null>(null)
-  const [vehicleLocked, setVehicleLocked] = useState(false)
-  const [composedPromptNotes, setComposedPromptNotes] = useState('')
-  const [tweakNotes, setTweakNotes] = useState('')
 
   // ---- Shared background generation inputs (one generation runs at a time) ----
   const [customBackgroundImageDataUrl, setCustomBackgroundImageDataUrl] = useState<string | null>(null)
@@ -70,18 +66,17 @@ export default function ProductCustomizer() {
 
   const availableFontOptions = customFontOptions.length > 0 ? customFontOptions : TEXT_FONTS
 
-  // ---- Per-side design state ----
+  // ---- Per-side state: design (background, layout, text) and vehicle (photo, notes, generation) ----
   const frontDesign = useSideDesign(availableFontOptions)
   const backDesign = useSideDesign(availableFontOptions)
   const activeDesign = selectedSide === 'front' ? frontDesign : backDesign
 
-  // ---- Hooks ----
-  const carGen = useCarGeneration({
-    carImageDataUrl, customerNotes,
-    vehicleLocked, setVehicleLocked, composedPromptNotes, setComposedPromptNotes,
-    tweakNotes, setTweakNotes,
-  })
+  const frontVehicle = useSideVehicle(PENDING_GENERATION_KEY_FRONT)
+  const backVehicle = useSideVehicle(PENDING_GENERATION_KEY_BACK)
+  const activeVehicle = selectedSide === 'front' ? frontVehicle : backVehicle
+  const activeCarGen = activeVehicle.carGen
 
+  // ---- Hooks ----
   const bgGen = useBackgroundGeneration({
     customBackgroundImageDataUrl, customBackgroundValue,
     setCustomBackgroundImageDataUrl, setCustomBackgroundImagePreview,
@@ -90,23 +85,58 @@ export default function ProductCustomizer() {
     customBackgroundFileRef,
   })
 
-  // ---- Derived state ----
-  const baseReady = !!carImageDataUrl && !carGen.running
-  const canRun = vehicleLocked ? baseReady && !!tweakNotes.trim() : baseReady
-  const isRunning = carGen.status === 'running'
-  const isDone = carGen.status === 'done'
-  const showResults = isRunning || carGen.status.startsWith('error') || carGen.revisions.length > 0
-  const viewingUrl = carGen.revisions.length > 0 ? carGen.revisions[carGen.viewIndex]?.url : null
-  const hasTransparentRevision = carGen.revisions.some((r) => r.transparent)
+  // ---- Derived state (active side) ----
+  const baseReady = !!activeVehicle.carImageDataUrl && !activeCarGen.running
+  const canRun = activeVehicle.vehicleLocked
+    ? baseReady && !!activeVehicle.tweakNotes.trim()
+    : baseReady
+  const isRunning = activeCarGen.status === 'running'
+  const isDone = activeCarGen.status === 'done'
+  const hasTransparentRevision = activeCarGen.revisions.some((r) => r.transparent)
+  const anySideHasTransparentRev =
+    frontVehicle.carGen.revisions.some((r) => r.transparent) ||
+    backVehicle.carGen.revisions.some((r) => r.transparent)
+  // Editors are visible whenever at least one side has produced a transparent
+  // car. That way the user can switch to the other side and design a
+  // text/background-only layout without having to generate a car for it too.
+  const editorsAvailable = hasTransparentRevision || anySideHasTransparentRev
+  const showResults =
+    isRunning ||
+    activeCarGen.status.startsWith('error') ||
+    activeCarGen.revisions.length > 0 ||
+    editorsAvailable
+  const viewingUrl = activeCarGen.revisions.length > 0 ? activeCarGen.revisions[activeCarGen.viewIndex]?.url : null
 
   const transparentCarUrlForPreset = useMemo(() => {
-    const cur = carGen.revisions[carGen.viewIndex]
+    const cur = activeCarGen.revisions[activeCarGen.viewIndex]
     if (cur?.transparent) return cur.url
-    for (let i = carGen.revisions.length - 1; i >= 0; i--) {
-      if (carGen.revisions[i].transparent) return carGen.revisions[i].url
+    for (let i = activeCarGen.revisions.length - 1; i >= 0; i--) {
+      if (activeCarGen.revisions[i].transparent) return activeCarGen.revisions[i].url
     }
     return null
-  }, [carGen.revisions, carGen.viewIndex])
+  }, [activeCarGen.revisions, activeCarGen.viewIndex])
+
+  // ---- Sync global Customizer context with the active side ----
+  useEffect(() => {
+    const transparentRev = activeCarGen.revisions.find((r) => r.transparent)
+    if (transparentRev) {
+      setArtworkUrl(transparentRev.url)
+      setGenerationStatus('done')
+    } else if (activeCarGen.revisions.length > 0) {
+      setArtworkUrl(activeCarGen.revisions[activeCarGen.revisions.length - 1].url)
+      setGenerationStatus('done')
+    } else {
+      setArtworkUrl(null)
+      setMockupThumbnailUrl(null)
+      setGenerationStatus(activeCarGen.status === 'running' ? 'running' : 'idle')
+    }
+  }, [
+    activeCarGen.revisions,
+    activeCarGen.status,
+    setArtworkUrl,
+    setGenerationStatus,
+    setMockupThumbnailUrl,
+  ])
 
   const selectedPreset = BACKGROUND_PRESETS.find((p) => p.id === activeDesign.selectedPresetId)
   const isCustomSavedSelection =
@@ -137,7 +167,9 @@ export default function ProductCustomizer() {
     textLayersRef: activeDesign.text.textLayersRef, textLayers: activeDesign.text.textLayers,
     selectedTextLayerId: activeDesign.text.selectedTextLayerId,
     updateTextLayer: activeDesign.text.updateTextLayer,
-    backgroundControlsLocked, showResults, desktopDragEnabled,
+    backgroundControlsLocked,
+    showResults,
+    desktopDragEnabled,
   })
 
   const mobileResultDockSrc = mockupThumbnailUrl || viewingUrl
@@ -145,10 +177,6 @@ export default function ProductCustomizer() {
   // ---- Session ----
   useSession(
     {
-      customerNotes,
-      carImageDataUrl, carImagePreview,
-      revisions: carGen.revisions, viewIndex: carGen.viewIndex,
-      vehicleLocked, composedPromptNotes, tweakNotes,
       savedCustomBackgrounds: bgGen.savedCustomBackgrounds,
       customBackgroundImageDataUrl, customBackgroundImagePreview, customBackgroundValue,
       selectedSide, backEnabled,
@@ -172,12 +200,28 @@ export default function ProductCustomizer() {
         textLayers: backDesign.text.textLayers,
         selectedTextLayerId: backDesign.text.selectedTextLayerId,
       },
+      frontVehicle: {
+        carImageDataUrl: frontVehicle.carImageDataUrl,
+        carImagePreview: frontVehicle.carImagePreview,
+        customerNotes: frontVehicle.customerNotes,
+        revisions: frontVehicle.carGen.revisions,
+        viewIndex: frontVehicle.carGen.viewIndex,
+        vehicleLocked: frontVehicle.vehicleLocked,
+        composedPromptNotes: frontVehicle.composedPromptNotes,
+        tweakNotes: frontVehicle.tweakNotes,
+      },
+      backVehicle: {
+        carImageDataUrl: backVehicle.carImageDataUrl,
+        carImagePreview: backVehicle.carImagePreview,
+        customerNotes: backVehicle.customerNotes,
+        revisions: backVehicle.carGen.revisions,
+        viewIndex: backVehicle.carGen.viewIndex,
+        vehicleLocked: backVehicle.vehicleLocked,
+        composedPromptNotes: backVehicle.composedPromptNotes,
+        tweakNotes: backVehicle.tweakNotes,
+      },
     },
     {
-      setCustomerNotes,
-      setCarImageDataUrl, setCarImagePreview,
-      setRevisions: carGen.setRevisions, setViewIndex: carGen.setViewIndex,
-      setVehicleLocked, setComposedPromptNotes, setTweakNotes,
       setSavedCustomBackgrounds: bgGen.setSavedCustomBackgrounds,
       setCustomBackgroundImageDataUrl, setCustomBackgroundImagePreview, setCustomBackgroundValue,
       setSelectedSide, setBackEnabled,
@@ -201,8 +245,30 @@ export default function ProductCustomizer() {
         setTextLayers: backDesign.text.setTextLayers,
         setSelectedTextLayerId: backDesign.text.setSelectedTextLayerId,
       },
-      setStatus: carGen.setStatus,
-      resumePendingGeneration: carGen.resumePendingGeneration,
+      setFrontVehicle: {
+        setCarImageDataUrl: frontVehicle.setCarImageDataUrl,
+        setCarImagePreview: frontVehicle.setCarImagePreview,
+        setCustomerNotes: frontVehicle.setCustomerNotes,
+        setRevisions: frontVehicle.carGen.setRevisions,
+        setViewIndex: frontVehicle.carGen.setViewIndex,
+        setVehicleLocked: frontVehicle.setVehicleLocked,
+        setComposedPromptNotes: frontVehicle.setComposedPromptNotes,
+        setTweakNotes: frontVehicle.setTweakNotes,
+        setStatus: frontVehicle.carGen.setStatus,
+        resumePendingGeneration: frontVehicle.carGen.resumePendingGeneration,
+      },
+      setBackVehicle: {
+        setCarImageDataUrl: backVehicle.setCarImageDataUrl,
+        setCarImagePreview: backVehicle.setCarImagePreview,
+        setCustomerNotes: backVehicle.setCustomerNotes,
+        setRevisions: backVehicle.carGen.setRevisions,
+        setViewIndex: backVehicle.carGen.setViewIndex,
+        setVehicleLocked: backVehicle.setVehicleLocked,
+        setComposedPromptNotes: backVehicle.setComposedPromptNotes,
+        setTweakNotes: backVehicle.setTweakNotes,
+        setStatus: backVehicle.carGen.setStatus,
+        resumePendingGeneration: backVehicle.carGen.resumePendingGeneration,
+      },
       resumePendingBackgroundGeneration: bgGen.resumePendingBackgroundGeneration,
     }
   )
@@ -277,13 +343,13 @@ export default function ProductCustomizer() {
     const file = e.target.files?.[0]
     if (!file) return
     readFileAsDataUrl(file, async (dataUrl) => {
-      setCarImagePreview(dataUrl)
+      activeVehicle.setCarImagePreview(dataUrl)
       try {
         const compressed = await compressImageDataUrl(dataUrl)
-        setCarImageDataUrl(compressed)
-        setCarImagePreview(compressed)
+        activeVehicle.setCarImageDataUrl(compressed)
+        activeVehicle.setCarImagePreview(compressed)
       } catch {
-        setCarImageDataUrl(dataUrl)
+        activeVehicle.setCarImageDataUrl(dataUrl)
       }
     })
   }
@@ -309,20 +375,22 @@ export default function ProductCustomizer() {
   // ---- Reset ----
   function reset() {
     try { sessionStorage.removeItem(SESSION_KEY) } catch { /* ignore */ }
-    try { sessionStorage.removeItem(PENDING_GENERATION_KEY); sessionStorage.removeItem(PENDING_BACKGROUND_KEY) } catch { /* ignore */ }
+    try {
+      sessionStorage.removeItem(PENDING_GENERATION_KEY_FRONT)
+      sessionStorage.removeItem(PENDING_GENERATION_KEY_BACK)
+      sessionStorage.removeItem(PENDING_BACKGROUND_KEY)
+    } catch { /* ignore */ }
     if (carFileRef.current) carFileRef.current.value = ''
     if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
-    setCustomerNotes('')
-    setCarImageDataUrl(null); setCarImagePreview(null)
-    setVehicleLocked(false); setComposedPromptNotes(''); setTweakNotes('')
     setCustomBackgroundImageDataUrl(null); setCustomBackgroundImagePreview(null)
     setCustomBackgroundValue('')
     setIsVehicleTweakOpen(false); setIsBackgroundTweakOpen(false)
     frontDesign.reset()
     backDesign.reset()
+    frontVehicle.reset()
+    backVehicle.reset()
     setSelectedSide('front')
     setBackEnabled(false)
-    carGen.resetCarGeneration()
     bgGen.resetBackgroundGeneration()
   }
 
@@ -364,6 +432,8 @@ export default function ProductCustomizer() {
     }
   }
 
+  const anyRevisions = frontVehicle.carGen.revisions.length > 0 || backVehicle.carGen.revisions.length > 0
+
   // ---- JSX ----
   return (
     <main className={styles.main}>
@@ -372,7 +442,7 @@ export default function ProductCustomizer() {
           <div>
             <h1 className={styles.title}>Customizer</h1>
           </div>
-          {carGen.revisions.length > 0 && (
+          {anyRevisions && (
             <button type="button" className={styles.btnNewProject} onClick={reset}>
               Start Fresh
             </button>
@@ -383,36 +453,64 @@ export default function ProductCustomizer() {
         </p>
       </div>
 
+      {/* Front / Back side tabs - always visible so the user picks a side first */}
+      <div className="flex items-center gap-1 mt-2 mb-3">
+        <button
+          type="button"
+          onClick={() => selectSide('front')}
+          className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
+            selectedSide === 'front'
+              ? 'border-ignition bg-ignition/10 text-white'
+              : 'border-border text-muted hover:border-white/30 hover:text-white'
+          }`}
+        >
+          Front design
+        </button>
+        <button
+          type="button"
+          onClick={() => selectSide('back')}
+          className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
+            selectedSide === 'back'
+              ? 'border-ignition bg-ignition/10 text-white'
+              : 'border-border text-muted hover:border-white/30 hover:text-white'
+          }`}
+        >
+          Back design{backEnabled ? '' : ' +'}
+        </button>
+      </div>
+
       <VehicleInputForm
-        customerNotes={customerNotes} setCustomerNotes={setCustomerNotes}
-        carImagePreview={carImagePreview} vehicleLocked={vehicleLocked}
-        running={carGen.running} canRun={canRun} isDone={isDone}
-        revCount={carGen.revisions.length}
+        customerNotes={activeVehicle.customerNotes}
+        setCustomerNotes={activeVehicle.setCustomerNotes}
+        carImagePreview={activeVehicle.carImagePreview}
+        vehicleLocked={activeVehicle.vehicleLocked}
+        running={activeCarGen.running} canRun={canRun} isDone={isDone}
+        revCount={activeCarGen.revisions.length}
         onUploadClick={() => carFileRef.current?.click()}
         onRemoveCarImage={() => {
-          setCarImageDataUrl(null)
-          setCarImagePreview(null)
+          activeVehicle.setCarImageDataUrl(null)
+          activeVehicle.setCarImagePreview(null)
           if (carFileRef.current) carFileRef.current.value = ''
         }}
-        onGenerate={carGen.runGeneration}
-        onCancel={carGen.cancelCarGeneration}
+        onGenerate={activeCarGen.runGeneration}
+        onCancel={activeCarGen.cancelCarGeneration}
         onReset={reset}
       />
       <input ref={carFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCarFile} />
 
       {showResults && (
         <div className={styles.results}>
-          {carGen.revisions.length > 1 && (
+          {activeCarGen.revisions.length > 1 && (
             <>
               <h2 className={styles.resultsTitle}>Result</h2>
               <div className={styles.tweakHistoryRow}>
-                {carGen.revisions.map((rev, idx) => (
+                {activeCarGen.revisions.map((rev, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    className={`${styles.tweakHistoryItem} ${carGen.viewIndex === idx ? styles.tweakHistoryItemActive : ''}`}
-                    onClick={() => carGen.setViewIndex(idx)}
-                    disabled={carGen.running}
+                    className={`${styles.tweakHistoryItem} ${activeCarGen.viewIndex === idx ? styles.tweakHistoryItemActive : ''}`}
+                    onClick={() => activeCarGen.setViewIndex(idx)}
+                    disabled={activeCarGen.running}
                     title={rev.label}
                   >
                     <img src={rev.url} alt={rev.label} className={styles.tweakHistoryThumb} />
@@ -423,9 +521,9 @@ export default function ProductCustomizer() {
             </>
           )}
           <div ref={composite.resultCardRef}>
-            {(vehicleLocked || hasTransparentRevision) && (
+            {(activeVehicle.vehicleLocked || editorsAvailable) && (
               <div>
-                {vehicleLocked && (
+                {activeVehicle.vehicleLocked && (
                   <div className={styles.tweakPanel}>
                     <CollapsibleTweak
                       label="Refine or fix the artwork"
@@ -433,14 +531,14 @@ export default function ProductCustomizer() {
                       onToggle={() => setIsVehicleTweakOpen((v) => !v)}
                     >
                       <div className={styles.setupBlock}>
-                        <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the illustration." value={tweakNotes} onChange={(e) => setTweakNotes(e.target.value)} />
+                        <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the illustration." value={activeVehicle.tweakNotes} onChange={(e) => activeVehicle.setTweakNotes(e.target.value)} />
                       </div>
                       <div className={styles.tweakPanelActions}>
-                        <button className={styles.btnPrimary} onClick={carGen.runGeneration} disabled={!canRun}>
-                          {carGen.running ? 'Generating…' : 'Tweak'}
+                        <button className={styles.btnPrimary} onClick={activeCarGen.runGeneration} disabled={!canRun}>
+                          {activeCarGen.running ? 'Generating…' : 'Tweak'}
                         </button>
-                        {carGen.running && (
-                          <button type="button" className={styles.btn} onClick={carGen.cancelCarGeneration}>Cancel request</button>
+                        {activeCarGen.running && (
+                          <button type="button" className={styles.btn} onClick={activeCarGen.cancelCarGeneration}>Cancel request</button>
                         )}
                       </div>
                     </CollapsibleTweak>
@@ -451,48 +549,8 @@ export default function ProductCustomizer() {
                   </div>
                 )}
 
-                {hasTransparentRevision && (
+                {editorsAvailable && (
                   <>
-                    {/* Front / Back side tabs */}
-                    <div className="flex items-center gap-1 mt-4 mb-3">
-                      <button
-                        type="button"
-                        onClick={() => selectSide('front')}
-                        className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
-                          selectedSide === 'front'
-                            ? 'border-ignition bg-ignition/10 text-white'
-                            : 'border-border text-muted hover:border-white/30 hover:text-white'
-                        }`}
-                      >
-                        Front design
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => selectSide('back')}
-                        className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
-                          selectedSide === 'back'
-                            ? 'border-ignition bg-ignition/10 text-white'
-                            : 'border-border text-muted hover:border-white/30 hover:text-white'
-                        }`}
-                      >
-                        Back design{backEnabled ? '' : ' +'}
-                      </button>
-                      {backEnabled && selectedSide === 'back' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            backDesign.reset()
-                            setBackEnabled(false)
-                            setSelectedSide('front')
-                          }}
-                          className="ml-auto px-3 py-2 text-[10px] font-sub font-bold uppercase tracking-widest border border-border text-muted hover:text-redline hover:border-redline/40 transition"
-                          title="Remove the back design"
-                        >
-                          Remove back
-                        </button>
-                      )}
-                    </div>
-
                     <BackgroundPresets
                       selectedPresetId={activeDesign.selectedPresetId}
                       setSelectedPresetId={activeDesign.setSelectedPresetId}
@@ -536,31 +594,29 @@ export default function ProductCustomizer() {
                     <input ref={customBackgroundFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCustomBackgroundFile} disabled={backgroundControlsLocked} />
 
                     {transparentCarUrlForPreset && (
-                      <>
-                        <CompositeEditor
-                          carAdjustYPct={activeDesign.carAdjustYPct} setCarAdjustYPct={activeDesign.setCarAdjustYPct}
-                          carScale={activeDesign.carScale} setCarScale={activeDesign.setCarScale}
-                          bgScale={activeDesign.bgScale} setBgScale={activeDesign.setBgScale}
-                          setCompositionZoom={activeDesign.setCompositionZoom}
-                          setCarAdjustXPct={activeDesign.setCarAdjustXPct}
-                          backgroundControlsLocked={backgroundControlsLocked}
-                        />
-                        <TextLayerEditor
-                          textLayers={activeDesign.text.textLayers}
-                          selectedTextLayerId={activeDesign.text.selectedTextLayerId}
-                          setSelectedTextLayerId={activeDesign.text.setSelectedTextLayerId}
-                          selectedTextLayer={activeDesign.text.selectedTextLayer}
-                          availableFontOptions={availableFontOptions}
-                          backgroundControlsLocked={backgroundControlsLocked}
-                          onAddTextLayer={activeDesign.text.addTextLayer}
-                          onUpdateTextLayer={activeDesign.text.updateTextLayer}
-                          onRemoveTextLayer={activeDesign.text.removeTextLayer}
-                          onMoveTextLayer={activeDesign.text.moveTextLayer}
-                          onNudgeTextFontSize={activeDesign.text.nudgeTextFontSize}
-                          onAlignTextLayerToCanvasVertical={activeDesign.text.alignTextLayerToCanvasVertical}
-                        />
-                      </>
+                      <CompositeEditor
+                        carAdjustYPct={activeDesign.carAdjustYPct} setCarAdjustYPct={activeDesign.setCarAdjustYPct}
+                        carScale={activeDesign.carScale} setCarScale={activeDesign.setCarScale}
+                        bgScale={activeDesign.bgScale} setBgScale={activeDesign.setBgScale}
+                        setCompositionZoom={activeDesign.setCompositionZoom}
+                        setCarAdjustXPct={activeDesign.setCarAdjustXPct}
+                        backgroundControlsLocked={backgroundControlsLocked}
+                      />
                     )}
+                    <TextLayerEditor
+                      textLayers={activeDesign.text.textLayers}
+                      selectedTextLayerId={activeDesign.text.selectedTextLayerId}
+                      setSelectedTextLayerId={activeDesign.text.setSelectedTextLayerId}
+                      selectedTextLayer={activeDesign.text.selectedTextLayer}
+                      availableFontOptions={availableFontOptions}
+                      backgroundControlsLocked={backgroundControlsLocked}
+                      onAddTextLayer={activeDesign.text.addTextLayer}
+                      onUpdateTextLayer={activeDesign.text.updateTextLayer}
+                      onRemoveTextLayer={activeDesign.text.removeTextLayer}
+                      onMoveTextLayer={activeDesign.text.moveTextLayer}
+                      onNudgeTextFontSize={activeDesign.text.nudgeTextFontSize}
+                      onAlignTextLayerToCanvasVertical={activeDesign.text.alignTextLayerToCanvasVertical}
+                    />
                   </>
                 )}
               </div>
