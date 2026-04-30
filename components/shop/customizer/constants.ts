@@ -1,13 +1,8 @@
 import type { BackgroundPreset, FontOption, PrintSide } from './types'
 
 export const SESSION_KEY = 'car-vector-session-v1'
-export const PENDING_GENERATION_KEY_FRONT = 'car-vector-pending-generation-front-v1'
-export const PENDING_GENERATION_KEY_BACK = 'car-vector-pending-generation-back-v1'
+export const PENDING_GENERATION_KEY = 'car-vector-pending-generation-v1'
 export const PENDING_BACKGROUND_KEY = 'car-vector-pending-background-v1'
-
-export function pendingGenerationKeyForSide(side: PrintSide): string {
-  return side === 'front' ? PENDING_GENERATION_KEY_FRONT : PENDING_GENERATION_KEY_BACK
-}
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = [
   { id: 'cyberpunk', name: 'Cyberpunk', src: '/presets/cyberpunk.png' },

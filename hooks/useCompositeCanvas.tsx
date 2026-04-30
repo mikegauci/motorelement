@@ -101,28 +101,18 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
 
   useEffect(() => { schedulePaint() }, [deps.textLayers])
 
-  // Canvas paint loop. Renders whenever the active side has at least one
-  // visual element (a car, a background, or some text layers).
+  // Canvas paint loop
   useEffect(() => {
+    if (!deps.transparentCarUrlForPreset) return
     const stage = compositeStageRef.current
     const canvas = compositeCanvasRef.current
     if (!stage || !canvas) return
-    const hasCar = !!deps.transparentCarUrlForPreset
-    const hasBg = !!deps.selectedBackgroundSrc
-    const hasText = (deps.textLayers?.length ?? 0) > 0
-    if (!hasCar && !hasBg && !hasText) {
-      // Nothing to paint — clear any lingering composite.
-      setMobileCompositePreviewSrc('')
-      setCompositeForSide(null)
-      return
-    }
     let cancelled = false
     let bgImg: HTMLImageElement | null = null
     let carImg: HTMLImageElement | null = null
     function paint() {
-      if (cancelled) return
-      if (hasCar && !carImg) return
-      if (hasBg && !bgImg) return
+      if (cancelled || !carImg) return
+      if (deps.selectedBackgroundSrc && !bgImg) return
       const cssSize = Math.min(Math.floor(stage!.clientWidth), 720)
       if (cssSize < 2) return
       const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
@@ -133,7 +123,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'
       ctx.clearRect(0, 0, pixelSize, pixelSize)
-      drawCompositeContent(ctx, pixelSize, hasBg ? bgImg : null, carImg, {
+      drawCompositeContent(ctx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, {
         cropBackgroundToArtwork: deps.selectedBackgroundIsCustom,
         carOffsetXPct: carAdjustXRef.current, carOffsetYPct: carAdjustYRef.current,
         carScale: carScaleRef.current, textLayers: deps.textLayersRef.current ?? [],
@@ -147,23 +137,22 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       } catch (_) { /* ignore */ }
     }
     compositeRenderRef.current = paint
-    const bgPromise = hasBg ? loadImageElement(deps.selectedBackgroundSrc!) : Promise.resolve(null)
-    const carPromise = hasCar ? loadImageElement(deps.transparentCarUrlForPreset!) : Promise.resolve(null)
-    Promise.all([bgPromise, carPromise]).then(([nextBgImg, nextCarImg]) => {
+    const bgPromise = deps.selectedBackgroundSrc ? loadImageElement(deps.selectedBackgroundSrc) : Promise.resolve(null)
+    Promise.all([bgPromise, loadImageElement(deps.transparentCarUrlForPreset)]).then(([nextBgImg, nextCarImg]) => {
       if (cancelled) return
       bgImg = nextBgImg; carImg = nextCarImg; paint()
     })
     const ro = new ResizeObserver(() => paint())
     ro.observe(stage)
     return () => { cancelled = true; compositeRenderRef.current = () => {}; ro.disconnect() }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    deps.selectedBackgroundSrc,
-    deps.selectedBackgroundIsCustom,
-    deps.transparentCarUrlForPreset,
-    deps.side,
-    deps.textLayers.length === 0,
-  ])
+  }, [deps.selectedBackgroundSrc, deps.selectedBackgroundIsCustom, deps.transparentCarUrlForPreset, deps.side])
+
+  useEffect(() => {
+    if (!deps.transparentCarUrlForPreset) {
+      setMobileCompositePreviewSrc('')
+      setCompositeForSide(null)
+    }
+  }, [deps.transparentCarUrlForPreset, setCompositeForSide])
 
   // Mobile dock visibility
   useEffect(() => {

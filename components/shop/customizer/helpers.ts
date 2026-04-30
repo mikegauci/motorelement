@@ -383,7 +383,7 @@ export function drawCompositeContent(
   ctx: CanvasRenderingContext2D,
   size: number,
   bgImg: HTMLImageElement | null,
-  carImg: HTMLImageElement | null,
+  carImg: HTMLImageElement,
   opts: CompositeOpts = {}
 ) {
   const {
@@ -412,7 +412,39 @@ export function drawCompositeContent(
   const bgH = baseBgH * bgZoom
   const bgX = center + (baseBgX - center) * bgZoom
   const bgY = center + (baseBgY - center) * bgZoom
-
+  const lift = size * COMPOSITE.carLiftPct
+  const carOffsetX = size * carOffsetXPct
+  const carOffsetY = size * carOffsetYPct
+  const safeCarScale = Math.min(1.6, Math.max(0.4, carScaleVal))
+  const baseCarW = baseBgW * safeCarScale
+  const baseCarX = (size - baseCarW) / 2 + carOffsetX
+  let carX = baseCarX
+  let carY = 0
+  let carW = baseCarW
+  let carH = 0
+  let carDrawSource: { minX: number; minY: number; sw: number; sh: number } | null = null
+  const bounds = getCarAlphaBounds(carImg)
+  const computeBaseCarY = (baseCarH: number) =>
+    omitBackground
+      ? (size - baseCarH) / 2 + carOffsetY
+      : Math.max(0, size - baseCarH - lift) + carOffsetY
+  if (bounds) {
+    const { minX, minY, w: sw, h: sh } = bounds
+    const baseCarH = (sh / sw) * baseCarW
+    const baseCarY = computeBaseCarY(baseCarH)
+    carW = baseCarW * safeCompositionZoom
+    carH = baseCarH * safeCompositionZoom
+    carX = center + (baseCarX - center) * safeCompositionZoom
+    carY = center + (baseCarY - center) * safeCompositionZoom
+    carDrawSource = { minX, minY, sw, sh }
+  } else {
+    const baseCarH = (carImg.naturalHeight / carImg.naturalWidth) * baseCarW
+    const baseCarY = computeBaseCarY(baseCarH)
+    carW = baseCarW * safeCompositionZoom
+    carH = baseCarH * safeCompositionZoom
+    carX = center + (baseCarX - center) * safeCompositionZoom
+    carY = center + (baseCarY - center) * safeCompositionZoom
+  }
   ctx.clearRect(0, 0, size, size)
   if (!omitBackground) {
     if (bgBounds) {
@@ -422,37 +454,11 @@ export function drawCompositeContent(
     }
     stripOutsideCircleDarkCorners(ctx, size)
   }
-
-  if (carImg) {
-    const lift = size * COMPOSITE.carLiftPct
-    const carOffsetX = size * carOffsetXPct
-    const carOffsetY = size * carOffsetYPct
-    const safeCarScale = Math.min(1.6, Math.max(0.4, carScaleVal))
-    const baseCarW = baseBgW * safeCarScale
-    const baseCarX = (size - baseCarW) / 2 + carOffsetX
-    const computeBaseCarY = (baseCarH: number) =>
-      omitBackground
-        ? (size - baseCarH) / 2 + carOffsetY
-        : Math.max(0, size - baseCarH - lift) + carOffsetY
-    const bounds = getCarAlphaBounds(carImg)
-    if (bounds) {
-      const { minX, minY, w: sw, h: sh } = bounds
-      const baseCarH = (sh / sw) * baseCarW
-      const baseCarY = computeBaseCarY(baseCarH)
-      const carW = baseCarW * safeCompositionZoom
-      const carH = baseCarH * safeCompositionZoom
-      const carX = center + (baseCarX - center) * safeCompositionZoom
-      const carY = center + (baseCarY - center) * safeCompositionZoom
-      ctx.drawImage(carImg, minX, minY, sw, sh, carX, carY, carW, carH)
-    } else {
-      const baseCarH = (carImg.naturalHeight / carImg.naturalWidth) * baseCarW
-      const baseCarY = computeBaseCarY(baseCarH)
-      const carW = baseCarW * safeCompositionZoom
-      const carH = baseCarH * safeCompositionZoom
-      const carX = center + (baseCarX - center) * safeCompositionZoom
-      const carY = center + (baseCarY - center) * safeCompositionZoom
-      ctx.drawImage(carImg, carX, carY, carW, carH)
-    }
+  if (carDrawSource) {
+    const { minX, minY, sw, sh } = carDrawSource
+    ctx.drawImage(carImg, minX, minY, sw, sh, carX, carY, carW, carH)
+  } else {
+    ctx.drawImage(carImg, carX, carY, carW, carH)
   }
 
   for (const layer of layers) {
