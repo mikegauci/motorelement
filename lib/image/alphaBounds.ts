@@ -1,4 +1,4 @@
-export type AlphaTrimRegion = { left: number; top: number; width: number; height: number }
+type AlphaTrimRegion = { left: number; top: number; width: number; height: number }
 
 export function computeAlphaBoundsRaw(
   rgba: Buffer,

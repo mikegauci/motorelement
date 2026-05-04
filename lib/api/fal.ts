@@ -18,20 +18,3 @@ export async function uploadDataUrl(dataUrl: string): Promise<string> {
   const blob = new Blob([buffer], { type: mime })
   return fal.storage.upload(blob)
 }
-
-export function requireFalKey(): string {
-  const key = process.env.FAL_API_KEY
-  if (!key || typeof key !== 'string') {
-    throw new FalKeyMissingError()
-  }
-  return key.trim()
-}
-
-export class FalKeyMissingError extends Error {
-  constructor() { super('Server missing FAL_API_KEY') }
-}
-
-export function jsonError(err: unknown, status = 500): Response {
-  const message = err instanceof Error ? err.message : String(err)
-  return Response.json({ error: message }, { status })
-}
