@@ -1,6 +1,19 @@
 import { trimPngToAlphaBounds } from '@/lib/image/alphaBounds'
+import { fal } from '@fal-ai/client'
 
 const PHOTOROOM_ENDPOINT = 'https://sdk.photoroom.com/v1/segment'
+
+async function uploadTransparentPngToFal(buf: Buffer): Promise<string | null> {
+  try {
+    const apiKey = process.env.FAL_API_KEY
+    if (!apiKey || typeof apiKey !== 'string') return null
+    fal.config({ credentials: apiKey.trim() })
+    const blob = new Blob([new Uint8Array(buf)], { type: 'image/png' })
+    return await fal.storage.upload(blob)
+  } catch {
+    return null
+  }
+}
 
 function parseBase64DataUrl(dataUrl: string): { mime: string; buffer: Buffer } | null {
   const m = /^data:([^;]+);base64,([\s\S]+)$/.exec(dataUrl)
@@ -73,6 +86,12 @@ export async function POST(request: Request) {
 
     const buf = Buffer.from(await res.arrayBuffer())
     const trimmed = await trimPngToAlphaBounds(buf, 8, 100)
+
+    const transparentUrl = await uploadTransparentPngToFal(trimmed)
+    if (transparentUrl) {
+      console.log(`\n[remove-bg-photoroom] Result (with transparency): ${transparentUrl}\n`)
+    }
+
     return new Response(new Uint8Array(trimmed), {
       status: 200,
       headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' },

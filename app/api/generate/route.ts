@@ -272,6 +272,9 @@ export async function POST(request: Request) {
           finalResult?.data?.images?.[0]?.url ||
           finalResult?.images?.[0]?.url ||
           finalResult?.output?.images?.[0]?.url
+        if (imageUrl && persistKindForStatus === 'car') {
+          console.log(`\n[generate-car] Result (no transparency): ${imageUrl}\n`)
+        }
         let supabase = null
         if (imageUrl) {
           supabase = await tryPersistGeneratedImage({
@@ -500,6 +503,9 @@ export async function POST(request: Request) {
     }
 
     const syncPersistKind = mode === 'background' ? 'background' : 'car'
+    if (syncPersistKind === 'car') {
+      console.log(`\n[generate-car] Result (no transparency): ${imageUrl}\n`)
+    }
     const metadata =
       syncPersistKind === 'background'
         ? {
