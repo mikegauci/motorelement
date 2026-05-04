@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Revision } from '@/components/shop/customizer/types'
 import { PENDING_GENERATION_KEY } from '@/components/shop/customizer/constants'
-import { removeCarBackground, joinNotes, splitCarPhotoVertically, flattenToWhite } from '@/components/shop/customizer/helpers'
+import { removeWhiteBackground, joinNotes, splitCarPhotoVertically, flattenToWhite } from '@/components/shop/customizer/helpers'
 import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
 import { useGenerationJob, writePending, clearPending } from './useGenerationJob'
 
@@ -47,7 +47,7 @@ export function useCarGeneration(deps: CarGenerationDeps) {
     let finalUrl = url
     let isTransparent = false
     try {
-      finalUrl = await removeCarBackground(url)
+      finalUrl = await removeWhiteBackground(url)
       isTransparent = true
     } catch (bgErr) {
       console.warn('Auto background removal failed, keeping original:', bgErr)

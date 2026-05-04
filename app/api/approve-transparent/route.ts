@@ -3,7 +3,11 @@ import { parseDataUrlToBuffer } from '@/lib/api/fal'
 import { computeAlphaBoundsRaw, regionCoversFullImage } from '@/lib/image/alphaBounds'
 
 const WHITE_THRESHOLD = 248
-const FRINGE_RGB = 235
+const FRINGE_RGB = 225
+const FRINGE_ITERATIONS = 3
+const MATTING_BAND_PX = 3
+const MATTING_ALPHA_OPAQUE = 0.96
+const MATTING_ALPHA_CLEAR = 0.05
 
 /** True if RGB reads as flat background white (before alpha is cleared). */
 function isNearWhite(out: Buffer, i: number): boolean {
@@ -27,13 +31,6 @@ function isBackgroundOrChecker(out: Buffer, i: number): boolean {
   return false
 }
 
-/**
- * Detect and remove baked-in checkerboard "transparency" patterns.
- * AI models sometimes render transparent areas as a visible checkerboard grid
- * instead of true alpha. This detects the grid from the image corners, then
- * flood-fills from edges only through pixels matching the grid — so artwork
- * whites/grays inside the circle are never touched.
- */
 const CHECKER_COLOR_TOLERANCE = 25
 
 function removeCheckerboardTransparency(out: Buffer, w: number, h: number): void {
@@ -178,45 +175,93 @@ function removeEdgeConnectedWhiteBackground(out: Buffer, w: number, h: number): 
   }
 }
 
-/**
- * Remove semi-transparent whitish pixels only on the **outside** of the subject
- * (touching a fully transparent pixel). Interior soft whites stay.
- */
-function removeExteriorWhitishFringe(out: Buffer, w: number, h: number): void {
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4
-      const a = out[i + 3]
-      if (a === 0 || a === 255) continue
-      if (out[i] < FRINGE_RGB || out[i + 1] < FRINGE_RGB || out[i + 2] < FRINGE_RGB) {
-        continue
-      }
-      let touchesTransparent = false
-      const dirs = [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]
-      for (const [dx, dy] of dirs) {
-        const nx = x + dx
-        const ny = y + dy
-        if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue
-        if (out[(ny * w + nx) * 4 + 3] === 0) {
-          touchesTransparent = true
-          break
+function removeExteriorWhitishFringe(
+  out: Buffer,
+  w: number,
+  h: number,
+  iterations: number = FRINGE_ITERATIONS,
+): void {
+  const total = w * h
+
+  for (let pass = 0; pass < iterations; pass++) {
+    const alphaSnap = new Uint8Array(total)
+    for (let p = 0; p < total; p++) alphaSnap[p] = out[p * 4 + 3]
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const p = y * w + x
+        if (alphaSnap[p] === 0) continue
+        const i = p * 4
+        if (out[i] < FRINGE_RGB || out[i + 1] < FRINGE_RGB || out[i + 2] < FRINGE_RGB) {
+          continue
         }
+
+        let touchesTransparent = false
+        if (x > 0 && alphaSnap[p - 1] === 0) touchesTransparent = true
+        else if (x < w - 1 && alphaSnap[p + 1] === 0) touchesTransparent = true
+        else if (y > 0 && alphaSnap[p - w] === 0) touchesTransparent = true
+        else if (y < h - 1 && alphaSnap[p + w] === 0) touchesTransparent = true
+        if (touchesTransparent) out[i + 3] = 0
       }
-      if (touchesTransparent) out[i + 3] = 0
     }
   }
 }
 
-/**
- * For round background artwork: remove only pixels outside the detected circle.
- * Interior whites (e.g. clouds) are preserved exactly.
- */
-/** Width (in px) of the soft alpha fade at the circle edge to eliminate white fringe. */
+
+function decontaminateEdgeColors(
+  out: Buffer,
+  w: number,
+  h: number,
+  bandPx: number = MATTING_BAND_PX,
+): void {
+  const total = w * h
+  const inBand = new Uint8Array(total)
+
+  for (let pass = 0; pass < bandPx; pass++) {
+    const snap = new Uint8Array(total)
+    for (let p = 0; p < total; p++) {
+      if (out[p * 4 + 3] === 0 || inBand[p]) snap[p] = 1
+    }
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const p = y * w + x
+        if (snap[p]) continue
+        if (out[p * 4 + 3] === 0) continue
+
+        let touches = false
+        if (x > 0 && snap[p - 1]) touches = true
+        else if (x < w - 1 && snap[p + 1]) touches = true
+        else if (y > 0 && snap[p - w]) touches = true
+        else if (y < h - 1 && snap[p + w]) touches = true
+        if (touches) inBand[p] = 1
+      }
+    }
+  }
+
+  for (let p = 0; p < total; p++) {
+    if (!inBand[p]) continue
+    const i = p * 4
+    const r = out[i]
+    const g = out[i + 1]
+    const b = out[i + 2]
+    const minRGB = Math.min(r, g, b)
+    const alpha = 1 - minRGB / 255
+
+    if (alpha >= MATTING_ALPHA_OPAQUE) continue
+    if (alpha <= MATTING_ALPHA_CLEAR) {
+      out[i + 3] = 0
+      continue
+    }
+
+    const bgContribution = (1 - alpha) * 255
+    out[i] = Math.max(0, Math.min(255, Math.round((r - bgContribution) / alpha)))
+    out[i + 1] = Math.max(0, Math.min(255, Math.round((g - bgContribution) / alpha)))
+    out[i + 2] = Math.max(0, Math.min(255, Math.round((b - bgContribution) / alpha)))
+    out[i + 3] = Math.round(alpha * 255)
+  }
+}
+
 const CIRCLE_FEATHER_PX = 1
 
 function removeOutsideDetectedCircle(
@@ -332,10 +377,9 @@ export async function POST(request: Request) {
       }
       removeExteriorWhitishFringe(out, w, h)
     } else {
-      // 1) Remove only edge-connected white (true background). Interior whites unchanged.
       removeEdgeConnectedWhiteBackground(out, w, h)
-      // 2) Exterior halos only — not interior semi-transparent highlights
       removeExteriorWhitishFringe(out, w, h)
+      decontaminateEdgeColors(out, w, h)
     }
 
     let rawPipeline = sharp(out, { raw: { width: w, height: h, channels: 4 } })
