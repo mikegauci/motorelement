@@ -1,7 +1,48 @@
+import sharp from 'sharp'
 import { trimPngToAlphaBounds } from '@/lib/image/alphaBounds'
 import { fal } from '@fal-ai/client'
 
 const PHOTOROOM_ENDPOINT = 'https://sdk.photoroom.com/v1/segment'
+
+async function restoreShadowFromOriginal(
+  originalBuffer: Buffer,
+  photoroomBuffer: Buffer,
+): Promise<Buffer> {
+  const ORIGINAL_DARK_RGB_MAX = 200
+
+  try {
+    const [orig, photo] = await Promise.all([
+      sharp(originalBuffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+      sharp(photoroomBuffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+    ])
+
+    if (orig.info.width !== photo.info.width || orig.info.height !== photo.info.height) {
+      return photoroomBuffer
+    }
+
+    const w = photo.info.width
+    const h = photo.info.height
+    const out = Buffer.from(photo.data)
+    const origData = orig.data
+
+    for (let i = 0; i < out.length; i += 4) {
+      const origR = origData[i]
+      const origG = origData[i + 1]
+      const origB = origData[i + 2]
+      if (Math.max(origR, origG, origB) > ORIGINAL_DARK_RGB_MAX) continue
+
+      const carA = out[i + 3] / 255
+      out[i] = Math.round(out[i] * carA)
+      out[i + 1] = Math.round(out[i + 1] * carA)
+      out[i + 2] = Math.round(out[i + 2] * carA)
+      out[i + 3] = 255
+    }
+
+    return await sharp(out, { raw: { width: w, height: h, channels: 4 } }).png().toBuffer()
+  } catch {
+    return photoroomBuffer
+  }
+}
 
 async function uploadTransparentPngToFal(buf: Buffer): Promise<string | null> {
   try {
@@ -85,7 +126,8 @@ export async function POST(request: Request) {
     }
 
     const buf = Buffer.from(await res.arrayBuffer())
-    const trimmed = await trimPngToAlphaBounds(buf, 8, 100)
+    const restored = await restoreShadowFromOriginal(buffer, buf)
+    const trimmed = await trimPngToAlphaBounds(restored, 8, 100)
 
     const transparentUrl = await uploadTransparentPngToFal(trimmed)
     if (transparentUrl) {
