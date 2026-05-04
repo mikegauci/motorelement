@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Revision } from '@/components/shop/customizer/types'
 import { PENDING_GENERATION_KEY } from '@/components/shop/customizer/constants'
-import { removeWhiteBackground, joinNotes, splitCarPhotoVertically, flattenToWhite } from '@/components/shop/customizer/helpers'
+import { removeWhiteBackground, joinNotes, flattenToWhite } from '@/components/shop/customizer/helpers'
 import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
 import { useGenerationJob, writePending, clearPending } from './useGenerationJob'
 
@@ -111,22 +111,12 @@ export function useCarGeneration(deps: CarGenerationDeps) {
       const currentIllustrationUrl = baseIllustrationUrl
         ? await flattenToWhite(baseIllustrationUrl)
         : undefined
-      const carImageSliceDataUrls = !isTweak && deps.carImageDataUrl
-        ? await splitCarPhotoVertically(deps.carImageDataUrl)
-        : null
-      if (carImageSliceDataUrls) {
-        const kb = (s: string) => `${Math.round(s.length / 1024)} KB`
-        console.log(
-          `[generate-car] split car photo into 3 slices — left: ${kb(carImageSliceDataUrls[0])}, mid: ${kb(carImageSliceDataUrls[1])}, right: ${kb(carImageSliceDataUrls[2])}`,
-        )
-      }
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'submit',
           carImageDataUrl: deps.carImageDataUrl,
-          ...(carImageSliceDataUrls ? { carImageSliceDataUrls } : {}),
           customerNotes: notesForPrompt,
           ...(currentIllustrationUrl ? { tweakImageUrl: currentIllustrationUrl } : {}),
         }),
