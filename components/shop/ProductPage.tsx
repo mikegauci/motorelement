@@ -64,6 +64,7 @@ export default function ProductPage({
   const {
     setTshirtBaseImage, tshirtBaseImage, artworkUrl, compositeDataUrl,
     mockupPlacement, setProductType, setSelectedColorHex, generationStatus,
+    artworkSide,
   } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,11 +121,12 @@ export default function ProductPage({
     !uploading &&
     !generationRunning;
 
-  // Use a per-color blank mockup when available; fall back to Printify's front image
+  // Use a per-color blank mockup when available; fall back to Printify's image for the selected side
   useEffect(() => {
-    const blank = getBlankMockupImage(product.type, selectedColorObj?.title);
-    setTshirtBaseImage(blank ?? currentImages?.front ?? null);
-  }, [product.type, selectedColorObj?.title, currentImages?.front, setTshirtBaseImage]);
+    const blank = getBlankMockupImage(product.type, selectedColorObj?.title, artworkSide);
+    const fallback = artworkSide === 'back' ? currentImages?.back : currentImages?.front;
+    setTshirtBaseImage(blank ?? fallback ?? null);
+  }, [product.type, selectedColorObj?.title, currentImages?.front, currentImages?.back, artworkSide, setTshirtBaseImage]);
 
   // Push selected color hex into context for mockup tinting
   useEffect(() => {
@@ -190,6 +192,7 @@ export default function ProductPage({
       size: selectedSizeObj.title,
       color: selectedColorObj?.title ?? "",
       price: displayPrice,
+      artworkSide,
       ...(persistedArtworkUrl ? { artworkUrl: persistedArtworkUrl } : {}),
       ...(persistedThumbnailUrl ? { thumbnailUrl: persistedThumbnailUrl } : {}),
     });

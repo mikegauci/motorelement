@@ -59,20 +59,36 @@ export const TEXT_FONTS: FontOption[] = [
 /**
  * Per-color blank garment mockup images used by the Live Mockup tab instead
  * of Printify's images (which contain "Custom Print" placeholder text).
- * Keyed by product type → colour slug → image path in public/.
+ * Keyed by side → product type → colour slug → image path in public/.
  */
-const BLANK_MOCKUP_IMAGES: Record<string, Record<string, string>> = {
-  't-shirt': {
-    white: '/images/mockups/t-shirt/front-white-t-shirt.png',
-    black: '/images/mockups/t-shirt/front-black-t-shirt.png',
-    grey:  '/images/mockups/t-shirt/front-grey-t-shirt.png',
-    navy:  '/images/mockups/t-shirt/front-navy-t-shirt.png',
+const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string, string>>> = {
+  front: {
+    't-shirt': {
+      white: '/images/mockups/t-shirt/front-white-t-shirt.png',
+      black: '/images/mockups/t-shirt/front-black-t-shirt.png',
+      grey:  '/images/mockups/t-shirt/front-grey-t-shirt.png',
+      navy:  '/images/mockups/t-shirt/front-navy-t-shirt.png',
+    },
+    hoodie: {
+      white: '/images/mockups/hoodie/front-white-hoodie.png',
+      black: '/images/mockups/hoodie/front-black-hoodie.png',
+      grey:  '/images/mockups/hoodie/front-grey-hoodie.png',
+      navy:  '/images/mockups/hoodie/front-navy-hoodie.png',
+    },
   },
-  hoodie: {
-    white: '/images/mockups/hoodie/front-white-hoodie.png',
-    black: '/images/mockups/hoodie/front-black-hoodie.png',
-    grey:  '/images/mockups/hoodie/front-grey-hoodie.png',
-    navy:  '/images/mockups/hoodie/front-navy-hoodie.png',
+  back: {
+    't-shirt': {
+      white: '/images/mockups/t-shirt/back-white-t-shirt.png',
+      black: '/images/mockups/t-shirt/back-black-t-shirt.png',
+      grey:  '/images/mockups/t-shirt/back-grey-t-shirt.png',
+      navy:  '/images/mockups/t-shirt/back-navy-t-shirt.png',
+    },
+    hoodie: {
+      white: '/images/mockups/hoodie/back-white-hoodie.png',
+      black: '/images/mockups/hoodie/back-black-hoodie.png',
+      grey:  '/images/mockups/hoodie/back-grey-hoodie.png',
+      navy:  '/images/mockups/hoodie/back-navy-hoodie.png',
+    },
   },
 }
 
@@ -88,12 +104,18 @@ function colorSlug(title: string): string {
 }
 
 /**
- * Look up a blank mockup image for a given product type and Printify colour title.
- * Returns the image path if a matching file exists, or `null` (caller falls back
- * to the Printify front image).
+ * Look up a blank mockup image for a given product type, Printify colour title,
+ * and side ('front' or 'back'). Returns the image path if a matching file exists,
+ * or `null` (caller falls back to the Printify image).
  */
-export function getBlankMockupImage(productType?: string, colorTitle?: string): string | null {
-  const typeMap = BLANK_MOCKUP_IMAGES[productType ?? '']
+export function getBlankMockupImage(
+  productType?: string,
+  colorTitle?: string,
+  side: 'front' | 'back' = 'front',
+): string | null {
+  const sideMap = BLANK_MOCKUP_IMAGES[side]
+  if (!sideMap) return null
+  const typeMap = sideMap[productType ?? '']
   if (!typeMap) return null
   if (!colorTitle) return Object.values(typeMap)[0] ?? null
   const slug = colorSlug(colorTitle)

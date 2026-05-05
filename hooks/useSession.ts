@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { TextLayer, Revision, SavedCustomBackground } from '@/components/shop/customizer/types'
+import type { ArtworkSide } from '@/components/shop/customizer/CustomizerContext'
 import { SESSION_KEY, PENDING_GENERATION_KEY, PENDING_BACKGROUND_KEY } from '@/components/shop/customizer/constants'
 import { normalizeTextLayer, clampCompositeZoom, clampBgScale } from '@/components/shop/customizer/helpers'
 import { readPending } from './useGenerationJob'
@@ -27,6 +28,7 @@ interface SessionState {
   bgScale: number
   textLayers: TextLayer[]
   selectedTextLayerId: string | null
+  artworkSide: ArtworkSide
 }
 
 interface SessionSetters {
@@ -50,6 +52,7 @@ interface SessionSetters {
   setBgScale: (v: number) => void
   setTextLayers: (v: TextLayer[]) => void
   setSelectedTextLayerId: (v: string | null) => void
+  setArtworkSide: (v: ArtworkSide) => void
   setStatus: (v: string) => void
   resumePendingGeneration: (pending: { requestId: string; endpointId: string; notesForPrompt?: string; wasLocked?: boolean; tweakNotes?: string }) => void
   resumePendingBackgroundGeneration: (pending: { requestId: string; endpointId: string; kind: string; combinedValue?: string; baseLabel?: string; tweakText?: string; originalValue?: string }) => void
@@ -105,6 +108,9 @@ export function useSession(state: SessionState, setters: SessionSetters) {
         }
         if (typeof s.selectedTextLayerId === 'string' || s.selectedTextLayerId === null) {
           setters.setSelectedTextLayerId(s.selectedTextLayerId ?? null)
+        }
+        if (s.artworkSide === 'front' || s.artworkSide === 'back') {
+          setters.setArtworkSide(s.artworkSide)
         }
         setters.setStatus('done')
       }

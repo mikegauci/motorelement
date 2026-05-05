@@ -5,11 +5,13 @@ export async function createCheckoutSession({
   items,
   customerId,
   artworkUrl,
+  artworkSide,
   origin,
 }: {
   items: CartItem[];
   customerId?: string;
   artworkUrl?: string;
+  artworkSide?: "front" | "back";
   origin: string;
 }) {
   const stripe = getStripe();
@@ -34,6 +36,7 @@ export async function createCheckoutSession({
   const metadata: Record<string, string> = {};
   if (customerId) metadata.customerId = customerId;
   if (artworkUrl) metadata.artworkUrl = artworkUrl;
+  if (artworkSide) metadata.artworkSide = artworkSide;
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",

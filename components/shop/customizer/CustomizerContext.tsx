@@ -3,6 +3,8 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import type { MockupPlacement } from './types'
 
+export type ArtworkSide = 'front' | 'back'
+
 interface CustomizerContextValue {
   artworkUrl: string | null
   setArtworkUrl: (url: string | null) => void
@@ -20,6 +22,8 @@ interface CustomizerContextValue {
   setSelectedColorHex: (hex: string | null) => void
   mockupThumbnailUrl: string | null
   setMockupThumbnailUrl: (url: string | null) => void
+  artworkSide: ArtworkSide
+  setArtworkSide: (s: ArtworkSide) => void
 }
 
 const CustomizerContext = createContext<CustomizerContextValue | null>(null)
@@ -37,6 +41,7 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
   const [productType, setProductType] = useState('t-shirt')
   const [selectedColorHex, setSelectedColorHex] = useState<string | null>(null)
   const [mockupThumbnailUrl, setMockupThumbnailUrl] = useState<string | null>(null)
+  const [artworkSide, setArtworkSide] = useState<ArtworkSide>('front')
 
   const setMockupPlacement = useCallback((p: MockupPlacement) => {
     setMockupPlacementRaw({
@@ -65,6 +70,8 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
         setSelectedColorHex,
         mockupThumbnailUrl,
         setMockupThumbnailUrl,
+        artworkSide,
+        setArtworkSide,
       }}
     >
       {children}

@@ -12,6 +12,7 @@ export interface CartItem {
   quantity: number;
   artworkUrl?: string;
   thumbnailUrl?: string;
+  artworkSide?: "front" | "back";
 }
 
 interface CartContextValue {

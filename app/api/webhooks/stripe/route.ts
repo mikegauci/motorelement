@@ -36,6 +36,8 @@ export async function POST(request: Request) {
       const session = event.data.object as Stripe.Checkout.Session;
       const customerId = session.metadata?.customerId;
       const artworkUrl = session.metadata?.artworkUrl;
+      const artworkSide: "front" | "back" =
+        session.metadata?.artworkSide === "back" ? "back" : "front";
 
       const stripeLineItems = await stripe.checkout.sessions.listLineItems(
         session.id,
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
                   product_id: printifyProductId,
                   variant_id: variantId,
                   quantity: item.quantity,
-                  print_areas: { front: artworkUrl },
+                  print_areas: { [artworkSide]: artworkUrl } as Record<string, string>,
                 };
               })
             )

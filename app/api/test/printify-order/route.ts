@@ -23,6 +23,7 @@ interface TestItem {
   color?: string;
   quantity: number;
   artworkUrl?: string;
+  artworkSide?: "front" | "back";
 }
 
 export async function POST(request: Request) {
@@ -66,12 +67,13 @@ export async function POST(request: Request) {
             return null;
           }
 
+          const side = item.artworkSide ?? "front";
           return {
             blueprint_id: pfyProduct.blueprint_id,
             print_provider_id: pfyProduct.print_provider_id,
             variant_id: variantId,
             quantity: item.quantity,
-            print_areas: { front: artworkUrl },
+            print_areas: { [side]: artworkUrl } as Record<string, string>,
           };
         })
       )

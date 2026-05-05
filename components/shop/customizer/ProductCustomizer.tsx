@@ -22,6 +22,7 @@ import VehicleInputForm from './VehicleInputForm'
 import BackgroundPresets from './BackgroundPresets'
 import CompositeEditor from './CompositeEditor'
 import TextLayerEditor from './TextLayerEditor'
+import ArtworkPositionSelector from './ArtworkPositionSelector'
 import MockupPreviewModal from './MockupPreviewModal'
 import CollapsibleTweak from './parts/CollapsibleTweak'
 import WhiteGapEraser from './WhiteGapEraser'
@@ -34,7 +35,7 @@ import { useCompositeCanvas } from '@/hooks/useCompositeCanvas'
 import { useSession } from '@/hooks/useSession'
 
 export default function ProductCustomizer() {
-  const { mockupThumbnailUrl } = useCustomizer()
+  const { mockupThumbnailUrl, artworkSide, setArtworkSide } = useCustomizer()
 
   // ---- Vehicle input state (owned by this component) ----
   const [customerNotes, setCustomerNotes] = useState('')
@@ -142,6 +143,7 @@ export default function ProductCustomizer() {
       customBackgroundImageDataUrl, customBackgroundImagePreview, customBackgroundValue,
       carAdjustXPct, carAdjustYPct, carScale, compositionZoom, bgScale,
       textLayers: textLayerHook.textLayers, selectedTextLayerId: textLayerHook.selectedTextLayerId,
+      artworkSide,
     },
     {
       setCustomerNotes,
@@ -152,6 +154,7 @@ export default function ProductCustomizer() {
       setCustomBackgroundImageDataUrl, setCustomBackgroundImagePreview, setCustomBackgroundValue,
       setCarAdjustXPct, setCarAdjustYPct, setCarScale, setCompositionZoom, setBgScale,
       setTextLayers: textLayerHook.setTextLayers, setSelectedTextLayerId: textLayerHook.setSelectedTextLayerId,
+      setArtworkSide,
       setStatus: carGen.setStatus,
       resumePendingGeneration: carGen.resumePendingGeneration,
       resumePendingBackgroundGeneration: bgGen.resumePendingBackgroundGeneration,
@@ -264,6 +267,7 @@ export default function ProductCustomizer() {
     setCustomBackgroundValue('')
     setIsVehicleTweakOpen(false); setIsBackgroundTweakOpen(false)
     setCarAdjustXPct(0); setCarAdjustYPct(0); setCarScale(1); setCompositionZoom(1); setBgScale(1)
+    setArtworkSide('front')
     carGen.resetCarGeneration()
     bgGen.resetBackgroundGeneration()
     textLayerHook.resetTextLayers()
@@ -450,6 +454,11 @@ export default function ProductCustomizer() {
                           setCompositionZoom={setCompositionZoom}
                           setCarAdjustXPct={setCarAdjustXPct}
                           backgroundControlsLocked={backgroundControlsLocked}
+                        />
+                        <ArtworkPositionSelector
+                          artworkSide={artworkSide}
+                          setArtworkSide={setArtworkSide}
+                          disabled={backgroundControlsLocked}
                         />
                         <TextLayerEditor
                           textLayers={textLayerHook.textLayers}
