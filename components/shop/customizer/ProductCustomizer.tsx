@@ -24,6 +24,7 @@ import CompositeEditor from './CompositeEditor'
 import TextLayerEditor from './TextLayerEditor'
 import MockupPreviewModal from './MockupPreviewModal'
 import CollapsibleTweak from './parts/CollapsibleTweak'
+import WhiteGapEraser from './WhiteGapEraser'
 
 import { useCustomizer } from './CustomizerContext'
 import { useTextLayers } from '@/hooks/useTextLayers'
@@ -50,6 +51,7 @@ export default function ProductCustomizer() {
   const [customBackgroundValue, setCustomBackgroundValue] = useState('')
   const [isVehicleTweakOpen, setIsVehicleTweakOpen] = useState(false)
   const [isBackgroundTweakOpen, setIsBackgroundTweakOpen] = useState(false)
+  const [isErasingArtwork, setIsErasingArtwork] = useState(false)
 
   // ---- Composite position state ----
   const [carAdjustXPct, setCarAdjustXPct] = useState(0)
@@ -374,15 +376,25 @@ export default function ProductCustomizer() {
                         <button className={styles.btnPrimary} onClick={carGen.runGeneration} disabled={!canRun}>
                           {carGen.running ? 'Generating…' : 'Tweak'}
                         </button>
+                        {!!viewingUrl && !carGen.running && (
+                          <button
+                            type="button"
+                            className={styles.btn}
+                            onClick={() => setIsErasingArtwork(true)}
+                            title="Tap on white gaps in the artwork to make them transparent"
+                          >
+                            Erase white gaps
+                          </button>
+                        )}
                         {carGen.running && (
                           <button type="button" className={styles.btn} onClick={carGen.cancelCarGeneration}>Cancel request</button>
                         )}
                       </div>
                     </CollapsibleTweak>
-                      <div className={styles.nextHint}>
-                        <span className="font-bold text-lg">Choose a background below</span>
-                        <span aria-hidden className={styles.nextHintArrow}>↓</span>
-                      </div>
+                    <div className={styles.nextHint}>
+                      <span className="font-bold text-lg">Choose a background below</span>
+                      <span aria-hidden className={styles.nextHintArrow}>↓</span>
+                    </div>
                   </div>
                 )}
 
@@ -502,6 +514,24 @@ export default function ProductCustomizer() {
         open={showPreviewModal}
         onClose={() => setShowPreviewModal(false)}
       />
+
+      {isErasingArtwork && viewingUrl && (
+        <WhiteGapEraser
+          imageUrl={viewingUrl}
+          onCancel={() => setIsErasingArtwork(false)}
+          onSave={(newUrl) => {
+            carGen.setRevisions((prev) => {
+              const next = [
+                ...prev,
+                { url: newUrl, label: `${prev.length + 1} · Erased`, transparent: true },
+              ]
+              carGen.setViewIndex(next.length - 1)
+              return next
+            })
+            setIsErasingArtwork(false)
+          }}
+        />
+      )}
 
       {composite.renderHiddenCanvas()}
     </main>
