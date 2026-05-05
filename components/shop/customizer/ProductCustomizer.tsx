@@ -22,6 +22,7 @@ import VehicleInputForm from './VehicleInputForm'
 import BackgroundPresets from './BackgroundPresets'
 import CompositeEditor from './CompositeEditor'
 import TextLayerEditor from './TextLayerEditor'
+import TextOverlayToggle from './TextOverlayToggle'
 import ArtworkPositionSelector from './ArtworkPositionSelector'
 import MockupPreviewModal from './MockupPreviewModal'
 import CollapsibleTweak from './parts/CollapsibleTweak'
@@ -66,6 +67,7 @@ export default function ProductCustomizer() {
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [mobileDockDismissed, setMobileDockDismissed] = useState(false)
   const [customFontOptions, setCustomFontOptions] = useState<FontOption[]>([])
+  const [addTextEnabled, setAddTextEnabled] = useState(true)
   const carFileRef = useRef<HTMLInputElement>(null)
   const customBackgroundFileRef = useRef<HTMLInputElement>(null)
   const loadedCustomFontFamiliesRef = useRef(new Set<string>())
@@ -133,7 +135,7 @@ export default function ProductCustomizer() {
   const mobileResultDockSrc = mockupThumbnailUrl || viewingUrl
 
   // ---- Session ----
-  useSession(
+  const { sessionRestored } = useSession(
     {
       customerNotes,
       carImageDataUrl, carImagePreview,
@@ -144,6 +146,7 @@ export default function ProductCustomizer() {
       carAdjustXPct, carAdjustYPct, carScale, compositionZoom, bgScale,
       textLayers: textLayerHook.textLayers, selectedTextLayerId: textLayerHook.selectedTextLayerId,
       artworkSide,
+      addTextEnabled,
     },
     {
       setCustomerNotes,
@@ -155,11 +158,20 @@ export default function ProductCustomizer() {
       setCarAdjustXPct, setCarAdjustYPct, setCarScale, setCompositionZoom, setBgScale,
       setTextLayers: textLayerHook.setTextLayers, setSelectedTextLayerId: textLayerHook.setSelectedTextLayerId,
       setArtworkSide,
+      setAddTextEnabled,
       setStatus: carGen.setStatus,
       resumePendingGeneration: carGen.resumePendingGeneration,
       resumePendingBackgroundGeneration: bgGen.resumePendingBackgroundGeneration,
     }
   )
+
+  useEffect(() => {
+    if (!sessionRestored) return
+    if (addTextEnabled && textLayerHook.textLayers.length === 0) {
+      textLayerHook.addTextLayer()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionRestored])
 
   // ---- Desktop media query ----
   useEffect(() => {
@@ -253,6 +265,15 @@ export default function ProductCustomizer() {
     })
   }
 
+  function handleAddTextToggle(enabled: boolean) {
+    setAddTextEnabled(enabled)
+    if (enabled) {
+      if (textLayerHook.textLayers.length === 0) textLayerHook.addTextLayer()
+    } else {
+      textLayerHook.resetTextLayers()
+    }
+  }
+
   // ---- Reset ----
   function reset() {
     try { sessionStorage.removeItem(SESSION_KEY) } catch { /* ignore */ }
@@ -268,6 +289,7 @@ export default function ProductCustomizer() {
     setIsVehicleTweakOpen(false); setIsBackgroundTweakOpen(false)
     setCarAdjustXPct(0); setCarAdjustYPct(0); setCarScale(1); setCompositionZoom(1); setBgScale(1)
     setArtworkSide('front')
+    setAddTextEnabled(true)
     carGen.resetCarGeneration()
     bgGen.resetBackgroundGeneration()
     textLayerHook.resetTextLayers()
@@ -460,20 +482,27 @@ export default function ProductCustomizer() {
                           setArtworkSide={setArtworkSide}
                           disabled={backgroundControlsLocked}
                         />
-                        <TextLayerEditor
-                          textLayers={textLayerHook.textLayers}
-                          selectedTextLayerId={textLayerHook.selectedTextLayerId}
-                          setSelectedTextLayerId={textLayerHook.setSelectedTextLayerId}
-                          selectedTextLayer={textLayerHook.selectedTextLayer}
-                          availableFontOptions={availableFontOptions}
-                          backgroundControlsLocked={backgroundControlsLocked}
-                          onAddTextLayer={textLayerHook.addTextLayer}
-                          onUpdateTextLayer={textLayerHook.updateTextLayer}
-                          onRemoveTextLayer={textLayerHook.removeTextLayer}
-                          onMoveTextLayer={textLayerHook.moveTextLayer}
-                          onNudgeTextFontSize={textLayerHook.nudgeTextFontSize}
-                          onAlignTextLayerToCanvasVertical={textLayerHook.alignTextLayerToCanvasVertical}
+                        <TextOverlayToggle
+                          enabled={addTextEnabled}
+                          onChange={handleAddTextToggle}
+                          disabled={backgroundControlsLocked}
                         />
+                        {addTextEnabled && (
+                          <TextLayerEditor
+                            textLayers={textLayerHook.textLayers}
+                            selectedTextLayerId={textLayerHook.selectedTextLayerId}
+                            setSelectedTextLayerId={textLayerHook.setSelectedTextLayerId}
+                            selectedTextLayer={textLayerHook.selectedTextLayer}
+                            availableFontOptions={availableFontOptions}
+                            backgroundControlsLocked={backgroundControlsLocked}
+                            onAddTextLayer={textLayerHook.addTextLayer}
+                            onUpdateTextLayer={textLayerHook.updateTextLayer}
+                            onRemoveTextLayer={textLayerHook.removeTextLayer}
+                            onMoveTextLayer={textLayerHook.moveTextLayer}
+                            onNudgeTextFontSize={textLayerHook.nudgeTextFontSize}
+                            onAlignTextLayerToCanvasVertical={textLayerHook.alignTextLayerToCanvasVertical}
+                          />
+                        )}
                       </>
                     )}
                   </>

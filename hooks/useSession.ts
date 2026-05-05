@@ -29,6 +29,7 @@ interface SessionState {
   textLayers: TextLayer[]
   selectedTextLayerId: string | null
   artworkSide: ArtworkSide
+  addTextEnabled: boolean
 }
 
 interface SessionSetters {
@@ -53,6 +54,7 @@ interface SessionSetters {
   setTextLayers: (v: TextLayer[]) => void
   setSelectedTextLayerId: (v: string | null) => void
   setArtworkSide: (v: ArtworkSide) => void
+  setAddTextEnabled: (v: boolean) => void
   setStatus: (v: string) => void
   resumePendingGeneration: (pending: { requestId: string; endpointId: string; notesForPrompt?: string; wasLocked?: boolean; tweakNotes?: string }) => void
   resumePendingBackgroundGeneration: (pending: { requestId: string; endpointId: string; kind: string; combinedValue?: string; baseLabel?: string; tweakText?: string; originalValue?: string }) => void
@@ -111,6 +113,9 @@ export function useSession(state: SessionState, setters: SessionSetters) {
         }
         if (s.artworkSide === 'front' || s.artworkSide === 'back') {
           setters.setArtworkSide(s.artworkSide)
+        }
+        if (typeof s.addTextEnabled === 'boolean') {
+          setters.setAddTextEnabled(s.addTextEnabled)
         }
         setters.setStatus('done')
       }
