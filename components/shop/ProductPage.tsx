@@ -63,8 +63,9 @@ export default function ProductPage({
   const { addItem, openCart } = useCart();
   const {
     setTshirtBaseImage, tshirtBaseImage, artworkUrl, compositeDataUrl,
+    artworkOnlyDataUrl, textOnlyDataUrl,
     mockupPlacement, setProductType, setSelectedColorHex, generationStatus,
-    artworkSide,
+    artworkSide, textPlacement, mockupViewSide,
   } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,23 +122,29 @@ export default function ProductPage({
     !uploading &&
     !generationRunning;
 
-  // Use a per-color blank mockup when available; fall back to Printify's image for the selected side
   useEffect(() => {
-    const blank = getBlankMockupImage(product.type, selectedColorObj?.title, artworkSide);
-    const fallback = artworkSide === 'back' ? currentImages?.back : currentImages?.front;
+    const blank = getBlankMockupImage(product.type, selectedColorObj?.title, mockupViewSide);
+    const fallback = mockupViewSide === 'back' ? currentImages?.back : currentImages?.front;
     setTshirtBaseImage(blank ?? fallback ?? null);
-  }, [product.type, selectedColorObj?.title, currentImages?.front, currentImages?.back, artworkSide, setTshirtBaseImage]);
+  }, [product.type, selectedColorObj?.title, currentImages?.front, currentImages?.back, mockupViewSide, setTshirtBaseImage]);
 
-  // Push selected color hex into context for mockup tinting
   useEffect(() => {
     setSelectedColorHex(selectedColorObj?.hex ?? null);
   }, [selectedColorObj?.hex, setSelectedColorHex]);
 
-  // Auto-show mockup when artwork is generated; hide mockup tab view if generation is cleared
   useEffect(() => {
     if (artworkUrl) setShowMockup(true);
     else setShowMockup(false);
   }, [artworkUrl]);
+
+  async function uploadPng(blob: Blob, kind: string, filename: string) {
+    const fd = new FormData();
+    fd.append("file", blob, filename);
+    fd.append("metadata", JSON.stringify({ kind, placement: mockupPlacement }));
+    const res = await fetch("/api/save-artwork", { method: "POST", body: fd });
+    if (res.ok) return (await res.json()).publicUrl as string;
+    return undefined;
+  }
 
   async function handleAddToCart() {
     if (!selectedVariant || !selectedSizeObj) return;
@@ -145,25 +152,34 @@ export default function ProductPage({
 
     let persistedArtworkUrl: string | undefined;
     let persistedThumbnailUrl: string | undefined;
+    let persistedTextArtworkUrl: string | undefined;
 
-    const printSource = compositeDataUrl ?? artworkUrl;
+    const isOpposite = textPlacement === 'opposite' && !!textOnlyDataUrl;
+    const printSource = isOpposite
+      ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
+      : (compositeDataUrl ?? artworkUrl);
+
     if (printSource) {
       setUploading(true);
       try {
         const printBlob = buildPrintAreaPng(printSource, mockupPlacement, product.type);
-        const thumbBlob = tshirtBaseImage
-          ? buildMockupThumbnail(tshirtBaseImage, printSource, mockupPlacement, product.type)
+        const thumbSource = isOpposite
+          ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
+          : (compositeDataUrl ?? artworkUrl);
+        const thumbBlank = isOpposite
+          ? (getBlankMockupImage(product.type, selectedColorObj?.title, artworkSide)
+              ?? (artworkSide === 'back' ? currentImages?.back : currentImages?.front)
+              ?? null)
+          : tshirtBaseImage;
+        const thumbBlob = thumbBlank && thumbSource
+          ? buildMockupThumbnail(thumbBlank, thumbSource, mockupPlacement, product.type)
+          : null;
+        const textBlob = isOpposite && textOnlyDataUrl
+          ? buildPrintAreaPng(textOnlyDataUrl, mockupPlacement, product.type)
           : null;
 
-        const [printResult, thumbResult] = await Promise.all([
-          printBlob.then(async (blob) => {
-            const fd = new FormData();
-            fd.append("file", blob, "print-area-artwork.png");
-            fd.append("metadata", JSON.stringify({ kind: "print_area", placement: mockupPlacement }));
-            const res = await fetch("/api/save-artwork", { method: "POST", body: fd });
-            if (res.ok) return (await res.json()).publicUrl as string;
-            return undefined;
-          }),
+        const [printResult, thumbResult, textResult] = await Promise.all([
+          printBlob.then((b) => uploadPng(b, "print_area", "print-area-artwork.png")),
           thumbBlob
             ? thumbBlob.then(async (blob) => {
                 const fd = new FormData();
@@ -174,16 +190,22 @@ export default function ProductPage({
                 return undefined;
               })
             : Promise.resolve(undefined),
+          textBlob
+            ? textBlob.then((b) => uploadPng(b, "print_area_text", "print-area-text.png"))
+            : Promise.resolve(undefined),
         ]);
 
         persistedArtworkUrl = printResult;
         persistedThumbnailUrl = thumbResult;
+        persistedTextArtworkUrl = textResult;
       } catch (err) {
         console.error("Failed to build artwork:", err);
       } finally {
         setUploading(false);
       }
     }
+
+    const oppositeSide: 'front' | 'back' = artworkSide === 'front' ? 'back' : 'front';
 
     addItem({
       productId: product.id,
@@ -195,13 +217,15 @@ export default function ProductPage({
       artworkSide,
       ...(persistedArtworkUrl ? { artworkUrl: persistedArtworkUrl } : {}),
       ...(persistedThumbnailUrl ? { thumbnailUrl: persistedThumbnailUrl } : {}),
+      ...(persistedTextArtworkUrl
+        ? { textArtworkUrl: persistedTextArtworkUrl, textArtworkSide: oppositeSide }
+        : {}),
     });
     setAdded(true);
     openCart();
     setTimeout(() => setAdded(false), 2000);
   }
 
-  // Sizes available for the selected color
   const availableSizeIds = new Set(
     data?.variants
       .filter((v) => v.colorId === selectedColor)
@@ -228,9 +252,7 @@ export default function ProductPage({
   return (
     <div className="mx-auto max-w-7xl p-6">
       <div className="grid gap-12 lg:grid-cols-2">
-        {/* Image Gallery + Mockup */}
         <div className="min-w-0 lg:sticky lg:top-20 lg:self-start">
-          {/* Tabs only when switching between gallery and mockup is meaningful */}
           {hasGeneratedImage && (
             <div className="flex gap-1 mb-3">
               <button
@@ -312,7 +334,6 @@ export default function ProductPage({
           )}
         </div>
 
-        {/* Product Info */}
         <div className="min-w-0">
           <p className="font-sub text-xs font-bold uppercase tracking-widest text-ignition">
             {product.type}
@@ -326,7 +347,6 @@ export default function ProductPage({
             {formatPrice(displayPrice)}
           </p>
 
-          {/* Color Picker */}
           {data && data.colors.length > 0 && (
             <div className="mt-8">
               <p className="font-sub text-xs font-bold uppercase tracking-widest text-muted mb-3">
@@ -369,7 +389,6 @@ export default function ProductPage({
             </div>
           )}
 
-          {/* Size Picker */}
           {data && data.sizes.length > 0 && (
             <div className="mt-8">
               <p className="font-sub text-xs font-bold uppercase tracking-widest text-muted mb-3">
@@ -399,7 +418,6 @@ export default function ProductPage({
             </div>
           )}
 
-          {/* Description */}
           {data?.description && (
             <div className="mt-10 border-t border-border pt-8">
               <p className="font-sub text-xs font-bold uppercase tracking-widest text-muted mb-3">
@@ -414,7 +432,6 @@ export default function ProductPage({
 
           {children}
 
-          {/* Add to Cart (placed at the very bottom, after customizer) */}
           <div className="mt-10 border-t border-border pt-8">
             <Button
               variant="success"

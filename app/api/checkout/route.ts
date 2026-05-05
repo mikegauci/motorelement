@@ -3,7 +3,14 @@ import { createCheckoutSession } from "@/lib/stripe/helpers";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { items, customerId, artworkUrl, artworkSide } = body;
+  const {
+    items,
+    customerId,
+    artworkUrl,
+    artworkSide,
+    textArtworkUrl,
+    textArtworkSide,
+  } = body;
 
   if (!items?.length) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -17,6 +24,8 @@ export async function POST(request: Request) {
       customerId,
       artworkUrl,
       artworkSide,
+      textArtworkUrl,
+      textArtworkSide,
       origin,
     });
 

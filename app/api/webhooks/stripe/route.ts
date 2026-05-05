@@ -38,6 +38,10 @@ export async function POST(request: Request) {
       const artworkUrl = session.metadata?.artworkUrl;
       const artworkSide: "front" | "back" =
         session.metadata?.artworkSide === "back" ? "back" : "front";
+      const textArtworkUrl = session.metadata?.textArtworkUrl;
+      const textArtworkSideRaw = session.metadata?.textArtworkSide;
+      const textArtworkSide: "front" | "back" | null =
+        textArtworkSideRaw === "back" ? "back" : textArtworkSideRaw === "front" ? "front" : null;
 
       const stripeLineItems = await stripe.checkout.sessions.listLineItems(
         session.id,
@@ -96,11 +100,15 @@ export async function POST(request: Request) {
                   );
                   return null;
                 }
+                const printAreas: Record<string, string> = { [artworkSide]: artworkUrl };
+                if (textArtworkUrl && textArtworkSide) {
+                  printAreas[textArtworkSide] = textArtworkUrl;
+                }
                 return {
                   product_id: printifyProductId,
                   variant_id: variantId,
                   quantity: item.quantity,
-                  print_areas: { [artworkSide]: artworkUrl } as Record<string, string>,
+                  print_areas: printAreas,
                 };
               })
             )

@@ -24,6 +24,8 @@ interface TestItem {
   quantity: number;
   artworkUrl?: string;
   artworkSide?: "front" | "back";
+  textArtworkUrl?: string;
+  textArtworkSide?: "front" | "back";
 }
 
 export async function POST(request: Request) {
@@ -68,12 +70,16 @@ export async function POST(request: Request) {
           }
 
           const side = item.artworkSide ?? "front";
+          const printAreas: Record<string, string> = { [side]: artworkUrl };
+          if (item.textArtworkUrl && item.textArtworkSide) {
+            printAreas[item.textArtworkSide] = item.textArtworkUrl;
+          }
           return {
             blueprint_id: pfyProduct.blueprint_id,
             print_provider_id: pfyProduct.print_provider_id,
             variant_id: variantId,
             quantity: item.quantity,
-            print_areas: { [side]: artworkUrl } as Record<string, string>,
+            print_areas: printAreas,
           };
         })
       )

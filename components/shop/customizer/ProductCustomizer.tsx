@@ -23,6 +23,7 @@ import BackgroundPresets from './BackgroundPresets'
 import CompositeEditor from './CompositeEditor'
 import TextLayerEditor from './TextLayerEditor'
 import TextOverlayToggle from './TextOverlayToggle'
+import TextPlacementSelector from './TextPlacementSelector'
 import ArtworkPositionSelector from './ArtworkPositionSelector'
 import MockupPreviewModal from './MockupPreviewModal'
 import CollapsibleTweak from './parts/CollapsibleTweak'
@@ -36,7 +37,15 @@ import { useCompositeCanvas } from '@/hooks/useCompositeCanvas'
 import { useSession } from '@/hooks/useSession'
 
 export default function ProductCustomizer() {
-  const { mockupThumbnailUrl, artworkSide, setArtworkSide } = useCustomizer()
+  const {
+    mockupThumbnailUrl,
+    artworkSide,
+    setArtworkSide,
+    textPlacement,
+    setTextPlacement,
+    setArtworkOnlyDataUrl,
+    setTextOnlyDataUrl,
+  } = useCustomizer()
 
   // ---- Vehicle input state (owned by this component) ----
   const [customerNotes, setCustomerNotes] = useState('')
@@ -130,6 +139,7 @@ export default function ProductCustomizer() {
     selectedTextLayerId: textLayerHook.selectedTextLayerId,
     updateTextLayer: textLayerHook.updateTextLayer,
     backgroundControlsLocked, showResults, desktopDragEnabled,
+    textPlacement,
   })
 
   const mobileResultDockSrc = mockupThumbnailUrl || viewingUrl
@@ -147,6 +157,7 @@ export default function ProductCustomizer() {
       textLayers: textLayerHook.textLayers, selectedTextLayerId: textLayerHook.selectedTextLayerId,
       artworkSide,
       addTextEnabled,
+      textPlacement,
     },
     {
       setCustomerNotes,
@@ -159,6 +170,7 @@ export default function ProductCustomizer() {
       setTextLayers: textLayerHook.setTextLayers, setSelectedTextLayerId: textLayerHook.setSelectedTextLayerId,
       setArtworkSide,
       setAddTextEnabled,
+      setTextPlacement,
       setStatus: carGen.setStatus,
       resumePendingGeneration: carGen.resumePendingGeneration,
       resumePendingBackgroundGeneration: bgGen.resumePendingBackgroundGeneration,
@@ -271,6 +283,9 @@ export default function ProductCustomizer() {
       if (textLayerHook.textLayers.length === 0) textLayerHook.addTextLayer()
     } else {
       textLayerHook.resetTextLayers()
+      // Without text there is nothing to place; revert so toggling back ON
+      // starts from the safe default.
+      setTextPlacement('same')
     }
   }
 
@@ -290,6 +305,9 @@ export default function ProductCustomizer() {
     setCarAdjustXPct(0); setCarAdjustYPct(0); setCarScale(1); setCompositionZoom(1); setBgScale(1)
     setArtworkSide('front')
     setAddTextEnabled(true)
+    setTextPlacement('same')
+    setArtworkOnlyDataUrl(null)
+    setTextOnlyDataUrl(null)
     carGen.resetCarGeneration()
     bgGen.resetBackgroundGeneration()
     textLayerHook.resetTextLayers()
@@ -487,6 +505,13 @@ export default function ProductCustomizer() {
                           onChange={handleAddTextToggle}
                           disabled={backgroundControlsLocked}
                         />
+                        {addTextEnabled && (
+                          <TextPlacementSelector
+                            placement={textPlacement}
+                            onChange={setTextPlacement}
+                            disabled={backgroundControlsLocked}
+                          />
+                        )}
                         {addTextEnabled && (
                           <TextLayerEditor
                             textLayers={textLayerHook.textLayers}

@@ -352,6 +352,8 @@ interface CompositeOpts {
   textLayers?: TextLayer[]
   compositionZoom?: number
   bgScale?: number
+  omitArtwork?: boolean
+  omitText?: boolean
 }
 
 export function clampBgScale(v: number) {
@@ -373,6 +375,8 @@ export function drawCompositeContent(
     textLayers: layers = [],
     compositionZoom = 1,
     bgScale: bgScaleVal = 1,
+    omitArtwork = false,
+    omitText = false,
   } = opts
   const safeCompositionZoom = clampCompositeZoom(compositionZoom)
   const safeBgScale = clampBgScale(bgScaleVal)
@@ -425,25 +429,29 @@ export function drawCompositeContent(
     carY = center + (baseCarY - center) * safeCompositionZoom
   }
   ctx.clearRect(0, 0, size, size)
-  if (!omitBackground) {
-    if (bgBounds) {
-      ctx.drawImage(bgImg!, bgBounds.minX, bgBounds.minY, bgBounds.w, bgBounds.h, bgX, bgY, bgW, bgH)
-    } else {
-      ctx.drawImage(bgImg!, bgX, bgY, bgW, bgH)
+  if (!omitArtwork) {
+    if (!omitBackground) {
+      if (bgBounds) {
+        ctx.drawImage(bgImg!, bgBounds.minX, bgBounds.minY, bgBounds.w, bgBounds.h, bgX, bgY, bgW, bgH)
+      } else {
+        ctx.drawImage(bgImg!, bgX, bgY, bgW, bgH)
+      }
+      stripOutsideCircleDarkCorners(ctx, size)
     }
-    stripOutsideCircleDarkCorners(ctx, size)
-  }
-  if (carDrawSource) {
-    const { minX, minY, sw, sh } = carDrawSource
-    ctx.drawImage(carImg, minX, minY, sw, sh, carX, carY, carW, carH)
-  } else {
-    ctx.drawImage(carImg, carX, carY, carW, carH)
+    if (carDrawSource) {
+      const { minX, minY, sw, sh } = carDrawSource
+      ctx.drawImage(carImg, minX, minY, sw, sh, carX, carY, carW, carH)
+    } else {
+      ctx.drawImage(carImg, carX, carY, carW, carH)
+    }
   }
 
-  for (const layer of layers) {
-    ctx.save()
-    drawTextLayer(ctx, size, layer)
-    ctx.restore()
+  if (!omitText) {
+    for (const layer of layers) {
+      ctx.save()
+      drawTextLayer(ctx, size, layer)
+      ctx.restore()
+    }
   }
 }
 

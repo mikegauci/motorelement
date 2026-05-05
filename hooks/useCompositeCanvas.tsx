@@ -8,7 +8,7 @@ import {
   getTextLayerBounds,
   clampAdjust,
 } from '@/components/shop/customizer/helpers'
-import { useCustomizer } from '@/components/shop/customizer/CustomizerContext'
+import { useCustomizer, type TextPlacement } from '@/components/shop/customizer/CustomizerContext'
 
 const COMPOSITE_EXPORT_SIZE = 2048
 
@@ -34,10 +34,15 @@ interface CompositeCanvasDeps {
   backgroundControlsLocked: boolean
   showResults: boolean
   desktopDragEnabled: boolean
+  textPlacement: TextPlacement
 }
 
 export function useCompositeCanvas(deps: CompositeCanvasDeps) {
-  const { setCompositeDataUrl } = useCustomizer()
+  const {
+    setCompositeDataUrl,
+    setArtworkOnlyDataUrl,
+    setTextOnlyDataUrl,
+  } = useCustomizer()
   const compositeStageRef = useRef<HTMLDivElement>(null)
   const compositeCanvasRef = useRef<HTMLCanvasElement>(null)
   const compositeRenderRef = useRef(() => {})
@@ -46,6 +51,9 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
   const carScaleRef = useRef(1)
   const compositionZoomRef = useRef(1)
   const bgScaleRef = useRef(1)
+  const textPlacementRef = useRef<TextPlacement>('same')
+  const artworkOnlyCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const textOnlyCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const resultCardRef = useRef<HTMLDivElement>(null)
 
   const [mobileCompositePreviewSrc, setMobileCompositePreviewSrc] = useState('')
@@ -99,6 +107,16 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
 
   useEffect(() => { schedulePaint() }, [deps.textLayers])
 
+  useEffect(() => {
+    textPlacementRef.current = deps.textPlacement
+    if (deps.textPlacement === 'same') {
+      // Clear stale split exports so the mockup falls back to compositeDataUrl.
+      setArtworkOnlyDataUrl(null)
+      setTextOnlyDataUrl(null)
+    }
+    schedulePaint()
+  }, [deps.textPlacement, setArtworkOnlyDataUrl, setTextOnlyDataUrl])
+
   // Canvas paint loop
   useEffect(() => {
     if (!deps.transparentCarUrlForPreset) return
@@ -121,18 +139,51 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'
       ctx.clearRect(0, 0, pixelSize, pixelSize)
-      drawCompositeContent(ctx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, {
+      const sharedOpts = {
         cropBackgroundToArtwork: deps.selectedBackgroundIsCustom,
         carOffsetXPct: carAdjustXRef.current, carOffsetYPct: carAdjustYRef.current,
         carScale: carScaleRef.current, textLayers: deps.textLayersRef.current ?? [],
         compositionZoom: compositionZoomRef.current,
         bgScale: bgScaleRef.current,
-      })
+      }
+      drawCompositeContent(ctx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, sharedOpts)
       try {
         const dataUrl = canvas!.toDataURL('image/png')
         setMobileCompositePreviewSrc(dataUrl)
         setCompositeDataUrl(dataUrl)
       } catch (_) { /* ignore */ }
+
+      if (textPlacementRef.current === 'opposite') {
+        try {
+          if (!artworkOnlyCanvasRef.current) artworkOnlyCanvasRef.current = document.createElement('canvas')
+          const aCanvas = artworkOnlyCanvasRef.current
+          if (aCanvas.width !== pixelSize) aCanvas.width = pixelSize
+          if (aCanvas.height !== pixelSize) aCanvas.height = pixelSize
+          const aCtx = aCanvas.getContext('2d', { alpha: true })!
+          aCtx.setTransform(1, 0, 0, 1, 0, 0)
+          aCtx.imageSmoothingEnabled = true; aCtx.imageSmoothingQuality = 'high'
+          drawCompositeContent(aCtx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, {
+            ...sharedOpts,
+            omitText: true,
+          })
+          setArtworkOnlyDataUrl(aCanvas.toDataURL('image/png'))
+        } catch (_) { /* ignore */ }
+
+        try {
+          if (!textOnlyCanvasRef.current) textOnlyCanvasRef.current = document.createElement('canvas')
+          const tCanvas = textOnlyCanvasRef.current
+          if (tCanvas.width !== pixelSize) tCanvas.width = pixelSize
+          if (tCanvas.height !== pixelSize) tCanvas.height = pixelSize
+          const tCtx = tCanvas.getContext('2d', { alpha: true })!
+          tCtx.setTransform(1, 0, 0, 1, 0, 0)
+          tCtx.imageSmoothingEnabled = true; tCtx.imageSmoothingQuality = 'high'
+          drawCompositeContent(tCtx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, {
+            ...sharedOpts,
+            omitArtwork: true,
+          })
+          setTextOnlyDataUrl(tCanvas.toDataURL('image/png'))
+        } catch (_) { /* ignore */ }
+      }
     }
     compositeRenderRef.current = paint
     const bgPromise = deps.selectedBackgroundSrc ? loadImageElement(deps.selectedBackgroundSrc) : Promise.resolve(null)
@@ -149,8 +200,10 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     if (!deps.transparentCarUrlForPreset) {
       setMobileCompositePreviewSrc('')
       setCompositeDataUrl(null)
+      setArtworkOnlyDataUrl(null)
+      setTextOnlyDataUrl(null)
     }
-  }, [deps.transparentCarUrlForPreset, setCompositeDataUrl])
+  }, [deps.transparentCarUrlForPreset, setCompositeDataUrl, setArtworkOnlyDataUrl, setTextOnlyDataUrl])
 
   // Mobile dock visibility
   useEffect(() => {

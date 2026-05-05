@@ -12,20 +12,28 @@ interface Props {
   onClose: () => void
 }
 
-/**
- * Full-screen modal showing a high-res mockup preview.
- * Same rendering as MockupPreview but at a much larger canvas size.
- */
 export default function MockupPreviewModal({ open, onClose }: Props) {
   const {
     artworkUrl,
     compositeDataUrl,
+    artworkOnlyDataUrl,
+    textOnlyDataUrl,
     mockupPlacement,
     tshirtBaseImage,
     productType,
+    artworkSide,
+    textPlacement,
+    mockupViewSide,
   } = useCustomizer()
 
-  const overlayUrl = compositeDataUrl ?? artworkUrl
+  let overlayUrl: string | null = null
+  if (mockupViewSide === artworkSide) {
+    overlayUrl = textPlacement === 'opposite'
+      ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
+      : (compositeDataUrl ?? artworkUrl)
+  } else if (textPlacement === 'opposite') {
+    overlayUrl = textOnlyDataUrl
+  }
   const pz = getMockupPrintZone(productType)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -82,8 +90,6 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
 
     if (!baseImg) return
 
-    // Size the offscreen so the artwork lands in the print zone at its
-    // native resolution (no downscale). Cap for memory.
     const MAX_OFFSCREEN_PX = 6144
     const artNaturalW = artworkImg?.naturalWidth ?? 0
     const required = artNaturalW > 0 && pz.widthPct > 0

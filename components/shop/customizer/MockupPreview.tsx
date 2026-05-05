@@ -10,14 +10,35 @@ export default function MockupPreview() {
   const {
     artworkUrl,
     compositeDataUrl,
+    artworkOnlyDataUrl,
+    textOnlyDataUrl,
     mockupPlacement,
     tshirtBaseImage,
     productType,
     selectedColorHex,
     setMockupThumbnailUrl,
+    artworkSide,
+    textPlacement,
+    mockupViewSide,
+    setMockupViewSide,
   } = useCustomizer()
 
-  const overlayUrl = compositeDataUrl ?? artworkUrl
+  const hasBothSides = textPlacement === 'opposite' && !!textOnlyDataUrl
+
+  useEffect(() => {
+    if (!hasBothSides && mockupViewSide !== artworkSide) {
+      setMockupViewSide(artworkSide)
+    }
+  }, [hasBothSides, mockupViewSide, artworkSide, setMockupViewSide])
+
+  let overlayUrl: string | null = null
+  if (mockupViewSide === artworkSide) {
+    overlayUrl = textPlacement === 'opposite'
+      ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
+      : (compositeDataUrl ?? artworkUrl)
+  } else if (textPlacement === 'opposite') {
+    overlayUrl = textOnlyDataUrl
+  }
 
   const pz = useMemo(() => getMockupPrintZone(productType), [productType])
 
@@ -38,8 +59,6 @@ export default function MockupPreview() {
     const rect = container.getBoundingClientRect()
     const dpr = clampDpr()
     const baseW = Math.round(rect.width * dpr)
-    // Grow the backing buffer so the artwork is drawn into the print zone
-    // at its native resolution (no downscaling). Cap to keep memory sane.
     const MAX_CANVAS_PX = 4096
     const artNaturalW = artworkImgRef.current?.naturalWidth ?? 0
     const required = artNaturalW > 0 && pz.widthPct > 0
@@ -185,6 +204,8 @@ export default function MockupPreview() {
     return () => ro.disconnect()
   }, [paint])
 
+  const sides: Array<'front' | 'back'> = ['front', 'back']
+
   return (
     <div className="relative w-full">
       <div
@@ -196,6 +217,27 @@ export default function MockupPreview() {
           className="absolute inset-0 w-full h-full"
           aria-label="T-shirt mockup preview"
         />
+        {hasBothSides && (
+          <div className="absolute top-3 left-3 flex gap-1 bg-black/60 backdrop-blur-sm border border-border p-1 rounded">
+            {sides.map((side) => {
+              const isActive = mockupViewSide === side
+              return (
+                <button
+                  key={side}
+                  type="button"
+                  onClick={() => setMockupViewSide(side)}
+                  aria-pressed={isActive}
+                  className={`px-3 py-1.5 text-[11px] font-sub font-bold uppercase tracking-widest border transition-colors cursor-pointer ${isActive
+                      ? 'border-ignition bg-ignition/20 text-white'
+                      : 'border-transparent text-muted hover:text-white'
+                    }`}
+                >
+                  {side === 'front' ? 'Front' : 'Back'}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
       {!loaded && !tshirtBaseImage && (
         <div className="absolute inset-0 flex items-center justify-center">

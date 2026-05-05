@@ -13,6 +13,8 @@ export interface CartItem {
   artworkUrl?: string;
   thumbnailUrl?: string;
   artworkSide?: "front" | "back";
+  textArtworkUrl?: string;
+  textArtworkSide?: "front" | "back";
 }
 
 interface CartContextValue {
