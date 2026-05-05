@@ -34,7 +34,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
   } else if (textPlacement === 'opposite') {
     overlayUrl = textOnlyDataUrl
   }
-  const pz = getMockupPrintZone(productType)
+  const pz = getMockupPrintZone(productType, mockupViewSide)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const baseImgRef = useRef<HTMLImageElement | null>(null)

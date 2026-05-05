@@ -172,7 +172,7 @@ export default function ProductPage({
               ?? null)
           : tshirtBaseImage;
         const thumbBlob = thumbBlank && thumbSource
-          ? buildMockupThumbnail(thumbBlank, thumbSource, mockupPlacement, product.type)
+          ? buildMockupThumbnail(thumbBlank, thumbSource, mockupPlacement, product.type, artworkSide)
           : null;
         const textBlob = isOpposite && textOnlyDataUrl
           ? buildPrintAreaPng(textOnlyDataUrl, mockupPlacement, product.type)

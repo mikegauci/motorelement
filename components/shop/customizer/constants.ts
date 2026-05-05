@@ -125,16 +125,27 @@ export function getBlankMockupImage(
 /**
  * Print zone on the product mockup (fraction of image dimensions).
  * Must visually match where Printify places the print on the garment.
+ * Front and back are tracked separately because the back print sits higher
+ * up on the garment than the front chest print.
  */
-const MOCKUP_PRINT_ZONES: Record<string, { xPct: number; yPct: number; widthPct: number; heightPct: number }> = {
-  't-shirt': { xPct: 0.38, yPct: 0.28, widthPct: 0.25, heightPct: 0.28 },
-  hoodie:    { xPct: 0.36, yPct: 0.35, widthPct: 0.25, heightPct: 0.23 },
+type PrintZone = { xPct: number; yPct: number; widthPct: number; heightPct: number }
+
+const MOCKUP_PRINT_ZONES: Record<string, Record<'front' | 'back', PrintZone>> = {
+  't-shirt': {
+    front: { xPct: 0.38, yPct: 0.28, widthPct: 0.25, heightPct: 0.32 },
+    back:  { xPct: 0.38, yPct: 0.24, widthPct: 0.25, heightPct: 0.32 },
+  },
+  hoodie: {
+    front: { xPct: 0.36, yPct: 0.35, widthPct: 0.25, heightPct: 0.23 },
+    back:  { xPct: 0.36, yPct: 0.30, widthPct: 0.25, heightPct: 0.23 },
+  },
 }
 
 const DEFAULT_MOCKUP_PRINT_ZONE = MOCKUP_PRINT_ZONES['t-shirt']
 
-export function getMockupPrintZone(productType?: string) {
-  return MOCKUP_PRINT_ZONES[productType ?? ''] ?? DEFAULT_MOCKUP_PRINT_ZONE
+export function getMockupPrintZone(productType?: string, side: 'front' | 'back' = 'front') {
+  const sides = MOCKUP_PRINT_ZONES[productType ?? ''] ?? DEFAULT_MOCKUP_PRINT_ZONE
+  return sides[side]
 }
 
 /** Printify front print area in pixels, per product type (from Printify API). */

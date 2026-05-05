@@ -475,11 +475,12 @@ export async function buildMockupThumbnail(
   baseSrc: string,
   artworkSrc: string,
   placement: { xPct: number; yPct: number; scale: number },
-  productType?: string
+  productType?: string,
+  side: 'front' | 'back' = 'front'
 ): Promise<Blob> {
   const { getMockupPrintZone } = await import('./constants')
   const { letterbox, printZoneRect, drawArtworkClipped } = await import('./canvas')
-  const pz = getMockupPrintZone(productType)
+  const pz = getMockupPrintZone(productType, side)
 
   const [baseImg, artImg] = await Promise.all([
     loadImageElement(baseSrc),

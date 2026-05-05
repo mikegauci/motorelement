@@ -40,7 +40,7 @@ export default function MockupPreview() {
     overlayUrl = textOnlyDataUrl
   }
 
-  const pz = useMemo(() => getMockupPrintZone(productType), [productType])
+  const pz = useMemo(() => getMockupPrintZone(productType, mockupViewSide), [productType, mockupViewSide])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
