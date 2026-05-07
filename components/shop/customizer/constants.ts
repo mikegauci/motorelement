@@ -125,8 +125,7 @@ export interface ProductProfile {
     widthPct: number
   }>
   printArea: Record<'front' | 'back', { width: number; height: number }>
-  defaultArtworkScale: number
-  defaultArtworkYPct: number
+  printExportMultiplier: Record<'front' | 'back', number>
 }
 
 export const PRODUCT_PROFILES: Record<string, ProductProfile> = {
@@ -139,20 +138,18 @@ export const PRODUCT_PROFILES: Record<string, ProductProfile> = {
       front: { width: 3852, height: 4398 },
       back:  { width: 3852, height: 4398 },
     },
-    defaultArtworkScale: 1.0,
-    defaultArtworkYPct: 0.5,
+    printExportMultiplier: { front: 1, back: 1 },
   },
   hoodie: {
     mockupZone: {
-      front: { xPct: 0.34, yPct: 0.35, widthPct: 0.30 },
+      front: { xPct: 0.37, yPct: 0.33, widthPct: 0.24 },
       back:  { xPct: 0.39, yPct: 0.30, widthPct: 0.25 },
     },
     printArea: {
-      front: { width: 3709, height: 2472 },
+      front: { width: 2609, height: 2872 },
       back:  { width: 4200, height: 4800 },
     },
-    defaultArtworkScale: 0.75,
-    defaultArtworkYPct: 0.65,
+    printExportMultiplier: { front: 0.63, back: 1 },
   },
 }
 
@@ -160,6 +157,21 @@ const DEFAULT_PRODUCT_PROFILE = PRODUCT_PROFILES['t-shirt']
 
 export function getProductProfile(productType?: string): ProductProfile {
   return PRODUCT_PROFILES[productType ?? ''] ?? DEFAULT_PRODUCT_PROFILE
+}
+
+export type PrintExportMultiplierOverrides = Partial<
+  Record<'front' | 'back', number>
+>
+
+export function getPrintExportMultiplier(
+  productType: string | undefined,
+  side: 'front' | 'back',
+  overrides?: PrintExportMultiplierOverrides | null,
+): number {
+  const base = getProductProfile(productType).printExportMultiplier[side]
+  const o = overrides?.[side]
+  if (o != null && Number.isFinite(o) && o > 0) return o
+  return base
 }
 
 export function getMockupPrintZone(productType?: string, side: 'front' | 'back' = 'front') {

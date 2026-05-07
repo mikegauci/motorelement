@@ -1,6 +1,11 @@
 import type { TextLayer } from './types'
 import type { Placement } from './placement'
-import { COMPOSITE, CORNER_CLEAR_RADIUS_FR } from './constants'
+import {
+  COMPOSITE,
+  CORNER_CLEAR_RADIUS_FR,
+  getPrintExportMultiplier,
+  type PrintExportMultiplierOverrides,
+} from './constants'
 
 // ---------------------------------------------------------------------------
 // Text layer helpers
@@ -468,6 +473,16 @@ export function joinNotes(base: string, extra: string) {
   return [a, b].filter(Boolean).join('\n\n')
 }
 
+export function withPrintExportMultiplier(
+  placement: Placement,
+  productType: string | undefined,
+  side: 'front' | 'back',
+  overrides?: PrintExportMultiplierOverrides | null,
+): Placement {
+  const m = getPrintExportMultiplier(productType, side, overrides)
+  return { ...placement, scale: placement.scale * m }
+}
+
 /**
  * Renders a small mockup thumbnail (garment + artwork overlay) for use in
  * the cart / order summary. Returns a JPEG blob at 400px.
@@ -477,7 +492,7 @@ export async function buildMockupThumbnail(
   artworkSrc: string,
   placement: Placement,
   productType?: string,
-  side: 'front' | 'back' = 'front'
+  side: 'front' | 'back' = 'front',
 ): Promise<Blob> {
   const { getMockupPrintZone } = await import('./constants')
   const { letterbox, printZoneRect, drawArtworkClipped } = await import('./canvas')
@@ -511,16 +526,12 @@ export async function buildMockupThumbnail(
   })
 }
 
-/**
- * Renders the artwork at the user's chosen position/scale into a canvas
- * matching Printify's exact print area dimensions. Returns a PNG Blob
- * ready for upload — what you see in the mockup is what gets printed.
- */
 export async function buildPrintAreaPng(
   artworkSrc: string,
   placement: Placement,
   productType?: string,
-  side: 'front' | 'back' = 'front'
+  side: 'front' | 'back' = 'front',
+  printMultiplierOverrides?: PrintExportMultiplierOverrides | null,
 ): Promise<Blob> {
   const { getProductProfile } = await import('./constants')
   const { getArtworkRect, getPrintAreaRect } = await import('./placement')
@@ -529,11 +540,13 @@ export async function buildPrintAreaPng(
 
   const img = await loadImageElement(artworkSrc)
 
-  // Use the full PNG dimensions (no alpha trim) so the print uses the exact
-  // same aspect ratio the mockup uses. WYSIWYG.
   const aspect = img.naturalWidth / img.naturalHeight
 
-  const art = getArtworkRect(getPrintAreaRect(profile, side), aspect, placement)
+  const art = getArtworkRect(
+    getPrintAreaRect(profile, side),
+    aspect,
+    withPrintExportMultiplier(placement, productType, side, printMultiplierOverrides),
+  )
 
   const canvas = document.createElement('canvas')
   canvas.width = paW

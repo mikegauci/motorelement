@@ -45,8 +45,18 @@ export function getArtworkRect(
   srcAspect: number,
   placement: Placement,
 ): Rect {
-  const w = target.w * placement.scale
-  const h = w / srcAspect
+  const maxW = target.w * placement.scale
+  const maxH = target.h * placement.scale
+  let w = maxW
+  let h = w / srcAspect
+  if (h > maxH) {
+    h = maxH
+    w = h * srcAspect
+  }
+  if (w > maxW) {
+    w = maxW
+    h = w / srcAspect
+  }
   return {
     x: target.x + placement.xPct * target.w - w / 2,
     y: target.y + placement.yPct * target.h - h / 2,

@@ -9,4 +9,6 @@ export interface Product {
   printifyBlueprintId: string;
   active: boolean;
   thumbnailUrl: string | null;
+  printExportMultiplierFront?: number | null;
+  printExportMultiplierBack?: number | null;
 }

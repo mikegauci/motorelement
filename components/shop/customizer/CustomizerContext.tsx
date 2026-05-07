@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import type { MockupPlacement } from './types'
-import { getProductProfile } from './constants'
 
 export type ArtworkSide = 'front' | 'back'
 export type TextPlacement = 'same' | 'opposite'
@@ -46,8 +45,8 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
   const [productType, setProductType] = useState('t-shirt')
   const [mockupPlacement, setMockupPlacementRaw] = useState<MockupPlacement>({
     xPct: 0.5,
-    yPct: getProductProfile('t-shirt').defaultArtworkYPct,
-    scale: getProductProfile('t-shirt').defaultArtworkScale,
+    yPct: 0.5,
+    scale: 1,
   })
   const [generationStatus, setGenerationStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [tshirtBaseImage, setTshirtBaseImage] = useState<string | null>(null)
@@ -57,18 +56,9 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
   const [textPlacement, setTextPlacement] = useState<TextPlacement>('same')
   const [mockupViewSide, setMockupViewSide] = useState<ArtworkSide>('front')
 
-  // Whenever the product type changes, snap the artwork scale and vertical
-  // anchor to that product's defaults. Each product has its own print area
-  // aspect, so the same composite would otherwise spill out or sit
-  // top-anchored (e.g. on hoodies).
   useEffect(() => {
-    const profile = getProductProfile(productType)
-    const defaultScale = profile.defaultArtworkScale
-    const defaultYPct = profile.defaultArtworkYPct
     setMockupPlacementRaw((prev) =>
-      prev.scale === defaultScale && prev.yPct === defaultYPct
-        ? prev
-        : { ...prev, scale: defaultScale, yPct: defaultYPct }
+      prev.scale === 1 && prev.yPct === 0.5 ? prev : { ...prev, scale: 1, yPct: 0.5 }
     )
   }, [productType])
 
@@ -90,7 +80,7 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
     setMockupPlacementRaw({
       xPct: Math.min(1, Math.max(0, p.xPct)),
       yPct: Math.min(1, Math.max(0, p.yPct)),
-      scale: Math.min(1, Math.max(0.1, p.scale)),
+      scale: Math.min(2, Math.max(0.1, p.scale)),
     })
   }, [])
 

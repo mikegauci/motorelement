@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/Button";
@@ -10,7 +10,7 @@ import MockupPreview from "./customizer/MockupPreview";
 import MockupPreviewModal from "./customizer/MockupPreviewModal";
 import { useCustomizer } from "./customizer/CustomizerContext";
 import { buildPrintAreaPng, buildMockupThumbnail } from "./customizer/helpers";
-import { getBlankMockupImage } from "./customizer/constants";
+import { getBlankMockupImage, type PrintExportMultiplierOverrides } from "./customizer/constants";
 
 interface PrintifyColor {
   id: number;
@@ -80,6 +80,15 @@ export default function ProductPage({
   useEffect(() => {
     setProductType(product.type);
   }, [product.type, setProductType]);
+
+  const printMultiplierOverrides = useMemo((): PrintExportMultiplierOverrides | null => {
+    const o: PrintExportMultiplierOverrides = {};
+    if (product.printExportMultiplierFront != null)
+      o.front = product.printExportMultiplierFront;
+    if (product.printExportMultiplierBack != null)
+      o.back = product.printExportMultiplierBack;
+    return Object.keys(o).length ? o : null;
+  }, [product.printExportMultiplierFront, product.printExportMultiplierBack]);
 
   useEffect(() => {
     async function load() {
@@ -169,6 +178,7 @@ export default function ProductPage({
           mockupPlacement,
           product.type,
           artworkSide,
+          printMultiplierOverrides,
         );
         const thumbSource = isOpposite
           ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
@@ -179,10 +189,22 @@ export default function ProductPage({
               ?? null)
           : tshirtBaseImage;
         const thumbBlob = thumbBlank && thumbSource
-          ? buildMockupThumbnail(thumbBlank, thumbSource, mockupPlacement, product.type, artworkSide)
+          ? buildMockupThumbnail(
+              thumbBlank,
+              thumbSource,
+              mockupPlacement,
+              product.type,
+              artworkSide,
+            )
           : null;
         const textBlob = isOpposite && textOnlyDataUrl
-          ? buildPrintAreaPng(textOnlyDataUrl, mockupPlacement, product.type, oppositeSide)
+          ? buildPrintAreaPng(
+              textOnlyDataUrl,
+              mockupPlacement,
+              product.type,
+              oppositeSide,
+              printMultiplierOverrides,
+            )
           : null;
 
         const [printResult, thumbResult, textResult] = await Promise.all([
