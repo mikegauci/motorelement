@@ -165,7 +165,7 @@ export default function TextLayerEditor({
               />
             </div>
             <div className={styles.setupBlock}>
-              <label className={styles.label}>Font family</label>
+              <label className={styles.label}>Font style</label>
               <select
                 className={styles.input}
                 value={selectedTextLayer.fontFamily}
