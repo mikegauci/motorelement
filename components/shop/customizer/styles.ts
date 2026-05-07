@@ -145,6 +145,12 @@ const styles: Record<string, string> = {
     'flex flex-nowrap items-end justify-between gap-2 sm:gap-3 md:gap-4 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [&_.setupBlock]:shrink-0 [&_.shadowSwatchGroup]:shrink-0 max-md:[&_.styleToggle]:!h-8 max-md:[&_.styleToggle]:!w-8 max-md:[&_.shadowSwatch]:!h-8 max-md:[&_.shadowSwatch]:!w-8 max-md:[&_.styleToggleGroup]:gap-0.5 max-md:[&_.shadowSwatches]:gap-0.5',
   colorInput:
     'h-9 w-9 shrink-0 cursor-pointer appearance-none rounded-sm border border-border bg-carbon p-0 disabled:cursor-not-allowed disabled:opacity-55 [&::-webkit-color-swatch-wrapper]:border-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-[2px] [&::-webkit-color-swatch]:border [&::-webkit-color-swatch]:border-border',
+  printZoneCheckboxLabel: 'flex h-10 w-full items-center gap-2.5 border border-border bg-carbon px-3 text-left text-xs font-sub font-bold uppercase tracking-widest text-white transition-colors hover:border-white/30 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50',
+  printZoneCheckboxLabelActive: '!border-ignition bg-ignition/10',
+  printZoneCheckbox: 'h-4 w-4 shrink-0 accent-ignition',
+  printZoneCornerGrid: 'grid grid-cols-4 gap-1.5',
+  printZoneCornerBtn: 'h-9 border border-border bg-carbon text-white flex items-center justify-center cursor-pointer transition-colors hover:border-white/30 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50',
+  printZoneCornerBtnActive: '!border-ignition bg-ignition/10 text-ignition',
   textOverlayHint: 'm-0 text-xs text-muted',
   mobileResultDock: 'hidden max-md:block fixed right-3.5 bottom-3.5 w-[180px] h-[180px] p-0 border-2 border-border overflow-hidden bg-obsidian shadow-[0_10px_20px_rgba(0,0,0,0.4)] z-[60] cursor-pointer opacity-0 translate-y-0 translate-x-2.5 pointer-events-none transition-all duration-600 [&_img]:w-full [&_img]:h-full [&_img]:object-contain [&_img]:block max-[380px]:w-[150px] max-[380px]:h-[140px]',
   mobileResultDockVisible: '!opacity-100 !translate-y-0 !translate-x-0 !pointer-events-auto',

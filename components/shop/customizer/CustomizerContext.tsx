@@ -33,6 +33,9 @@ interface CustomizerContextValue {
   setTextPlacement: (p: TextPlacement) => void
   mockupViewSide: ArtworkSide
   setMockupViewSide: (s: ArtworkSide) => void
+  mockupBaseNaturalWidth: number | null
+  mockupBaseNaturalHeight: number | null
+  setMockupBaseNaturalSize: (size: { width: number; height: number } | null) => void
 }
 
 const CustomizerContext = createContext<CustomizerContextValue | null>(null)
@@ -55,6 +58,8 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
   const [artworkSide, setArtworkSide] = useState<ArtworkSide>('front')
   const [textPlacement, setTextPlacement] = useState<TextPlacement>('same')
   const [mockupViewSide, setMockupViewSide] = useState<ArtworkSide>('front')
+  const [mockupBaseNaturalWidth, setMockupBaseNaturalWidth] = useState<number | null>(null)
+  const [mockupBaseNaturalHeight, setMockupBaseNaturalHeight] = useState<number | null>(null)
 
   useEffect(() => {
     setMockupPlacementRaw((prev) =>
@@ -82,6 +87,11 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
       yPct: Math.min(1, Math.max(0, p.yPct)),
       scale: Math.min(2, Math.max(0.1, p.scale)),
     })
+  }, [])
+
+  const setMockupBaseNaturalSize = useCallback((size: { width: number; height: number } | null) => {
+    setMockupBaseNaturalWidth(size?.width ?? null)
+    setMockupBaseNaturalHeight(size?.height ?? null)
   }, [])
 
   return (
@@ -113,6 +123,9 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
         setTextPlacement,
         mockupViewSide,
         setMockupViewSide,
+        mockupBaseNaturalWidth,
+        mockupBaseNaturalHeight,
+        setMockupBaseNaturalSize,
       }}
     >
       {children}

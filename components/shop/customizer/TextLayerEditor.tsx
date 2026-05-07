@@ -1,6 +1,6 @@
 'use client'
 
-import type { TextLayer, FontOption } from './types'
+import type { TextLayer, FontOption, PrintZoneCorner } from './types'
 import styles from './styles'
 import SliderRow from './parts/SliderRow'
 
@@ -16,6 +16,34 @@ interface TextLayerEditorProps {
   onRemoveTextLayer: (layerId: string) => void
   onMoveTextLayer: (layerId: string, direction: number) => void
   onNudgeTextFontSize: (layerId: string, delta: number) => void
+  getPrintZoneCornerPosition: (corner: PrintZoneCorner) => { xPct: number; yPct: number } | null
+}
+
+const CORNER_OPTIONS: Array<{ value: PrintZoneCorner; label: string }> = [
+  { value: 'top-left', label: 'Top left' },
+  { value: 'top-right', label: 'Top right' },
+  { value: 'bottom-left', label: 'Bottom left' },
+  { value: 'bottom-right', label: 'Bottom right' },
+]
+
+function CornerIcon({ corner }: { corner: PrintZoneCorner }) {
+  const left = corner.endsWith('left')
+  const top = corner.startsWith('top')
+  const x = left ? 4 : 12
+  const y = top ? 4 : 12
+  const hLine = left
+    ? { x1: 4, y1: y, x2: 10, y2: y }
+    : { x1: 6, y1: y, x2: 12, y2: y }
+  const vLine = top
+    ? { x1: x, y1: 4, x2: x, y2: 10 }
+    : { x1: x, y1: 6, x2: x, y2: 12 }
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <line {...hLine} stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line {...vLine} stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx={x} cy={y} r="1.75" fill="currentColor" />
+    </svg>
+  )
 }
 
 export default function TextLayerEditor({
@@ -29,8 +57,39 @@ export default function TextLayerEditor({
   onRemoveTextLayer,
   onMoveTextLayer,
   onNudgeTextFontSize,
+  getPrintZoneCornerPosition,
   setSelectedTextLayerId,
 }: TextLayerEditorProps) {
+  function setPrintZoneCorner(layer: TextLayer, corner: PrintZoneCorner) {
+    const position = getPrintZoneCornerPosition(corner)
+    onUpdateTextLayer(layer.id, {
+      printZoneCorner: corner,
+      ...(position ?? {}),
+    })
+  }
+
+  function togglePrintZoneCorner(layer: TextLayer) {
+    const enabled = !layer.printZoneCorner
+    if (!enabled) {
+      onUpdateTextLayer(layer.id, {
+        printZoneCorner: null,
+        xPct: layer.printZonePreviousXPct ?? 0.5,
+        yPct: layer.printZonePreviousYPct ?? 0.2,
+        printZonePreviousXPct: undefined,
+        printZonePreviousYPct: undefined,
+      })
+      return
+    }
+    const corner = layer.printZoneCorner ?? 'top-right'
+    const position = getPrintZoneCornerPosition(corner)
+    onUpdateTextLayer(layer.id, {
+      printZoneCorner: corner,
+      printZonePreviousXPct: layer.xPct,
+      printZonePreviousYPct: layer.yPct,
+      ...(position ?? {}),
+    })
+  }
+
   return (
     <div className={styles.textOverlayBlock}>
       <div className={styles.textOverlayHeader}>
@@ -211,18 +270,54 @@ export default function TextLayerEditor({
             />
           </div>
           <div className={styles.setupBlock}>
-            <SliderRow
-              label="Vertical position"
-              displayValue={Math.round(selectedTextLayer.yPct * 100)}
-              min={0}
-              max={100}
-              value={Math.round(selectedTextLayer.yPct * 100)}
+            <button
+              type="button"
+              className={`${styles.printZoneCheckboxLabel} ${selectedTextLayer.printZoneCorner ? styles.printZoneCheckboxLabelActive : ''}`}
+              onClick={() => togglePrintZoneCorner(selectedTextLayer)}
               disabled={backgroundControlsLocked}
-              onNudgeDown={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
-              onNudgeUp={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
-              onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { yPct: v / 100 })}
-            />
+            >
+              <input
+                type="checkbox"
+                className={styles.printZoneCheckbox}
+                checked={!!selectedTextLayer.printZoneCorner}
+                readOnly
+                tabIndex={-1}
+              />
+              <span>Add text in corner?</span>
+            </button>
+            {selectedTextLayer.printZoneCorner && (
+              <div className={styles.printZoneCornerGrid}>
+                {CORNER_OPTIONS.map((corner) => (
+                  <button
+                    key={corner.value}
+                    type="button"
+                    className={`${styles.printZoneCornerBtn} ${selectedTextLayer.printZoneCorner === corner.value ? styles.printZoneCornerBtnActive : ''}`}
+                    onClick={() => setPrintZoneCorner(selectedTextLayer, corner.value)}
+                    disabled={backgroundControlsLocked}
+                    aria-label={corner.label}
+                    title={corner.label}
+                  >
+                    <CornerIcon corner={corner.value} />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+          {!selectedTextLayer.printZoneCorner && (
+            <div className={styles.setupBlock}>
+              <SliderRow
+                label="Vertical position"
+                displayValue={Math.round(selectedTextLayer.yPct * 100)}
+                min={0}
+                max={100}
+                value={Math.round(selectedTextLayer.yPct * 100)}
+                disabled={backgroundControlsLocked}
+                onNudgeDown={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
+                onNudgeUp={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
+                onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { yPct: v / 100 })}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

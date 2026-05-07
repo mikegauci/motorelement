@@ -1,3 +1,5 @@
+export type PrintZoneCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+
 export interface TextLayer {
   id: string
   text: string
@@ -11,6 +13,9 @@ export interface TextLayer {
   color: string
   shadow: 'off' | 'black' | 'white'
   visible: boolean
+  printZoneCorner: PrintZoneCorner | null
+  printZonePreviousXPct?: number
+  printZonePreviousYPct?: number
 }
 
 export interface Revision {

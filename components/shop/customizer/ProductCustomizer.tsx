@@ -15,8 +15,9 @@ import {
 import {
   readFileAsDataUrl,
   compressImageDataUrl,
+  getPrintZoneCornerTextPosition,
 } from './helpers'
-import type { FontOption } from './types'
+import type { FontOption, PrintZoneCorner } from './types'
 
 import VehicleInputForm from './VehicleInputForm'
 import BackgroundPresets from './BackgroundPresets'
@@ -45,6 +46,10 @@ export default function ProductCustomizer() {
     setTextPlacement,
     setArtworkOnlyDataUrl,
     setTextOnlyDataUrl,
+    productType,
+    mockupPlacement,
+    mockupBaseNaturalWidth,
+    mockupBaseNaturalHeight,
   } = useCustomizer()
 
   // ---- Vehicle input state (owned by this component) ----
@@ -139,8 +144,24 @@ export default function ProductCustomizer() {
     selectedTextLayerId: textLayerHook.selectedTextLayerId,
     updateTextLayer: textLayerHook.updateTextLayer,
     backgroundControlsLocked, showResults, desktopDragEnabled,
-    textPlacement,
+    textPlacement, artworkSide, productType, mockupPlacement,
+    mockupBaseNaturalWidth, mockupBaseNaturalHeight,
   })
+
+  function getPrintZoneCornerPosition(corner: PrintZoneCorner) {
+    const width = 2048
+    const height = width + Math.ceil(width * 0.22)
+    const side = textPlacement === 'opposite'
+      ? (artworkSide === 'front' ? 'back' : 'front')
+      : artworkSide
+    return getPrintZoneCornerTextPosition(width, height, corner, {
+      productType,
+      side,
+      placement: mockupPlacement,
+      mockupBaseNaturalWidth,
+      mockupBaseNaturalHeight,
+    })
+  }
 
   const mobileResultDockSrc = mockupThumbnailUrl || viewingUrl
 
@@ -525,6 +546,7 @@ export default function ProductCustomizer() {
                             onRemoveTextLayer={textLayerHook.removeTextLayer}
                             onMoveTextLayer={textLayerHook.moveTextLayer}
                             onNudgeTextFontSize={textLayerHook.nudgeTextFontSize}
+                            getPrintZoneCornerPosition={getPrintZoneCornerPosition}
                           />
                         )}
                       </>

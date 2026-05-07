@@ -1,14 +1,15 @@
 'use client'
 
 import { useRef, useEffect, useState, type ReactNode } from 'react'
-import type { TextLayer } from '@/components/shop/customizer/types'
+import type { MockupPlacement, TextLayer } from '@/components/shop/customizer/types'
 import {
   loadImageElement,
   drawCompositeContent,
   getTextLayerBounds,
+  getPrintZoneCornerTextPosition,
   clampAdjust,
 } from '@/components/shop/customizer/helpers'
-import { useCustomizer, type TextPlacement } from '@/components/shop/customizer/CustomizerContext'
+import { useCustomizer, type ArtworkSide, type TextPlacement } from '@/components/shop/customizer/CustomizerContext'
 
 const COMPOSITE_EXPORT_SIZE = 2048
 function compositeCanvasHeight(layoutW: number) {
@@ -38,6 +39,11 @@ interface CompositeCanvasDeps {
   showResults: boolean
   desktopDragEnabled: boolean
   textPlacement: TextPlacement
+  artworkSide: ArtworkSide
+  productType: string
+  mockupPlacement: MockupPlacement
+  mockupBaseNaturalWidth: number | null
+  mockupBaseNaturalHeight: number | null
 }
 
 export function useCompositeCanvas(deps: CompositeCanvasDeps) {
@@ -55,6 +61,11 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
   const compositionZoomRef = useRef(1)
   const bgScaleRef = useRef(1)
   const textPlacementRef = useRef<TextPlacement>('same')
+  const artworkSideRef = useRef<ArtworkSide>('front')
+  const productTypeRef = useRef('t-shirt')
+  const mockupPlacementRef = useRef<MockupPlacement>({ xPct: 0.5, yPct: 0.5, scale: 1 })
+  const mockupBaseNaturalWidthRef = useRef<number | null>(null)
+  const mockupBaseNaturalHeightRef = useRef<number | null>(null)
   const artworkOnlyCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const textOnlyCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const resultCardRef = useRef<HTMLDivElement>(null)
@@ -113,13 +124,43 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
 
   useEffect(() => {
     textPlacementRef.current = deps.textPlacement
+    artworkSideRef.current = deps.artworkSide
+    productTypeRef.current = deps.productType
+    mockupPlacementRef.current = deps.mockupPlacement
+    mockupBaseNaturalWidthRef.current = deps.mockupBaseNaturalWidth
+    mockupBaseNaturalHeightRef.current = deps.mockupBaseNaturalHeight
     if (deps.textPlacement === 'same') {
       // Clear stale split exports so the mockup falls back to compositeDataUrl.
       setArtworkOnlyDataUrl(null)
       setTextOnlyDataUrl(null)
     }
     schedulePaint()
-  }, [deps.textPlacement, setArtworkOnlyDataUrl, setTextOnlyDataUrl])
+  }, [
+    deps.textPlacement,
+    deps.artworkSide,
+    deps.productType,
+    deps.mockupPlacement,
+    deps.mockupBaseNaturalWidth,
+    deps.mockupBaseNaturalHeight,
+    setArtworkOnlyDataUrl,
+    setTextOnlyDataUrl,
+  ])
+
+  function getPrintZoneSide() {
+    return textPlacementRef.current === 'opposite'
+      ? (artworkSideRef.current === 'front' ? 'back' : 'front')
+      : artworkSideRef.current
+  }
+
+  function getPrintZoneCornerOptions() {
+    return {
+      productType: productTypeRef.current,
+      side: getPrintZoneSide(),
+      placement: mockupPlacementRef.current,
+      mockupBaseNaturalWidth: mockupBaseNaturalWidthRef.current,
+      mockupBaseNaturalHeight: mockupBaseNaturalHeightRef.current,
+    }
+  }
 
   // Canvas paint loop
   useEffect(() => {
@@ -150,6 +191,11 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
         carScale: carScaleRef.current, textLayers: deps.textLayersRef.current ?? [],
         compositionZoom: compositionZoomRef.current,
         bgScale: bgScaleRef.current,
+        productType: productTypeRef.current,
+        mockupPlacement: mockupPlacementRef.current,
+        printZoneSide: getPrintZoneSide(),
+        mockupBaseNaturalWidth: mockupBaseNaturalWidthRef.current,
+        mockupBaseNaturalHeight: mockupBaseNaturalHeightRef.current,
       }
       drawCompositeContent(ctx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, sharedOpts)
       try {
@@ -249,7 +295,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       if (activeLayer && pointer) {
         const ctx = canvas.getContext('2d', { alpha: true })
         if (ctx) {
-          const bounds = getTextLayerBounds(ctx, canvas.width, activeLayer)
+          const bounds = getTextLayerBounds(ctx, canvas.width, activeLayer, getPrintZoneCornerOptions())
           if (bounds) {
             const pad = Math.max(10, canvas.width * 0.015)
             const inBounds =
@@ -257,11 +303,15 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
               pointer.y >= bounds.top - pad && pointer.y <= bounds.top + bounds.height + pad
             if (inBounds) {
               const drag = textDragRef.current
+              const anchorPosition = activeLayer.printZoneCorner
+                ? getPrintZoneCornerTextPosition(canvas.width, canvas.height, activeLayer.printZoneCorner, getPrintZoneCornerOptions())
+                : null
               drag.active = true; drag.pointerId = e.pointerId; drag.layerId = activeLayer.id
               drag.startPointerX = pointer.x; drag.startPointerY = pointer.y
               drag.startSize = Math.max(1, canvas.width)
               drag.startHeight = Math.max(1, canvas.height)
-              drag.startXPct = activeLayer.xPct; drag.startYPct = activeLayer.yPct
+              drag.startXPct = anchorPosition?.xPct ?? activeLayer.xPct
+              drag.startYPct = anchorPosition?.yPct ?? activeLayer.yPct
               stage.setPointerCapture?.(e.pointerId)
               return
             }
@@ -282,6 +332,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       const pointer = getCompositePointerPixel(e)
       if (!pointer || !tDrag.layerId) return
       deps.updateTextLayer(tDrag.layerId, {
+        printZoneCorner: null,
         xPct: tDrag.startXPct + (pointer.x - tDrag.startPointerX) / tDrag.startSize,
         yPct: tDrag.startYPct + (pointer.y - tDrag.startPointerY) / tDrag.startHeight,
       })

@@ -21,6 +21,7 @@ export default function MockupPreview() {
     textPlacement,
     mockupViewSide,
     setMockupViewSide,
+    setMockupBaseNaturalSize,
   } = useCustomizer()
 
   const hasBothSides = textPlacement === 'opposite' && !!textOnlyDataUrl
@@ -156,6 +157,7 @@ export default function MockupPreview() {
   useEffect(() => {
     if (!tshirtBaseImage) {
       baseImgRef.current = null
+      setMockupBaseNaturalSize(null)
       setLoaded(false)
       paint()
       return
@@ -164,16 +166,18 @@ export default function MockupPreview() {
     loadImageElement(tshirtBaseImage).then((img) => {
       if (cancelled) return
       baseImgRef.current = img
+      setMockupBaseNaturalSize({ width: img.naturalWidth, height: img.naturalHeight })
       setLoaded(true)
       paint()
     }).catch(() => {
       if (cancelled) return
       baseImgRef.current = null
+      setMockupBaseNaturalSize(null)
       setLoaded(false)
       paint()
     })
     return () => { cancelled = true }
-  }, [tshirtBaseImage, paint])
+  }, [tshirtBaseImage, paint, setMockupBaseNaturalSize])
 
   // Load artwork/composite overlay image
   useEffect(() => {

@@ -1,8 +1,14 @@
-import type { TextLayer } from './types'
-import type { Placement } from './placement'
+import type { PrintZoneCorner, TextLayer } from './types'
+import {
+  getArtworkRect,
+  getMockupPrintZoneRect,
+  letterboxRect,
+  type Placement,
+} from './placement'
 import {
   COMPOSITE,
   CORNER_CLEAR_RADIUS_FR,
+  getMockupPrintZone,
   getPrintExportMultiplier,
   type PrintExportMultiplierOverrides,
 } from './constants'
@@ -25,6 +31,7 @@ export function createTextLayer(id: string, defaultFontFamily = 'Arial'): TextLa
     color: '#ffffff',
     shadow: 'black',
     visible: true,
+    printZoneCorner: null,
   }
 }
 
@@ -38,6 +45,9 @@ export function normalizeTextLayer(layer: any, fallbackId: string): TextLayer {
   if (!layer || typeof layer !== 'object') return next
   const layerRest = { ...layer } as Record<string, unknown>
   delete layerRest.alignY
+  delete layerRest.printZoneTopRight
+  const printZoneCorner = getPrintZoneCorner(layer.printZoneCorner)
+    ?? (layer.printZoneTopRight === true ? 'top-right' : null)
   return {
     ...next,
     ...layerRest,
@@ -56,7 +66,25 @@ export function normalizeTextLayer(layer: any, fallbackId: string): TextLayer {
     color: incomingColor,
     shadow: ['off', 'black', 'white'].includes(layer.shadow) ? layer.shadow : next.shadow,
     visible: layer.visible !== false,
+    printZoneCorner,
+    printZonePreviousXPct:
+      typeof layer.printZonePreviousXPct === 'number'
+        ? clampTextPct(layer.printZonePreviousXPct)
+        : undefined,
+    printZonePreviousYPct:
+      typeof layer.printZonePreviousYPct === 'number'
+        ? clampTextPct(layer.printZonePreviousYPct)
+        : undefined,
   }
+}
+
+function getPrintZoneCorner(value: unknown): PrintZoneCorner | null {
+  return value === 'top-left' ||
+    value === 'top-right' ||
+    value === 'bottom-left' ||
+    value === 'bottom-right'
+    ? value
+    : null
 }
 
 export function clampTextPct(v: number) {
@@ -106,15 +134,74 @@ function getTextLayerCenterY(ctx: CanvasRenderingContext2D, layer: TextLayer, te
   return minY + clampTextPct(layer.yPct) * Math.max(0, maxY - minY)
 }
 
-function drawTextLayer(ctx: CanvasRenderingContext2D, size: number, layer: TextLayer) {
+export interface PrintZoneCornerAnchorOptions {
+  productType?: string
+  side: 'front' | 'back'
+  placement: Placement
+  mockupBaseNaturalWidth?: number | null
+  mockupBaseNaturalHeight?: number | null
+}
+
+function getPrintZoneCornerAnchor(
+  canvasWidth: number,
+  canvasHeight: number,
+  corner: PrintZoneCorner | null,
+  options?: PrintZoneCornerAnchorOptions,
+) {
+  if (!corner) return null
+  if (!options) return null
+  const { mockupBaseNaturalWidth, mockupBaseNaturalHeight } = options
+  if (!mockupBaseNaturalWidth || !mockupBaseNaturalHeight) return null
+  if (mockupBaseNaturalWidth <= 0 || mockupBaseNaturalHeight <= 0) return null
+  const baseRect = letterboxRect(mockupBaseNaturalWidth, mockupBaseNaturalHeight, 1)
+  const zoneRect = getMockupPrintZoneRect(baseRect, getMockupPrintZone(options.productType, options.side))
+  const artworkRect = getArtworkRect(zoneRect, canvasWidth / canvasHeight, options.placement)
+  if (artworkRect.w <= 0 || artworkRect.h <= 0) return null
+  const basePad = Math.min(zoneRect.w, zoneRect.h)
+  const xPad = basePad * 0.05
+  const yPad = basePad * 0.02
+  const isLeft = corner.endsWith('left')
+  const isTop = corner.startsWith('top')
+  return {
+    x: canvasWidth * (((isLeft ? zoneRect.x + xPad : zoneRect.x + zoneRect.w - xPad) - artworkRect.x) / artworkRect.w),
+    y: canvasHeight * (((isTop ? zoneRect.y + yPad : zoneRect.y + zoneRect.h - yPad) - artworkRect.y) / artworkRect.h),
+    horizontal: isLeft ? 'left' as const : 'right' as const,
+    vertical: isTop ? 'top' as const : 'bottom' as const,
+  }
+}
+
+export function getPrintZoneCornerTextPosition(
+  canvasWidth: number,
+  canvasHeight: number,
+  corner: PrintZoneCorner | null,
+  options?: PrintZoneCornerAnchorOptions,
+) {
+  const anchor = getPrintZoneCornerAnchor(canvasWidth, canvasHeight, corner, options)
+  if (!anchor) return null
+  return {
+    xPct: clampTextPct(anchor.x / Math.max(1, canvasWidth)),
+    yPct: clampTextPct(anchor.y / Math.max(1, canvasHeight)),
+  }
+}
+
+function drawTextLayer(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  layer: TextLayer,
+  printZoneCornerOptions?: PrintZoneCornerAnchorOptions,
+) {
   if (!layer?.visible) return
   const text = (layer.text || '').trim()
   if (!text) return
-  const x = clampTextPct(layer.xPct) * size
   const px = applyTextLayerFont(ctx, size, layer)
-  const y = getTextLayerCenterY(ctx, layer, getTextLayerHeight(ctx, text, px))
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
+  const height = getTextLayerHeight(ctx, text, px)
+  const anchor = layer.printZoneCorner
+    ? getPrintZoneCornerAnchor(ctx.canvas.width, ctx.canvas.height, layer.printZoneCorner, printZoneCornerOptions)
+    : null
+  const x = anchor ? anchor.x : clampTextPct(layer.xPct) * size
+  const y = anchor ? anchor.y : getTextLayerCenterY(ctx, layer, height)
+  ctx.textAlign = anchor ? anchor.horizontal : 'center'
+  ctx.textBaseline = anchor ? anchor.vertical : 'middle'
   ctx.fillStyle = layer.color || '#ffffff'
   ctx.shadowColor = 'transparent'
   ctx.shadowBlur = 0
@@ -131,29 +218,49 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, size: number, layer: TextL
   if (layer.underline) {
     const metrics = ctx.measureText(text)
     const textW = metrics.width
-    const lineY = y + px * 0.4
+    const lineY = anchor
+      ? anchor.vertical === 'top' ? y + px * 0.92 : y - px * 0.08
+      : y + px * 0.4
+    const left = anchor
+      ? anchor.horizontal === 'left' ? x : x - textW
+      : x - textW / 2
+    const right = anchor
+      ? anchor.horizontal === 'left' ? x + textW : x
+      : x + textW / 2
     ctx.strokeStyle = layer.color || '#ffffff'
     ctx.lineWidth = Math.max(1, Math.round(px * 0.05))
     ctx.lineCap = 'round'
     ctx.beginPath()
-    ctx.moveTo(x - textW / 2, lineY)
-    ctx.lineTo(x + textW / 2, lineY)
+    ctx.moveTo(left, lineY)
+    ctx.lineTo(right, lineY)
     ctx.stroke()
   }
 }
 
-export function getTextLayerBounds(ctx: CanvasRenderingContext2D, size: number, layer: TextLayer) {
+export function getTextLayerBounds(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  layer: TextLayer,
+  printZoneCornerOptions?: PrintZoneCornerAnchorOptions,
+) {
   if (!layer?.visible) return null
   const text = (layer.text || '').trim()
   if (!text) return null
-  const x = clampTextPct(layer.xPct) * size
   const px = applyTextLayerFont(ctx, size, layer)
   const metrics = ctx.measureText(text)
   const width = Math.max(metrics.width, px * 0.5)
   const height = getTextLayerHeight(ctx, text, px)
-  const y = getTextLayerCenterY(ctx, layer, height)
-  const left = x - width / 2
-  const top = y - height / 2
+  const anchor = layer.printZoneCorner
+    ? getPrintZoneCornerAnchor(ctx.canvas.width, ctx.canvas.height, layer.printZoneCorner, printZoneCornerOptions)
+    : null
+  const x = anchor ? anchor.x : clampTextPct(layer.xPct) * size
+  const y = anchor ? anchor.y : getTextLayerCenterY(ctx, layer, height)
+  const left = anchor
+    ? anchor.horizontal === 'left' ? x : x - width
+    : x - width / 2
+  const top = anchor
+    ? anchor.vertical === 'top' ? y : y - height
+    : y - height / 2
   return { left, top, width, height }
 }
 
@@ -355,6 +462,11 @@ interface CompositeOpts {
   bgScale?: number
   omitArtwork?: boolean
   omitText?: boolean
+  productType?: string
+  mockupPlacement?: Placement
+  printZoneSide?: 'front' | 'back'
+  mockupBaseNaturalWidth?: number | null
+  mockupBaseNaturalHeight?: number | null
 }
 
 export function clampBgScale(v: number) {
@@ -378,6 +490,11 @@ export function drawCompositeContent(
     bgScale: bgScaleVal = 1,
     omitArtwork = false,
     omitText = false,
+    productType,
+    mockupPlacement,
+    printZoneSide = 'front',
+    mockupBaseNaturalWidth,
+    mockupBaseNaturalHeight,
   } = opts
   const safeCompositionZoom = clampCompositeZoom(compositionZoom)
   const safeBgScale = clampBgScale(bgScaleVal)
@@ -451,9 +568,18 @@ export function drawCompositeContent(
   }
 
   if (!omitText) {
+    const printZoneCornerOptions = mockupPlacement
+      ? {
+          productType,
+          side: printZoneSide,
+          placement: mockupPlacement,
+          mockupBaseNaturalWidth,
+          mockupBaseNaturalHeight,
+        }
+      : undefined
     for (const layer of layers) {
       ctx.save()
-      drawTextLayer(ctx, size, layer)
+      drawTextLayer(ctx, size, layer, printZoneCornerOptions)
       ctx.restore()
     }
   }
