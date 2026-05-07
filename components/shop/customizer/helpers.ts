@@ -185,10 +185,11 @@ function getPrintZoneCornerAnchor(
   const basePad = Math.min(zoneRect.w, zoneRect.h)
   const xPad = basePad * 0.05
   const yPad = basePad * 0.02
+  const xPadLeft = xPad + basePad * 0.02
   const isLeft = corner.endsWith('left')
   const isTop = corner.startsWith('top')
   return {
-    x: canvasWidth * (((isLeft ? zoneRect.x + xPad : zoneRect.x + zoneRect.w - xPad) - artworkRect.x) / artworkRect.w),
+    x: canvasWidth * (((isLeft ? zoneRect.x + xPadLeft : zoneRect.x + zoneRect.w - xPad) - artworkRect.x) / artworkRect.w),
     y: canvasHeight * (((isTop ? zoneRect.y + yPad : zoneRect.y + zoneRect.h - yPad) - artworkRect.y) / artworkRect.h),
     horizontal: isLeft ? 'left' as const : 'right' as const,
     vertical: isTop ? 'top' as const : 'bottom' as const,
