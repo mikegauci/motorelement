@@ -282,6 +282,21 @@ export default function TextLayerEditor({
               onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { fontSizePct: v / 100 })}
             />
           </div>
+          {!selectedTextLayer.printZoneCorner && (
+            <div className={styles.setupBlock}>
+              <SliderRow
+                label="Vertical position"
+                displayValue={Math.round(selectedTextLayer.yPct * 100)}
+                min={0}
+                max={100}
+                value={Math.round(selectedTextLayer.yPct * 100)}
+                disabled={backgroundControlsLocked}
+                onNudgeDown={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
+                onNudgeUp={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
+                onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { yPct: v / 100 })}
+              />
+            </div>
+          )}
           <div className={styles.setupBlock}>
             <button
               type="button"
@@ -316,21 +331,6 @@ export default function TextLayerEditor({
               </div>
             )}
           </div>
-          {!selectedTextLayer.printZoneCorner && (
-            <div className={styles.setupBlock}>
-              <SliderRow
-                label="Vertical position"
-                displayValue={Math.round(selectedTextLayer.yPct * 100)}
-                min={0}
-                max={100}
-                value={Math.round(selectedTextLayer.yPct * 100)}
-                disabled={backgroundControlsLocked}
-                onNudgeDown={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
-                onNudgeUp={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
-                onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { yPct: v / 100 })}
-              />
-            </div>
-          )}
           <div className={styles.setupBlock}>
             <button
               type="button"
