@@ -1,6 +1,7 @@
 'use client'
 
-import type { TextLayer, FontOption, PrintZoneCorner } from './types'
+import Image from 'next/image'
+import type { TextLayer, FontOption, PrintZoneCorner, PrintZoneCornerImage } from './types'
 import styles from './styles'
 import SliderRow from './parts/SliderRow'
 
@@ -17,6 +18,10 @@ interface TextLayerEditorProps {
   onMoveTextLayer: (layerId: string, direction: number) => void
   onNudgeTextFontSize: (layerId: string, delta: number) => void
   getPrintZoneCornerPosition: (corner: PrintZoneCorner) => { xPct: number; yPct: number } | null
+  printZoneCornerImage: PrintZoneCornerImage
+  onUpdatePrintZoneCornerImage: (patch: Partial<PrintZoneCornerImage>) => void
+  onUploadCornerImage: () => void
+  onRemoveCornerImage: () => void
 }
 
 const CORNER_OPTIONS: Array<{ value: PrintZoneCorner; label: string }> = [
@@ -58,6 +63,10 @@ export default function TextLayerEditor({
   onMoveTextLayer,
   onNudgeTextFontSize,
   getPrintZoneCornerPosition,
+  printZoneCornerImage,
+  onUpdatePrintZoneCornerImage,
+  onUploadCornerImage,
+  onRemoveCornerImage,
   setSelectedTextLayerId,
 }: TextLayerEditorProps) {
   function setPrintZoneCorner(layer: TextLayer, corner: PrintZoneCorner) {
@@ -88,6 +97,10 @@ export default function TextLayerEditor({
       printZonePreviousYPct: layer.yPct,
       ...(position ?? {}),
     })
+  }
+
+  function setCornerImageCorner(corner: PrintZoneCorner) {
+    onUpdatePrintZoneCornerImage({ corner })
   }
 
   return (
@@ -318,6 +331,96 @@ export default function TextLayerEditor({
               />
             </div>
           )}
+          <div className={styles.setupBlock}>
+            <button
+              type="button"
+              className={`${styles.printZoneCheckboxLabel} ${printZoneCornerImage.enabled ? styles.printZoneCheckboxLabelActive : ''}`}
+              onClick={() => onUpdatePrintZoneCornerImage({ enabled: !printZoneCornerImage.enabled })}
+              disabled={backgroundControlsLocked}
+            >
+              <input
+                type="checkbox"
+                className={styles.printZoneCheckbox}
+                checked={printZoneCornerImage.enabled}
+                readOnly
+                tabIndex={-1}
+              />
+              <span>Add image in corner?</span>
+            </button>
+            {printZoneCornerImage.enabled && (
+              <>
+                {printZoneCornerImage.src ? (
+                  <div className={styles.printZoneImagePreviewRow}>
+                    <Image
+                      src={printZoneCornerImage.src}
+                      alt="Corner image"
+                      width={64}
+                      height={64}
+                      unoptimized
+                      className={styles.printZoneImagePreview}
+                    />
+                    <div className={styles.printZoneImageActions}>
+                      <button
+                        type="button"
+                        className={styles.btn}
+                        onClick={onUploadCornerImage}
+                        disabled={backgroundControlsLocked}
+                      >
+                        Replace image
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.btn}
+                        onClick={onRemoveCornerImage}
+                        disabled={backgroundControlsLocked}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.printZoneImageUpload}
+                    onClick={onUploadCornerImage}
+                    disabled={backgroundControlsLocked}
+                  >
+                    Upload corner image
+                  </button>
+                )}
+                {printZoneCornerImage.src && (
+                  <>
+                    <div className={styles.printZoneCornerGrid}>
+                      {CORNER_OPTIONS.map((corner) => (
+                        <button
+                          key={corner.value}
+                          type="button"
+                          className={`${styles.printZoneCornerBtn} ${printZoneCornerImage.corner === corner.value ? styles.printZoneCornerBtnActive : ''}`}
+                          onClick={() => setCornerImageCorner(corner.value)}
+                          disabled={backgroundControlsLocked}
+                          aria-label={corner.label}
+                          title={corner.label}
+                        >
+                          <CornerIcon corner={corner.value} />
+                        </button>
+                      ))}
+                    </div>
+                    <SliderRow
+                      label="Image size"
+                      displayValue={`${Math.round(printZoneCornerImage.sizePct * 100)}%`}
+                      min={5}
+                      max={35}
+                      value={Math.round(printZoneCornerImage.sizePct * 100)}
+                      disabled={backgroundControlsLocked}
+                      onNudgeDown={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct - 0.01 })}
+                      onNudgeUp={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct + 0.01 })}
+                      onChange={(v) => onUpdatePrintZoneCornerImage({ sizePct: v / 100 })}
+                    />
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

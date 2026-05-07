@@ -1,5 +1,12 @@
 export type PrintZoneCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
+export interface PrintZoneCornerImage {
+  enabled: boolean
+  src: string | null
+  corner: PrintZoneCorner
+  sizePct: number
+}
+
 export interface TextLayer {
   id: string
   text: string

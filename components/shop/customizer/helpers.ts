@@ -1,4 +1,4 @@
-import type { PrintZoneCorner, TextLayer } from './types'
+import type { PrintZoneCorner, PrintZoneCornerImage, TextLayer } from './types'
 import {
   getArtworkRect,
   getMockupPrintZoneRect,
@@ -87,6 +87,31 @@ function getPrintZoneCorner(value: unknown): PrintZoneCorner | null {
     : null
 }
 
+export function createPrintZoneCornerImage(): PrintZoneCornerImage {
+  return {
+    enabled: false,
+    src: null,
+    corner: 'top-right',
+    sizePct: 0.12,
+  }
+}
+
+export function clampCornerImageSizePct(v: number) {
+  return Math.min(0.35, Math.max(0.05, v))
+}
+
+export function normalizePrintZoneCornerImage(value: unknown): PrintZoneCornerImage {
+  const next = createPrintZoneCornerImage()
+  if (!value || typeof value !== 'object') return next
+  const image = value as Record<string, unknown>
+  return {
+    enabled: image.enabled === true,
+    src: typeof image.src === 'string' && image.src ? image.src : null,
+    corner: getPrintZoneCorner(image.corner) ?? next.corner,
+    sizePct: typeof image.sizePct === 'number' ? clampCornerImageSizePct(image.sizePct) : next.sizePct,
+  }
+}
+
 export function clampTextPct(v: number) {
   return Math.min(1, Math.max(0, v))
 }
@@ -167,6 +192,8 @@ function getPrintZoneCornerAnchor(
     y: canvasHeight * (((isTop ? zoneRect.y + yPad : zoneRect.y + zoneRect.h - yPad) - artworkRect.y) / artworkRect.h),
     horizontal: isLeft ? 'left' as const : 'right' as const,
     vertical: isTop ? 'top' as const : 'bottom' as const,
+    printZoneWidth: canvasWidth * (zoneRect.w / artworkRect.w),
+    printZoneHeight: canvasHeight * (zoneRect.h / artworkRect.h),
   }
 }
 
@@ -262,6 +289,52 @@ export function getTextLayerBounds(
     ? anchor.vertical === 'top' ? y : y - height
     : y - height / 2
   return { left, top, width, height }
+}
+
+function getPrintZoneCornerImageRect(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  cornerImage: PrintZoneCornerImage,
+  printZoneCornerOptions?: PrintZoneCornerAnchorOptions,
+) {
+  if (!cornerImage.enabled || !cornerImage.src) return null
+  const anchor = getPrintZoneCornerAnchor(
+    ctx.canvas.width,
+    ctx.canvas.height,
+    cornerImage.corner,
+    printZoneCornerOptions,
+  )
+  if (!anchor) return null
+  const naturalW = image.naturalWidth || image.width
+  const naturalH = image.naturalHeight || image.height
+  if (naturalW <= 0 || naturalH <= 0) return null
+  const sizePct = clampCornerImageSizePct(cornerImage.sizePct)
+  const maxW = anchor.printZoneWidth * sizePct
+  const maxH = anchor.printZoneHeight * sizePct
+  let width = maxW
+  let height = width * (naturalH / naturalW)
+  if (height > maxH) {
+    height = maxH
+    width = height * (naturalW / naturalH)
+  }
+  return {
+    x: anchor.horizontal === 'left' ? anchor.x : anchor.x - width,
+    y: anchor.vertical === 'top' ? anchor.y : anchor.y - height,
+    width,
+    height,
+  }
+}
+
+function drawPrintZoneCornerImage(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement | null | undefined,
+  cornerImage: PrintZoneCornerImage | null | undefined,
+  printZoneCornerOptions?: PrintZoneCornerAnchorOptions,
+) {
+  if (!image || !cornerImage) return
+  const rect = getPrintZoneCornerImageRect(ctx, image, cornerImage, printZoneCornerOptions)
+  if (!rect) return
+  ctx.drawImage(image, rect.x, rect.y, rect.width, rect.height)
 }
 
 export function getLayerId() {
@@ -467,6 +540,8 @@ interface CompositeOpts {
   printZoneSide?: 'front' | 'back'
   mockupBaseNaturalWidth?: number | null
   mockupBaseNaturalHeight?: number | null
+  printZoneCornerImage?: PrintZoneCornerImage
+  printZoneCornerImageElement?: HTMLImageElement | null
 }
 
 export function clampBgScale(v: number) {
@@ -495,6 +570,8 @@ export function drawCompositeContent(
     printZoneSide = 'front',
     mockupBaseNaturalWidth,
     mockupBaseNaturalHeight,
+    printZoneCornerImage,
+    printZoneCornerImageElement,
   } = opts
   const safeCompositionZoom = clampCompositeZoom(compositionZoom)
   const safeBgScale = clampBgScale(bgScaleVal)
@@ -582,6 +659,9 @@ export function drawCompositeContent(
       drawTextLayer(ctx, size, layer, printZoneCornerOptions)
       ctx.restore()
     }
+    ctx.save()
+    drawPrintZoneCornerImage(ctx, printZoneCornerImageElement, printZoneCornerImage, printZoneCornerOptions)
+    ctx.restore()
   }
 }
 

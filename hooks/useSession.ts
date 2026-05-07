@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { TextLayer, Revision, SavedCustomBackground } from '@/components/shop/customizer/types'
+import type { PrintZoneCornerImage, TextLayer, Revision, SavedCustomBackground } from '@/components/shop/customizer/types'
 import type { ArtworkSide, TextPlacement } from '@/components/shop/customizer/CustomizerContext'
 import { SESSION_KEY, PENDING_GENERATION_KEY, PENDING_BACKGROUND_KEY } from '@/components/shop/customizer/constants'
-import { normalizeTextLayer, clampCompositeZoom, clampBgScale } from '@/components/shop/customizer/helpers'
+import { normalizeTextLayer, normalizePrintZoneCornerImage, clampCompositeZoom, clampBgScale } from '@/components/shop/customizer/helpers'
 import { readPending } from './useGenerationJob'
 
 interface SessionState {
@@ -28,6 +28,7 @@ interface SessionState {
   bgScale: number
   textLayers: TextLayer[]
   selectedTextLayerId: string | null
+  printZoneCornerImage: PrintZoneCornerImage
   artworkSide: ArtworkSide
   addTextEnabled: boolean
   textPlacement: TextPlacement
@@ -54,6 +55,7 @@ interface SessionSetters {
   setBgScale: (v: number) => void
   setTextLayers: (v: TextLayer[]) => void
   setSelectedTextLayerId: (v: string | null) => void
+  setPrintZoneCornerImage: (v: PrintZoneCornerImage) => void
   setArtworkSide: (v: ArtworkSide) => void
   setAddTextEnabled: (v: boolean) => void
   setTextPlacement: (v: TextPlacement) => void
@@ -113,6 +115,7 @@ export function useSession(state: SessionState, setters: SessionSetters) {
         if (typeof s.selectedTextLayerId === 'string' || s.selectedTextLayerId === null) {
           setters.setSelectedTextLayerId(s.selectedTextLayerId ?? null)
         }
+        setters.setPrintZoneCornerImage(normalizePrintZoneCornerImage(s.printZoneCornerImage))
         if (s.artworkSide === 'front' || s.artworkSide === 'back') {
           setters.setArtworkSide(s.artworkSide)
         }

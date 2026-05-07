@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useState, type ReactNode } from 'react'
-import type { MockupPlacement, TextLayer } from '@/components/shop/customizer/types'
+import type { MockupPlacement, PrintZoneCornerImage, TextLayer } from '@/components/shop/customizer/types'
 import {
   loadImageElement,
   drawCompositeContent,
@@ -44,6 +44,7 @@ interface CompositeCanvasDeps {
   mockupPlacement: MockupPlacement
   mockupBaseNaturalWidth: number | null
   mockupBaseNaturalHeight: number | null
+  printZoneCornerImage: PrintZoneCornerImage
 }
 
 export function useCompositeCanvas(deps: CompositeCanvasDeps) {
@@ -66,6 +67,8 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
   const mockupPlacementRef = useRef<MockupPlacement>({ xPct: 0.5, yPct: 0.5, scale: 1 })
   const mockupBaseNaturalWidthRef = useRef<number | null>(null)
   const mockupBaseNaturalHeightRef = useRef<number | null>(null)
+  const printZoneCornerImageRef = useRef<PrintZoneCornerImage>(deps.printZoneCornerImage)
+  const printZoneCornerImageElementRef = useRef<HTMLImageElement | null>(null)
   const artworkOnlyCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const textOnlyCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const resultCardRef = useRef<HTMLDivElement>(null)
@@ -121,6 +124,31 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
   }, [deps.carAdjustXPct, deps.carAdjustYPct, deps.carScale, deps.compositionZoom, deps.bgScale])
 
   useEffect(() => { schedulePaint() }, [deps.textLayers])
+
+  useEffect(() => {
+    printZoneCornerImageRef.current = deps.printZoneCornerImage
+    schedulePaint()
+  }, [deps.printZoneCornerImage])
+
+  useEffect(() => {
+    const src = deps.printZoneCornerImage.enabled ? deps.printZoneCornerImage.src : null
+    if (!src) {
+      printZoneCornerImageElementRef.current = null
+      schedulePaint()
+      return
+    }
+    let cancelled = false
+    loadImageElement(src).then((img) => {
+      if (cancelled) return
+      printZoneCornerImageElementRef.current = img
+      schedulePaint()
+    }).catch(() => {
+      if (cancelled) return
+      printZoneCornerImageElementRef.current = null
+      schedulePaint()
+    })
+    return () => { cancelled = true }
+  }, [deps.printZoneCornerImage.enabled, deps.printZoneCornerImage.src])
 
   useEffect(() => {
     textPlacementRef.current = deps.textPlacement
@@ -196,6 +224,8 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
         printZoneSide: getPrintZoneSide(),
         mockupBaseNaturalWidth: mockupBaseNaturalWidthRef.current,
         mockupBaseNaturalHeight: mockupBaseNaturalHeightRef.current,
+        printZoneCornerImage: printZoneCornerImageRef.current,
+        printZoneCornerImageElement: printZoneCornerImageElementRef.current,
       }
       drawCompositeContent(ctx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, sharedOpts)
       try {

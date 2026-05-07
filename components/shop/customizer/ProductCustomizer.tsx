@@ -16,8 +16,10 @@ import {
   readFileAsDataUrl,
   compressImageDataUrl,
   getPrintZoneCornerTextPosition,
+  createPrintZoneCornerImage,
+  clampCornerImageSizePct,
 } from './helpers'
-import type { FontOption, PrintZoneCorner } from './types'
+import type { FontOption, PrintZoneCorner, PrintZoneCornerImage } from './types'
 
 import VehicleInputForm from './VehicleInputForm'
 import BackgroundPresets from './BackgroundPresets'
@@ -82,8 +84,10 @@ export default function ProductCustomizer() {
   const [mobileDockDismissed, setMobileDockDismissed] = useState(false)
   const [customFontOptions, setCustomFontOptions] = useState<FontOption[]>([])
   const [addTextEnabled, setAddTextEnabled] = useState(false)
+  const [printZoneCornerImage, setPrintZoneCornerImage] = useState<PrintZoneCornerImage>(() => createPrintZoneCornerImage())
   const carFileRef = useRef<HTMLInputElement>(null)
   const customBackgroundFileRef = useRef<HTMLInputElement>(null)
+  const cornerImageFileRef = useRef<HTMLInputElement>(null)
   const loadedCustomFontFamiliesRef = useRef(new Set<string>())
   const mobileDockTouchStartXRef = useRef<number | null>(null)
   const mobileDockDidSwipeRef = useRef(false)
@@ -146,6 +150,7 @@ export default function ProductCustomizer() {
     backgroundControlsLocked, showResults, desktopDragEnabled,
     textPlacement, artworkSide, productType, mockupPlacement,
     mockupBaseNaturalWidth, mockupBaseNaturalHeight,
+    printZoneCornerImage,
   })
 
   function getPrintZoneCornerPosition(corner: PrintZoneCorner) {
@@ -176,6 +181,7 @@ export default function ProductCustomizer() {
       customBackgroundImageDataUrl, customBackgroundImagePreview, customBackgroundValue,
       carAdjustXPct, carAdjustYPct, carScale, compositionZoom, bgScale,
       textLayers: textLayerHook.textLayers, selectedTextLayerId: textLayerHook.selectedTextLayerId,
+      printZoneCornerImage,
       artworkSide,
       addTextEnabled,
       textPlacement,
@@ -189,6 +195,7 @@ export default function ProductCustomizer() {
       setCustomBackgroundImageDataUrl, setCustomBackgroundImagePreview, setCustomBackgroundValue,
       setCarAdjustXPct, setCarAdjustYPct, setCarScale, setCompositionZoom, setBgScale,
       setTextLayers: textLayerHook.setTextLayers, setSelectedTextLayerId: textLayerHook.setSelectedTextLayerId,
+      setPrintZoneCornerImage,
       setArtworkSide,
       setAddTextEnabled,
       setTextPlacement,
@@ -298,6 +305,35 @@ export default function ProductCustomizer() {
     })
   }
 
+  function updatePrintZoneCornerImage(patch: Partial<PrintZoneCornerImage>) {
+    setPrintZoneCornerImage((prev) => ({
+      ...prev,
+      ...patch,
+      sizePct: typeof patch.sizePct === 'number'
+        ? clampCornerImageSizePct(patch.sizePct)
+        : prev.sizePct,
+    }))
+  }
+
+  function handleCornerImageFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    readFileAsDataUrl(file, (dataUrl) => {
+      updatePrintZoneCornerImage({
+        enabled: true,
+        src: dataUrl,
+      })
+    })
+  }
+
+  function removePrintZoneCornerImage() {
+    setPrintZoneCornerImage((prev) => ({
+      ...prev,
+      src: null,
+    }))
+    if (cornerImageFileRef.current) cornerImageFileRef.current.value = ''
+  }
+
   function handleAddTextToggle(enabled: boolean) {
     setAddTextEnabled(enabled)
     if (enabled) {
@@ -307,6 +343,7 @@ export default function ProductCustomizer() {
       // Without text there is nothing to place; revert so toggling back ON
       // starts from the safe default.
       setTextPlacement('same')
+      setPrintZoneCornerImage(createPrintZoneCornerImage())
     }
   }
 
@@ -316,6 +353,7 @@ export default function ProductCustomizer() {
     try { sessionStorage.removeItem(PENDING_GENERATION_KEY); sessionStorage.removeItem(PENDING_BACKGROUND_KEY) } catch { /* ignore */ }
     if (carFileRef.current) carFileRef.current.value = ''
     if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
+    if (cornerImageFileRef.current) cornerImageFileRef.current.value = ''
     setCustomerNotes('')
     setCarImageDataUrl(null); setCarImagePreview(null)
     setVehicleLocked(false); setComposedPromptNotes(''); setTweakNotes('')
@@ -326,6 +364,7 @@ export default function ProductCustomizer() {
     setCarAdjustXPct(0); setCarAdjustYPct(0); setCarScale(1); setCompositionZoom(1); setBgScale(1)
     setArtworkSide('front')
     setAddTextEnabled(false)
+    setPrintZoneCornerImage(createPrintZoneCornerImage())
     setTextPlacement('same')
     setArtworkOnlyDataUrl(null)
     setTextOnlyDataUrl(null)
@@ -547,6 +586,10 @@ export default function ProductCustomizer() {
                             onMoveTextLayer={textLayerHook.moveTextLayer}
                             onNudgeTextFontSize={textLayerHook.nudgeTextFontSize}
                             getPrintZoneCornerPosition={getPrintZoneCornerPosition}
+                            printZoneCornerImage={printZoneCornerImage}
+                            onUpdatePrintZoneCornerImage={updatePrintZoneCornerImage}
+                            onUploadCornerImage={() => cornerImageFileRef.current?.click()}
+                            onRemoveCornerImage={removePrintZoneCornerImage}
                           />
                         )}
                       </>
@@ -598,6 +641,8 @@ export default function ProductCustomizer() {
         open={showPreviewModal}
         onClose={() => setShowPreviewModal(false)}
       />
+
+      <input ref={cornerImageFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCornerImageFile} disabled={backgroundControlsLocked} />
 
       {isErasingArtwork && viewingUrl && (
         <WhiteGapEraser
