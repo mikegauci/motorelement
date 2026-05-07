@@ -1,4 +1,5 @@
 import type { TextLayer } from './types'
+import type { Placement } from './placement'
 import { COMPOSITE, CORNER_CLEAR_RADIUS_FR } from './constants'
 
 // ---------------------------------------------------------------------------
@@ -474,13 +475,13 @@ export function joinNotes(base: string, extra: string) {
 export async function buildMockupThumbnail(
   baseSrc: string,
   artworkSrc: string,
-  placement: { xPct: number; yPct: number; scale: number },
+  placement: Placement,
   productType?: string,
   side: 'front' | 'back' = 'front'
 ): Promise<Blob> {
   const { getMockupPrintZone } = await import('./constants')
   const { letterbox, printZoneRect, drawArtworkClipped } = await import('./canvas')
-  const pz = getMockupPrintZone(productType, side)
+  const zone = getMockupPrintZone(productType, side)
 
   const [baseImg, artImg] = await Promise.all([
     loadImageElement(baseSrc),
@@ -498,7 +499,7 @@ export async function buildMockupThumbnail(
   const baseRect = letterbox(baseImg.naturalWidth, baseImg.naturalHeight, size)
   ctx.drawImage(baseImg, baseRect.x, baseRect.y, baseRect.w, baseRect.h)
 
-  const pzr = printZoneRect(baseRect, pz)
+  const pzr = printZoneRect(baseRect, zone)
   drawArtworkClipped(ctx, artImg, pzr, placement)
 
   return new Promise<Blob>((resolve, reject) => {
@@ -517,35 +518,28 @@ export async function buildMockupThumbnail(
  */
 export async function buildPrintAreaPng(
   artworkSrc: string,
-  placement: { xPct: number; yPct: number; scale: number },
+  placement: Placement,
   productType?: string
 ): Promise<Blob> {
-  const { getPrintifyPrintArea, getPrintScaleFactor, getPrintYOffsetPx } = await import('./constants')
-  const { width: paW, height: paH } = getPrintifyPrintArea(productType)
-  const printFactor = getPrintScaleFactor(productType)
-  const yOffset = getPrintYOffsetPx(productType)
+  const { getProductProfile } = await import('./constants')
+  const { getArtworkRect, getPrintAreaRect } = await import('./placement')
+  const profile = getProductProfile(productType)
+  const { width: paW, height: paH } = profile.printArea
 
   const img = await loadImageElement(artworkSrc)
 
-  // Trim transparent padding so the actual artwork drives sizing
-  const bounds = getCarAlphaBounds(img)
-  const srcX = bounds?.minX ?? 0
-  const srcY = bounds?.minY ?? 0
-  const srcW = bounds?.w ?? img.naturalWidth
-  const srcH = bounds?.h ?? img.naturalHeight
-  const artAspect = srcW / srcH
+  // Use the full PNG dimensions (no alpha trim) so the print uses the exact
+  // same aspect ratio the mockup uses. WYSIWYG.
+  const aspect = img.naturalWidth / img.naturalHeight
 
-  const artW = paW * placement.scale * printFactor
-  const artH = artW / artAspect
-  const artX = placement.xPct * paW - artW / 2
-  const artY = placement.yPct * paH - artH / 2 + yOffset
+  const art = getArtworkRect(getPrintAreaRect(profile), aspect, placement)
 
   const canvas = document.createElement('canvas')
   canvas.width = paW
   canvas.height = paH
   const ctx = canvas.getContext('2d', { alpha: true })!
   ctx.clearRect(0, 0, paW, paH)
-  ctx.drawImage(img, srcX, srcY, srcW, srcH, artX, artY, artW, artH)
+  ctx.drawImage(img, art.x, art.y, art.w, art.h)
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(

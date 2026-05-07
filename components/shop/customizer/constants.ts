@@ -56,11 +56,7 @@ export const TEXT_FONTS: FontOption[] = [
   { value: 'Tahoma', label: 'Tahoma' },
 ]
 
-/**
- * Per-color blank garment mockup images used by the Live Mockup tab instead
- * of Printify's images (which contain "Custom Print" placeholder text).
- * Keyed by side → product type → colour slug → image path in public/.
- */
+
 const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string, string>>> = {
   front: {
     't-shirt': {
@@ -122,67 +118,46 @@ export function getBlankMockupImage(
   return typeMap[slug] ?? null
 }
 
-/**
- * Print zone on the product mockup (fraction of image dimensions).
- * Must visually match where Printify places the print on the garment.
- * Front and back are tracked separately because the back print sits higher
- * up on the garment than the front chest print.
- */
-type PrintZone = { xPct: number; yPct: number; widthPct: number; heightPct: number }
+export interface ProductProfile {
+  mockupZone: Record<'front' | 'back', {
+    xPct: number
+    yPct: number
+    widthPct: number
+  }>
+  printArea: { width: number; height: number }
+}
 
-const MOCKUP_PRINT_ZONES: Record<string, Record<'front' | 'back', PrintZone>> = {
+export const PRODUCT_PROFILES: Record<string, ProductProfile> = {
   't-shirt': {
-    front: { xPct: 0.38, yPct: 0.28, widthPct: 0.25, heightPct: 0.32 },
-    back:  { xPct: 0.38, yPct: 0.24, widthPct: 0.25, heightPct: 0.32 },
+    mockupZone: {
+      front: { xPct: 0.38, yPct: 0.28, widthPct: 0.25 },
+      back:  { xPct: 0.38, yPct: 0.24, widthPct: 0.25 },
+    },
+    printArea: { width: 3852, height: 4398 },
   },
   hoodie: {
-    front: { xPct: 0.36, yPct: 0.35, widthPct: 0.25, heightPct: 0.23 },
-    back:  { xPct: 0.36, yPct: 0.30, widthPct: 0.25, heightPct: 0.23 },
+    mockupZone: {
+      front: { xPct: 0.36, yPct: 0.35, widthPct: 0.25 },
+      back:  { xPct: 0.36, yPct: 0.30, widthPct: 0.25 },
+    },
+    printArea: { width: 3709, height: 2472 },
   },
 }
 
-const DEFAULT_MOCKUP_PRINT_ZONE = MOCKUP_PRINT_ZONES['t-shirt']
+const DEFAULT_PRODUCT_PROFILE = PRODUCT_PROFILES['t-shirt']
+
+export function getProductProfile(productType?: string): ProductProfile {
+  return PRODUCT_PROFILES[productType ?? ''] ?? DEFAULT_PRODUCT_PROFILE
+}
 
 export function getMockupPrintZone(productType?: string, side: 'front' | 'back' = 'front') {
-  const sides = MOCKUP_PRINT_ZONES[productType ?? ''] ?? DEFAULT_MOCKUP_PRINT_ZONE
-  return sides[side]
-}
-
-/** Printify front print area in pixels, per product type (from Printify API). */
-const PRINT_AREAS: Record<string, { width: number; height: number }> = {
-  't-shirt': { width: 3852, height: 4398 },
-  hoodie:    { width: 3709, height: 2472 },
-}
-
-const DEFAULT_PRINT_AREA = PRINT_AREAS['t-shirt']
-
-export function getPrintifyPrintArea(productType?: string) {
-  return PRINT_AREAS[productType ?? ''] ?? DEFAULT_PRINT_AREA
-}
-
-/**
- * Scale factor applied when building the print file for Printify.
- * The mockup scale (0–1) is multiplied by this to fit the artwork
- * within the actual print area without overflowing.
- */
-const PRINT_SCALE_FACTOR: Record<string, number> = {
-  't-shirt': 0.75,
-  hoodie:    0.47,
-}
-
-export function getPrintScaleFactor(productType?: string): number {
-  return PRINT_SCALE_FACTOR[productType ?? ''] ?? 0.75
-}
-
-/**
- * Vertical pixel offset applied to the artwork in the Printify print file.
- * Negative = shift up, positive = shift down.
- */
-const PRINT_Y_OFFSET_PX: Record<string, number> = {
-  't-shirt': -600,
-  hoodie:    100,
-}
-
-export function getPrintYOffsetPx(productType?: string): number {
-  return PRINT_Y_OFFSET_PX[productType ?? ''] ?? 0
+  const profile = getProductProfile(productType)
+  const z = profile.mockupZone[side]
+  const printAspect = profile.printArea.width / profile.printArea.height
+  return {
+    xPct: z.xPct,
+    yPct: z.yPct,
+    widthPct: z.widthPct,
+    heightPct: z.widthPct / printAspect,
+  }
 }
