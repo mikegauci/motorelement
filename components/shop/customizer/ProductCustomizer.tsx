@@ -67,7 +67,7 @@ export default function ProductCustomizer() {
   // ---- Composite position state ----
   const [carAdjustXPct, setCarAdjustXPct] = useState(0)
   const [carAdjustYPct, setCarAdjustYPct] = useState(0)
-  const [carScale, setCarScale] = useState(0.70)
+  const [carScale, setCarScale] = useState(1)
   const [compositionZoom, setCompositionZoom] = useState(1)
   const [bgScale, setBgScale] = useState(1)
 
@@ -525,7 +525,6 @@ export default function ProductCustomizer() {
                             onRemoveTextLayer={textLayerHook.removeTextLayer}
                             onMoveTextLayer={textLayerHook.moveTextLayer}
                             onNudgeTextFontSize={textLayerHook.nudgeTextFontSize}
-                            onAlignTextLayerToCanvasVertical={textLayerHook.alignTextLayerToCanvasVertical}
                           />
                         )}
                       </>

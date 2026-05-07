@@ -6,7 +6,6 @@ import {
   createTextLayer,
   clampTextPct,
   clampTextFontSizePct,
-  getCanvasAlignedYPct,
   getLayerId,
 } from '@/components/shop/customizer/helpers'
 
@@ -23,7 +22,9 @@ export function useTextLayers(availableFontOptions: FontOption[]) {
 
   function addTextLayer() {
     const id = getLayerId()
+    const sourceLayer = selectedTextLayer ?? textLayersRef.current[textLayersRef.current.length - 1]
     const layer = createTextLayer(id, availableFontOptions[0]?.value || 'Arial')
+    if (sourceLayer) layer.fontSizePct = sourceLayer.fontSizePct
     setTextLayers((prev) => [...prev, layer])
     setSelectedTextLayerId(id)
   }
@@ -45,10 +46,6 @@ export function useTextLayers(availableFontOptions: FontOption[]) {
     const layer = textLayersRef.current.find((it) => it.id === layerId)
     if (!layer) return
     updateTextLayer(layerId, { fontSizePct: layer.fontSizePct + delta })
-  }
-
-  function alignTextLayerToCanvasVertical(layerId: string, nextAlignY: string) {
-    updateTextLayer(layerId, { alignY: nextAlignY as 'top' | 'middle' | 'bottom', yPct: getCanvasAlignedYPct(nextAlignY as 'top' | 'middle' | 'bottom') })
   }
 
   function removeTextLayer(layerId: string) {
@@ -83,7 +80,6 @@ export function useTextLayers(availableFontOptions: FontOption[]) {
     addTextLayer,
     updateTextLayer,
     nudgeTextFontSize,
-    alignTextLayerToCanvasVertical,
     removeTextLayer,
     moveTextLayer,
     resetTextLayers,

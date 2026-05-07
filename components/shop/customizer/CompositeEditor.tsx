@@ -49,7 +49,7 @@ export default function CompositeEditor({
           label="Car size"
           displayValue={`${Math.round(carScale * 100)}%`}
           min={70}
-          max={140}
+          max={130}
           value={Math.round(carScale * 100)}
           disabled={backgroundControlsLocked}
           onNudgeDown={() => setCarScale(clampCarScale(carScale - 0.01))}
@@ -59,12 +59,12 @@ export default function CompositeEditor({
         <SliderRow
           label="Background size"
           displayValue={`${Math.round(bgScale * 100)}%`}
-          min={50}
-          max={140}
+          min={80}
+          max={120}
           value={Math.round(bgScale * 100)}
           disabled={backgroundControlsLocked}
-          nudgeDownDisabled={bgScale <= 0.5}
-          nudgeUpDisabled={bgScale >= 1.4}
+          nudgeDownDisabled={bgScale <= 0.8}
+          nudgeUpDisabled={bgScale >= 1.2}
           onNudgeDown={() => setBgScale(clampBgScale(bgScale - 0.05))}
           onNudgeUp={() => setBgScale(clampBgScale(bgScale + 0.05))}
           onChange={(v) => setBgScale(clampBgScale(v / 100))}

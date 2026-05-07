@@ -19,7 +19,6 @@ export function createTextLayer(id: string, defaultFontFamily = 'Arial'): TextLa
     yPct: 0.2,
     fontFamily: defaultFontFamily,
     fontSizePct: 0.08,
-    alignY: 'middle',
     bold: false,
     italic: false,
     underline: false,
@@ -37,9 +36,11 @@ export function normalizeTextLayer(layer: any, fallbackId: string): TextLayer {
       ? layer.color
       : next.color
   if (!layer || typeof layer !== 'object') return next
+  const layerRest = { ...layer } as Record<string, unknown>
+  delete layerRest.alignY
   return {
     ...next,
-    ...layer,
+    ...layerRest,
     id: typeof layer.id === 'string' ? layer.id : fallbackId,
     text: typeof layer.text === 'string' ? layer.text : next.text,
     xPct: typeof layer.xPct === 'number' ? layer.xPct : next.xPct,
@@ -49,7 +50,6 @@ export function normalizeTextLayer(layer: any, fallbackId: string): TextLayer {
         ? layer.fontFamily
         : next.fontFamily,
     fontSizePct: typeof layer.fontSizePct === 'number' ? layer.fontSizePct : next.fontSizePct,
-    alignY: ['top', 'middle', 'bottom'].includes(layer.alignY) ? layer.alignY : next.alignY,
     bold: !!layer.bold,
     italic: !!layer.italic,
     underline: !!layer.underline,
@@ -76,14 +76,7 @@ export function clampAdjust(v: number) {
 }
 
 export function clampCarScale(v: number) {
-  return Math.min(1.4, Math.max(0.7, v))
-}
-
-export function getCanvasAlignedYPct(alignY: string) {
-  const edgePadding = 0.08
-  if (alignY === 'top') return edgePadding
-  if (alignY === 'bottom') return 1 - edgePadding
-  return 0.5
+  return Math.min(1.3, Math.max(0.7, v))
 }
 
 function getTextFontPx(size: number, layer: TextLayer) {
@@ -99,10 +92,18 @@ function applyTextLayerFont(ctx: CanvasRenderingContext2D, size: number, layer: 
   return px
 }
 
-function getCanvasTextBaseline(alignY: string): CanvasTextBaseline {
-  if (alignY === 'top') return 'top'
-  if (alignY === 'bottom') return 'bottom'
-  return 'middle'
+function getTextLayerHeight(ctx: CanvasRenderingContext2D, text: string, px: number) {
+  const metrics = ctx.measureText(text)
+  const ascent = metrics.actualBoundingBoxAscent || px * 0.75
+  const descent = metrics.actualBoundingBoxDescent || px * 0.25
+  return Math.max(1, ascent + descent)
+}
+
+function getTextLayerCenterY(ctx: CanvasRenderingContext2D, layer: TextLayer, textHeight: number) {
+  const canvasHeight = Math.max(1, ctx.canvas.height)
+  const minY = textHeight / 2
+  const maxY = canvasHeight - textHeight / 2
+  return minY + clampTextPct(layer.yPct) * Math.max(0, maxY - minY)
 }
 
 function drawTextLayer(ctx: CanvasRenderingContext2D, size: number, layer: TextLayer) {
@@ -110,10 +111,10 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, size: number, layer: TextL
   const text = (layer.text || '').trim()
   if (!text) return
   const x = clampTextPct(layer.xPct) * size
-  const y = clampTextPct(layer.yPct) * size
   const px = applyTextLayerFont(ctx, size, layer)
+  const y = getTextLayerCenterY(ctx, layer, getTextLayerHeight(ctx, text, px))
   ctx.textAlign = 'center'
-  ctx.textBaseline = getCanvasTextBaseline(layer.alignY)
+  ctx.textBaseline = 'middle'
   ctx.fillStyle = layer.color || '#ffffff'
   ctx.shadowColor = 'transparent'
   ctx.shadowBlur = 0
@@ -130,11 +131,7 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, size: number, layer: TextL
   if (layer.underline) {
     const metrics = ctx.measureText(text)
     const textW = metrics.width
-    const baseline = getCanvasTextBaseline(layer.alignY)
-    let lineY = y
-    if (baseline === 'middle') lineY = y + px * 0.4
-    else if (baseline === 'top') lineY = y + px * 1.1
-    else lineY = y + px * 0.15
+    const lineY = y + px * 0.4
     ctx.strokeStyle = layer.color || '#ffffff'
     ctx.lineWidth = Math.max(1, Math.round(px * 0.05))
     ctx.lineCap = 'round'
@@ -150,15 +147,13 @@ export function getTextLayerBounds(ctx: CanvasRenderingContext2D, size: number, 
   const text = (layer.text || '').trim()
   if (!text) return null
   const x = clampTextPct(layer.xPct) * size
-  const y = clampTextPct(layer.yPct) * size
   const px = applyTextLayerFont(ctx, size, layer)
   const metrics = ctx.measureText(text)
   const width = Math.max(metrics.width, px * 0.5)
-  const ascent = metrics.actualBoundingBoxAscent || px * 0.75
-  const descent = metrics.actualBoundingBoxDescent || px * 0.25
-  const height = Math.max(1, ascent + descent)
+  const height = getTextLayerHeight(ctx, text, px)
+  const y = getTextLayerCenterY(ctx, layer, height)
   const left = x - width / 2
-  const top = layer.alignY === 'top' ? y : layer.alignY === 'bottom' ? y - height : y - height / 2
+  const top = y - height / 2
   return { left, top, width, height }
 }
 
@@ -363,7 +358,7 @@ interface CompositeOpts {
 }
 
 export function clampBgScale(v: number) {
-  return Math.min(1.4, Math.max(0.5, v))
+  return Math.min(1.2, Math.max(0.8, v))
 }
 
 export function drawCompositeContent(
@@ -386,7 +381,6 @@ export function drawCompositeContent(
   } = opts
   const safeCompositionZoom = clampCompositeZoom(compositionZoom)
   const safeBgScale = clampBgScale(bgScaleVal)
-  const bgZoom = safeCompositionZoom * safeBgScale
   const center = size / 2
   const baseBgW = size * COMPOSITE.bgWidthPct
   const omitBackground = !bgImg
@@ -397,10 +391,14 @@ export function drawCompositeContent(
   const baseBgH = (srcH / srcW) * baseBgW
   const baseBgX = (size - baseBgW) / 2
   const baseBgY = size * COMPOSITE.bgTopPct
-  const bgW = baseBgW * bgZoom
-  const bgH = baseBgH * bgZoom
-  const bgX = center + (baseBgX - center) * bgZoom
-  const bgY = center + (baseBgY - center) * bgZoom
+  const composedBgW = baseBgW * safeCompositionZoom
+  const composedBgH = baseBgH * safeCompositionZoom
+  const composedBgX = center + (baseBgX - center) * safeCompositionZoom
+  const composedBgY = center + (baseBgY - center) * safeCompositionZoom
+  const bgW = composedBgW * safeBgScale
+  const bgH = composedBgH * safeBgScale
+  const bgX = composedBgX + (composedBgW - bgW) / 2
+  const bgY = composedBgY
   const lift = size * COMPOSITE.carLiftPct
   const carOffsetX = size * carOffsetXPct
   const carOffsetY = size * carOffsetYPct

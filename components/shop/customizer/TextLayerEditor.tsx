@@ -16,7 +16,6 @@ interface TextLayerEditorProps {
   onRemoveTextLayer: (layerId: string) => void
   onMoveTextLayer: (layerId: string, direction: number) => void
   onNudgeTextFontSize: (layerId: string, delta: number) => void
-  onAlignTextLayerToCanvasVertical: (layerId: string, alignY: string) => void
 }
 
 export default function TextLayerEditor({
@@ -30,7 +29,6 @@ export default function TextLayerEditor({
   onRemoveTextLayer,
   onMoveTextLayer,
   onNudgeTextFontSize,
-  onAlignTextLayerToCanvasVertical,
   setSelectedTextLayerId,
 }: TextLayerEditorProps) {
   return (
@@ -145,24 +143,6 @@ export default function TextLayerEditor({
               onNudgeUp={() => onNudgeTextFontSize(selectedTextLayer.id, 0.005)}
               onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { fontSizePct: v / 100 })}
             />
-          </div>
-          <div className={styles.setupBlock}>
-            <label className={styles.label}>Text vertical alignment</label>
-            <div className={styles.alignBtnRow}>
-              {(['top', 'middle', 'bottom'] as const).map((align) => (
-                <button
-                  key={align}
-                  type="button"
-                  className={`${styles.alignBtn} ${
-                    selectedTextLayer.alignY === align ? styles.alignBtnActive : ''
-                  }`}
-                  onClick={() => onAlignTextLayerToCanvasVertical(selectedTextLayer.id, align)}
-                  disabled={backgroundControlsLocked}
-                >
-                  {align.charAt(0).toUpperCase() + align.slice(1)}
-                </button>
-              ))}
-            </div>
           </div>
           <div className={styles.setupBlock}>
             <SliderRow

@@ -5,7 +5,6 @@ export interface TextLayer {
   yPct: number
   fontFamily: string
   fontSizePct: number
-  alignY: 'top' | 'middle' | 'bottom'
   bold: boolean
   italic: boolean
   underline: boolean

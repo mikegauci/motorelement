@@ -94,6 +94,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     startPointerX: 0,
     startPointerY: 0,
     startSize: 1,
+    startHeight: 1,
     startXPct: 0,
     startYPct: 0,
   })
@@ -259,6 +260,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
               drag.active = true; drag.pointerId = e.pointerId; drag.layerId = activeLayer.id
               drag.startPointerX = pointer.x; drag.startPointerY = pointer.y
               drag.startSize = Math.max(1, canvas.width)
+              drag.startHeight = Math.max(1, canvas.height)
               drag.startXPct = activeLayer.xPct; drag.startYPct = activeLayer.yPct
               stage.setPointerCapture?.(e.pointerId)
               return
@@ -281,7 +283,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       if (!pointer || !tDrag.layerId) return
       deps.updateTextLayer(tDrag.layerId, {
         xPct: tDrag.startXPct + (pointer.x - tDrag.startPointerX) / tDrag.startSize,
-        yPct: tDrag.startYPct + (pointer.y - tDrag.startPointerY) / tDrag.startSize,
+        yPct: tDrag.startYPct + (pointer.y - tDrag.startPointerY) / tDrag.startHeight,
       })
       return
     }
