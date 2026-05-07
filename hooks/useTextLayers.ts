@@ -24,7 +24,10 @@ export function useTextLayers(availableFontOptions: FontOption[]) {
     const id = getLayerId()
     const sourceLayer = selectedTextLayer ?? textLayersRef.current[textLayersRef.current.length - 1]
     const layer = createTextLayer(id, availableFontOptions[0]?.value || 'Arial')
-    if (sourceLayer) layer.fontSizePct = sourceLayer.fontSizePct
+    if (sourceLayer) {
+      layer.fontSizePct = sourceLayer.fontSizePct
+      layer.yPct = clampTextPct(sourceLayer.yPct + 0.1)
+    }
     setTextLayers((prev) => [...prev, layer])
     setSelectedTextLayerId(id)
   }

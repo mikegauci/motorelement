@@ -94,17 +94,17 @@ export default function TextLayerEditor({
       )}
       {selectedTextLayer && (
         <div className={styles.textLayerEditor}>
-          <div className={styles.setupBlock}>
-            <label className={styles.label}>Text</label>
-            <input
-              className={styles.input}
-              type="text"
-              value={selectedTextLayer.text}
-              onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { text: e.target.value })}
-              disabled={backgroundControlsLocked}
-            />
-          </div>
-          <div className={styles.textLayerGrid}>
+          <div className={styles.textLayerTextFontRow}>
+            <div className={styles.setupBlock}>
+              <label className={styles.label}>Text</label>
+              <input
+                className={styles.input}
+                type="text"
+                value={selectedTextLayer.text}
+                onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { text: e.target.value })}
+                disabled={backgroundControlsLocked}
+              />
+            </div>
             <div className={styles.setupBlock}>
               <label className={styles.label}>Font family</label>
               <select
@@ -120,8 +120,10 @@ export default function TextLayerEditor({
                 ))}
               </select>
             </div>
+          </div>
+          <div className={styles.textLayerColorStyleRow}>
             <div className={styles.setupBlock}>
-              <label className={styles.label}>Text color</label>
+              <label className={styles.label}>Color</label>
               <input
                 className={styles.colorInput}
                 type="color"
@@ -130,34 +132,6 @@ export default function TextLayerEditor({
                 disabled={backgroundControlsLocked}
               />
             </div>
-          </div>
-          <div className={styles.setupBlock}>
-            <SliderRow
-              label="Font size"
-              displayValue={`${Math.round(selectedTextLayer.fontSizePct * 100)}%`}
-              min={3}
-              max={25}
-              value={Math.round(selectedTextLayer.fontSizePct * 100)}
-              disabled={backgroundControlsLocked}
-              onNudgeDown={() => onNudgeTextFontSize(selectedTextLayer.id, -0.005)}
-              onNudgeUp={() => onNudgeTextFontSize(selectedTextLayer.id, 0.005)}
-              onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { fontSizePct: v / 100 })}
-            />
-          </div>
-          <div className={styles.setupBlock}>
-            <SliderRow
-              label="Vertical position"
-              displayValue={Math.round(selectedTextLayer.yPct * 100)}
-              min={0}
-              max={100}
-              value={Math.round(selectedTextLayer.yPct * 100)}
-              disabled={backgroundControlsLocked}
-              onNudgeDown={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
-              onNudgeUp={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
-              onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { yPct: v / 100 })}
-            />
-          </div>
-          <div className={styles.styleRow}>
             <div className={styles.shadowSwatchGroup}>
               <label className={styles.label}>Format</label>
               <div className={styles.styleToggleGroup}>
@@ -222,6 +196,32 @@ export default function TextLayerEditor({
                 </button>
               </div>
             </div>
+          </div>
+          <div className={styles.setupBlock}>
+            <SliderRow
+              label="Font size"
+              displayValue={`${Math.round(selectedTextLayer.fontSizePct * 100)}%`}
+              min={3}
+              max={25}
+              value={Math.round(selectedTextLayer.fontSizePct * 100)}
+              disabled={backgroundControlsLocked}
+              onNudgeDown={() => onNudgeTextFontSize(selectedTextLayer.id, -0.005)}
+              onNudgeUp={() => onNudgeTextFontSize(selectedTextLayer.id, 0.005)}
+              onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { fontSizePct: v / 100 })}
+            />
+          </div>
+          <div className={styles.setupBlock}>
+            <SliderRow
+              label="Vertical position"
+              displayValue={Math.round(selectedTextLayer.yPct * 100)}
+              min={0}
+              max={100}
+              value={Math.round(selectedTextLayer.yPct * 100)}
+              disabled={backgroundControlsLocked}
+              onNudgeDown={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
+              onNudgeUp={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
+              onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { yPct: v / 100 })}
+            />
           </div>
         </div>
       )}
