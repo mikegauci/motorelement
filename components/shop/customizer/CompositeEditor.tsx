@@ -37,8 +37,8 @@ export default function CompositeEditor({
         <SliderRow
           label="Car vertical adjust"
           displayValue={Math.round(carAdjustYPct * 100)}
-          min={-30}
-          max={30}
+          min={-50}
+          max={50}
           value={Math.round(carAdjustYPct * 100)}
           disabled={backgroundControlsLocked}
           onNudgeDown={() => setCarAdjustYPct(clampAdjust(carAdjustYPct - 0.01))}

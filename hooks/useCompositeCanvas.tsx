@@ -11,6 +11,9 @@ import {
 import { useCustomizer, type TextPlacement } from '@/components/shop/customizer/CustomizerContext'
 
 const COMPOSITE_EXPORT_SIZE = 2048
+function compositeCanvasHeight(layoutW: number) {
+  return layoutW + Math.ceil(layoutW * 0.22)
+}
 
 interface CompositeCanvasDeps {
   transparentCarUrlForPreset: string | null
@@ -133,12 +136,13 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       if (cssSize < 2) return
       const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
       const pixelSize = Math.max(COMPOSITE_EXPORT_SIZE, Math.round(cssSize * dpr))
+      const pixelH = compositeCanvasHeight(pixelSize)
       if (canvas!.width !== pixelSize) canvas!.width = pixelSize
-      if (canvas!.height !== pixelSize) canvas!.height = pixelSize
+      if (canvas!.height !== pixelH) canvas!.height = pixelH
       const ctx = canvas!.getContext('2d', { alpha: true })!
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'
-      ctx.clearRect(0, 0, pixelSize, pixelSize)
+      ctx.clearRect(0, 0, pixelSize, pixelH)
       const sharedOpts = {
         cropBackgroundToArtwork: deps.selectedBackgroundIsCustom,
         carOffsetXPct: carAdjustXRef.current, carOffsetYPct: carAdjustYRef.current,
@@ -158,7 +162,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
           if (!artworkOnlyCanvasRef.current) artworkOnlyCanvasRef.current = document.createElement('canvas')
           const aCanvas = artworkOnlyCanvasRef.current
           if (aCanvas.width !== pixelSize) aCanvas.width = pixelSize
-          if (aCanvas.height !== pixelSize) aCanvas.height = pixelSize
+          if (aCanvas.height !== pixelH) aCanvas.height = pixelH
           const aCtx = aCanvas.getContext('2d', { alpha: true })!
           aCtx.setTransform(1, 0, 0, 1, 0, 0)
           aCtx.imageSmoothingEnabled = true; aCtx.imageSmoothingQuality = 'high'
@@ -173,7 +177,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
           if (!textOnlyCanvasRef.current) textOnlyCanvasRef.current = document.createElement('canvas')
           const tCanvas = textOnlyCanvasRef.current
           if (tCanvas.width !== pixelSize) tCanvas.width = pixelSize
-          if (tCanvas.height !== pixelSize) tCanvas.height = pixelSize
+          if (tCanvas.height !== pixelH) tCanvas.height = pixelH
           const tCtx = tCanvas.getContext('2d', { alpha: true })!
           tCtx.setTransform(1, 0, 0, 1, 0, 0)
           tCtx.imageSmoothingEnabled = true; tCtx.imageSmoothingQuality = 'high'

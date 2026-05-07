@@ -179,7 +179,7 @@ export function getPrintScaleFactor(productType?: string): number {
  * Negative = shift up, positive = shift down.
  */
 const PRINT_Y_OFFSET_PX: Record<string, number> = {
-  't-shirt': -750,
+  't-shirt': -600,
   hoodie:    100,
 }
 

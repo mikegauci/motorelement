@@ -66,7 +66,7 @@ export function clampCompositeZoom(v: number) {
 }
 
 export function clampAdjust(v: number) {
-  return Math.min(0.3, Math.max(-0.3, v))
+  return Math.min(0.5, Math.max(-0.5, v))
 }
 
 export function clampCarScale(v: number) {
@@ -428,7 +428,7 @@ export function drawCompositeContent(
     carX = center + (baseCarX - center) * safeCompositionZoom
     carY = center + (baseCarY - center) * safeCompositionZoom
   }
-  ctx.clearRect(0, 0, size, size)
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
   if (!omitArtwork) {
     if (!omitBackground) {
       if (bgBounds) {
