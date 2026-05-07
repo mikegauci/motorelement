@@ -118,6 +118,8 @@ export function useSession(state: SessionState, setters: SessionSetters) {
         }
         if (typeof s.addTextEnabled === 'boolean') {
           setters.setAddTextEnabled(s.addTextEnabled)
+        } else if (Array.isArray(s.textLayers) && s.textLayers.length > 0) {
+          setters.setAddTextEnabled(true)
         }
         if (s.textPlacement === 'same' || s.textPlacement === 'opposite') {
           setters.setTextPlacement(s.textPlacement)
