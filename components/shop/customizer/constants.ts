@@ -124,7 +124,9 @@ export interface ProductProfile {
     yPct: number
     widthPct: number
   }>
-  printArea: { width: number; height: number }
+  printArea: Record<'front' | 'back', { width: number; height: number }>
+  defaultArtworkScale: number
+  defaultArtworkYPct: number
 }
 
 export const PRODUCT_PROFILES: Record<string, ProductProfile> = {
@@ -133,14 +135,24 @@ export const PRODUCT_PROFILES: Record<string, ProductProfile> = {
       front: { xPct: 0.38, yPct: 0.28, widthPct: 0.25 },
       back:  { xPct: 0.38, yPct: 0.24, widthPct: 0.25 },
     },
-    printArea: { width: 3852, height: 4398 },
+    printArea: {
+      front: { width: 3852, height: 4398 },
+      back:  { width: 3852, height: 4398 },
+    },
+    defaultArtworkScale: 1.0,
+    defaultArtworkYPct: 0.5,
   },
   hoodie: {
     mockupZone: {
-      front: { xPct: 0.36, yPct: 0.35, widthPct: 0.25 },
-      back:  { xPct: 0.36, yPct: 0.30, widthPct: 0.25 },
+      front: { xPct: 0.34, yPct: 0.35, widthPct: 0.30 },
+      back:  { xPct: 0.39, yPct: 0.30, widthPct: 0.25 },
     },
-    printArea: { width: 3709, height: 2472 },
+    printArea: {
+      front: { width: 3709, height: 2472 },
+      back:  { width: 4200, height: 4800 },
+    },
+    defaultArtworkScale: 0.75,
+    defaultArtworkYPct: 0.65,
   },
 }
 
@@ -153,7 +165,8 @@ export function getProductProfile(productType?: string): ProductProfile {
 export function getMockupPrintZone(productType?: string, side: 'front' | 'back' = 'front') {
   const profile = getProductProfile(productType)
   const z = profile.mockupZone[side]
-  const printAspect = profile.printArea.width / profile.printArea.height
+  const pa = profile.printArea[side]
+  const printAspect = pa.width / pa.height
   return {
     xPct: z.xPct,
     yPct: z.yPct,

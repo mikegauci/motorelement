@@ -3,6 +3,7 @@
 import styles from './styles'
 import { clampAdjust, clampCarScale, clampBgScale } from './helpers'
 import { useCustomizer } from './CustomizerContext'
+import { getProductProfile } from './constants'
 import SliderRow from './parts/SliderRow'
 
 interface CompositeEditorProps {
@@ -28,7 +29,7 @@ export default function CompositeEditor({
   setCarAdjustXPct,
   backgroundControlsLocked,
 }: CompositeEditorProps) {
-  const { mockupPlacement, setMockupPlacement } = useCustomizer()
+  const { mockupPlacement, setMockupPlacement, productType } = useCustomizer()
 
   return (
     <div className={styles.compositeBlock}>
@@ -90,7 +91,12 @@ export default function CompositeEditor({
               setCarScale(1)
               setCompositionZoom(1)
               setBgScale(1)
-              setMockupPlacement({ xPct: 0.5, yPct: 0.5, scale: 1.0 })
+              const profile = getProductProfile(productType)
+              setMockupPlacement({
+                xPct: 0.5,
+                yPct: profile.defaultArtworkYPct,
+                scale: profile.defaultArtworkScale,
+              })
             }}
             disabled={backgroundControlsLocked}
           >

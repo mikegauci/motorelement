@@ -519,12 +519,13 @@ export async function buildMockupThumbnail(
 export async function buildPrintAreaPng(
   artworkSrc: string,
   placement: Placement,
-  productType?: string
+  productType?: string,
+  side: 'front' | 'back' = 'front'
 ): Promise<Blob> {
   const { getProductProfile } = await import('./constants')
   const { getArtworkRect, getPrintAreaRect } = await import('./placement')
   const profile = getProductProfile(productType)
-  const { width: paW, height: paH } = profile.printArea
+  const { width: paW, height: paH } = profile.printArea[side]
 
   const img = await loadImageElement(artworkSrc)
 
@@ -532,7 +533,7 @@ export async function buildPrintAreaPng(
   // same aspect ratio the mockup uses. WYSIWYG.
   const aspect = img.naturalWidth / img.naturalHeight
 
-  const art = getArtworkRect(getPrintAreaRect(profile), aspect, placement)
+  const art = getArtworkRect(getPrintAreaRect(profile, side), aspect, placement)
 
   const canvas = document.createElement('canvas')
   canvas.width = paW

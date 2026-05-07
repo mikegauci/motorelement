@@ -55,6 +55,10 @@ export function getArtworkRect(
   }
 }
 
-export function getPrintAreaRect(profile: ProductProfile): Rect {
-  return { x: 0, y: 0, w: profile.printArea.width, h: profile.printArea.height }
+export function getPrintAreaRect(
+  profile: ProductProfile,
+  side: 'front' | 'back' = 'front',
+): Rect {
+  const pa = profile.printArea[side]
+  return { x: 0, y: 0, w: pa.width, h: pa.height }
 }

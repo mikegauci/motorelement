@@ -159,10 +159,17 @@ export default function ProductPage({
       ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
       : (compositeDataUrl ?? artworkUrl);
 
+    const oppositeSide: 'front' | 'back' = artworkSide === 'front' ? 'back' : 'front';
+
     if (printSource) {
       setUploading(true);
       try {
-        const printBlob = buildPrintAreaPng(printSource, mockupPlacement, product.type);
+        const printBlob = buildPrintAreaPng(
+          printSource,
+          mockupPlacement,
+          product.type,
+          artworkSide,
+        );
         const thumbSource = isOpposite
           ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
           : (compositeDataUrl ?? artworkUrl);
@@ -175,7 +182,7 @@ export default function ProductPage({
           ? buildMockupThumbnail(thumbBlank, thumbSource, mockupPlacement, product.type, artworkSide)
           : null;
         const textBlob = isOpposite && textOnlyDataUrl
-          ? buildPrintAreaPng(textOnlyDataUrl, mockupPlacement, product.type)
+          ? buildPrintAreaPng(textOnlyDataUrl, mockupPlacement, product.type, oppositeSide)
           : null;
 
         const [printResult, thumbResult, textResult] = await Promise.all([
@@ -204,8 +211,6 @@ export default function ProductPage({
         setUploading(false);
       }
     }
-
-    const oppositeSide: 'front' | 'back' = artworkSide === 'front' ? 'back' : 'front';
 
     addItem({
       productId: product.id,
