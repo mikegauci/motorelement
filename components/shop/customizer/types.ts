@@ -3,6 +3,7 @@ export type PrintZoneCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom
 export interface PrintZoneCornerImage {
   enabled: boolean
   src: string | null
+  presetId: string | null
   corner: PrintZoneCorner
   sizePct: number
 }

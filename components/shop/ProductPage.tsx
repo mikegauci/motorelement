@@ -64,7 +64,7 @@ export default function ProductPage({
   const {
     setTshirtBaseImage, tshirtBaseImage, artworkUrl, compositeDataUrl,
     artworkOnlyDataUrl, textOnlyDataUrl,
-    mockupPlacement, setProductType, setSelectedColorHex, generationStatus,
+    mockupPlacement, setProductType, setSelectedColorHex, setSelectedColorTitle, generationStatus,
     artworkSide, textPlacement, mockupViewSide,
   } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
@@ -140,6 +140,10 @@ export default function ProductPage({
   useEffect(() => {
     setSelectedColorHex(selectedColorObj?.hex ?? null);
   }, [selectedColorObj?.hex, setSelectedColorHex]);
+
+  useEffect(() => {
+    setSelectedColorTitle(selectedColorObj?.title ?? null);
+  }, [selectedColorObj?.title, setSelectedColorTitle]);
 
   useEffect(() => {
     if (artworkUrl) setShowMockup(true);

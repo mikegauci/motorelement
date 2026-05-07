@@ -25,6 +25,8 @@ interface CustomizerContextValue {
   setProductType: (t: string) => void
   selectedColorHex: string | null
   setSelectedColorHex: (hex: string | null) => void
+  selectedColorTitle: string | null
+  setSelectedColorTitle: (title: string | null) => void
   mockupThumbnailUrl: string | null
   setMockupThumbnailUrl: (url: string | null) => void
   artworkSide: ArtworkSide
@@ -54,6 +56,7 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
   const [generationStatus, setGenerationStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [tshirtBaseImage, setTshirtBaseImage] = useState<string | null>(null)
   const [selectedColorHex, setSelectedColorHex] = useState<string | null>(null)
+  const [selectedColorTitle, setSelectedColorTitle] = useState<string | null>(null)
   const [mockupThumbnailUrl, setMockupThumbnailUrl] = useState<string | null>(null)
   const [artworkSide, setArtworkSide] = useState<ArtworkSide>('front')
   const [textPlacement, setTextPlacement] = useState<TextPlacement>('same')
@@ -115,6 +118,8 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
         setProductType,
         selectedColorHex,
         setSelectedColorHex,
+        selectedColorTitle,
+        setSelectedColorTitle,
         mockupThumbnailUrl,
         setMockupThumbnailUrl,
         artworkSide,

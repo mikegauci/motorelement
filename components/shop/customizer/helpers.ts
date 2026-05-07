@@ -91,6 +91,7 @@ export function createPrintZoneCornerImage(): PrintZoneCornerImage {
   return {
     enabled: false,
     src: null,
+    presetId: null,
     corner: 'top-right',
     sizePct: 0.12,
   }
@@ -104,9 +105,13 @@ export function normalizePrintZoneCornerImage(value: unknown): PrintZoneCornerIm
   const next = createPrintZoneCornerImage()
   if (!value || typeof value !== 'object') return next
   const image = value as Record<string, unknown>
+  const rawPreset = image.presetId
+  const presetId =
+    typeof rawPreset === 'string' && rawPreset.trim() ? rawPreset.trim() : null
   return {
     enabled: image.enabled === true,
     src: typeof image.src === 'string' && image.src ? image.src : null,
+    presetId,
     corner: getPrintZoneCorner(image.corner) ?? next.corner,
     sizePct: typeof image.sizePct === 'number' ? clampCornerImageSizePct(image.sizePct) : next.sizePct,
   }

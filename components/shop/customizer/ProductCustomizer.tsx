@@ -11,6 +11,7 @@ import {
   CUSTOM_BACKGROUND_NEW,
   CUSTOM_BACKGROUND_PREFIX,
   TEXT_FONTS,
+  resolveCornerLogoPresetSrc,
 } from './constants'
 import {
   readFileAsDataUrl,
@@ -52,6 +53,7 @@ export default function ProductCustomizer() {
     mockupPlacement,
     mockupBaseNaturalWidth,
     mockupBaseNaturalHeight,
+    selectedColorTitle,
   } = useCustomizer()
 
   // ---- Vehicle input state (owned by this component) ----
@@ -322,14 +324,32 @@ export default function ProductCustomizer() {
       updatePrintZoneCornerImage({
         enabled: true,
         src: dataUrl,
+        presetId: null,
       })
     })
   }
+
+  function applyCornerPreset(presetId: string) {
+    const src = resolveCornerLogoPresetSrc(presetId, selectedColorTitle)
+    if (!src) return
+    updatePrintZoneCornerImage({ enabled: true, src, presetId })
+  }
+
+  useEffect(() => {
+    setPrintZoneCornerImage((prev) => {
+      const id = prev.presetId
+      if (!id || !prev.enabled) return prev
+      const next = resolveCornerLogoPresetSrc(id, selectedColorTitle)
+      if (!next || next === prev.src) return prev
+      return { ...prev, src: next }
+    })
+  }, [selectedColorTitle, printZoneCornerImage.presetId, printZoneCornerImage.enabled])
 
   function removePrintZoneCornerImage() {
     setPrintZoneCornerImage((prev) => ({
       ...prev,
       src: null,
+      presetId: null,
     }))
     if (cornerImageFileRef.current) cornerImageFileRef.current.value = ''
   }
@@ -590,6 +610,8 @@ export default function ProductCustomizer() {
                             onUpdatePrintZoneCornerImage={updatePrintZoneCornerImage}
                             onUploadCornerImage={() => cornerImageFileRef.current?.click()}
                             onRemoveCornerImage={removePrintZoneCornerImage}
+                            garmentColorTitle={selectedColorTitle}
+                            onApplyCornerPreset={applyCornerPreset}
                           />
                         )}
                       </>

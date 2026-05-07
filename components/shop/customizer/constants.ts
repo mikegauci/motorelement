@@ -99,6 +99,35 @@ function colorSlug(title: string): string {
   return COLOR_TITLE_TO_SLUG[lower] ?? lower.replace(/\s+/g, '-')
 }
 
+export function getGarmentColorSlug(colorTitle: string | null | undefined): string | null {
+  if (colorTitle == null || !String(colorTitle).trim()) return null
+  return colorSlug(String(colorTitle))
+}
+
+export type CornerLogoPreset =
+  | { id: string; label: string; kind: 'single'; src: string }
+  | { id: string; label: string; kind: 'paired'; lightSrc: string; darkSrc: string }
+
+export const LOGO_CORNER_PRESETS: CornerLogoPreset[] = [
+  { id: 'retro-cursive', label: 'Retro Cursive', kind: 'single', src: '/logo-presets/retro-cursive.png' },
+  { id: 'menace', label: 'Menace', kind: 'paired', lightSrc: '/logo-presets/menace-black.png', darkSrc: '/logo-presets/menace.png' },
+  { id: 'thunder', label: 'Thunder', kind: 'paired', lightSrc: '/logo-presets/thunder-black.png', darkSrc: '/logo-presets/thunder.png' },
+  { id: 'voyager', label: 'Voyager', kind: 'paired', lightSrc: '/logo-presets/voyager-black.png', darkSrc: '/logo-presets/voyager.png' },
+  { id: 'winners-circle', label: 'Winners Circle', kind: 'paired', lightSrc: '/logo-presets/winners-circle-black.png', darkSrc: '/logo-presets/winners-circle.png' },
+]
+
+function isLightGarmentSlug(slug: string | null): boolean {
+  return slug === 'white' || slug === 'grey'
+}
+
+export function resolveCornerLogoPresetSrc(presetId: string, colorTitle: string | null | undefined): string {
+  const preset = LOGO_CORNER_PRESETS.find((p) => p.id === presetId)
+  if (!preset) return ''
+  if (preset.kind === 'single') return preset.src
+  const slug = getGarmentColorSlug(colorTitle)
+  return isLightGarmentSlug(slug) ? preset.lightSrc : preset.darkSrc
+}
+
 /**
  * Look up a blank mockup image for a given product type, Printify colour title,
  * and side ('front' or 'back'). Returns the image path if a matching file exists,
@@ -113,8 +142,9 @@ export function getBlankMockupImage(
   if (!sideMap) return null
   const typeMap = sideMap[productType ?? '']
   if (!typeMap) return null
-  if (!colorTitle) return Object.values(typeMap)[0] ?? null
-  const slug = colorSlug(colorTitle)
+  if (colorTitle == null || !String(colorTitle).trim()) return Object.values(typeMap)[0] ?? null
+  const slug = getGarmentColorSlug(colorTitle)
+  if (!slug) return Object.values(typeMap)[0] ?? null
   return typeMap[slug] ?? null
 }
 

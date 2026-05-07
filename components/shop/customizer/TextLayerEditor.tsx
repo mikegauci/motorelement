@@ -4,6 +4,7 @@ import Image from 'next/image'
 import type { TextLayer, FontOption, PrintZoneCorner, PrintZoneCornerImage } from './types'
 import styles from './styles'
 import SliderRow from './parts/SliderRow'
+import CornerLogoPresetPicker from './parts/CornerLogoPresetPicker'
 
 interface TextLayerEditorProps {
   textLayers: TextLayer[]
@@ -22,6 +23,8 @@ interface TextLayerEditorProps {
   onUpdatePrintZoneCornerImage: (patch: Partial<PrintZoneCornerImage>) => void
   onUploadCornerImage: () => void
   onRemoveCornerImage: () => void
+  garmentColorTitle: string | null
+  onApplyCornerPreset: (presetId: string) => void
 }
 
 const CORNER_OPTIONS: Array<{ value: PrintZoneCorner; label: string }> = [
@@ -67,6 +70,8 @@ export default function TextLayerEditor({
   onUpdatePrintZoneCornerImage,
   onUploadCornerImage,
   onRemoveCornerImage,
+  garmentColorTitle,
+  onApplyCornerPreset,
   setSelectedTextLayerId,
 }: TextLayerEditorProps) {
   function setPrintZoneCorner(layer: TextLayer, corner: PrintZoneCorner) {
@@ -360,14 +365,25 @@ export default function TextLayerEditor({
                       className={styles.printZoneImagePreview}
                     />
                     <div className={styles.printZoneImageActions}>
-                      <button
-                        type="button"
-                        className={styles.btn}
-                        onClick={onUploadCornerImage}
-                        disabled={backgroundControlsLocked}
-                      >
-                        Replace image
-                      </button>
+                      {printZoneCornerImage.presetId ? (
+                        <CornerLogoPresetPicker
+                          disabled={backgroundControlsLocked}
+                          garmentColorTitle={garmentColorTitle}
+                          onSelect={onApplyCornerPreset}
+                          buttonLabel="Replace preset"
+                          buttonClassName={styles.btn}
+                          wrapperClassName="relative"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.btn}
+                          onClick={onUploadCornerImage}
+                          disabled={backgroundControlsLocked}
+                        >
+                          Replace image
+                        </button>
+                      )}
                       <button
                         type="button"
                         className={styles.btn}
@@ -379,14 +395,21 @@ export default function TextLayerEditor({
                     </div>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    className={styles.printZoneImageUpload}
-                    onClick={onUploadCornerImage}
-                    disabled={backgroundControlsLocked}
-                  >
-                    Upload corner image
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className={`${styles.printZoneImageUpload} flex-1 min-w-0`}
+                      onClick={onUploadCornerImage}
+                      disabled={backgroundControlsLocked}
+                    >
+                      Upload corner image
+                    </button>
+                    <CornerLogoPresetPicker
+                      disabled={backgroundControlsLocked}
+                      garmentColorTitle={garmentColorTitle}
+                      onSelect={onApplyCornerPreset}
+                    />
+                  </div>
                 )}
                 {printZoneCornerImage.src && (
                   <>
