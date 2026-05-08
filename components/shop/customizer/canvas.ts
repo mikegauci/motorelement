@@ -7,8 +7,6 @@ import {
   type Rect,
 } from './placement'
 
-export type { Rect, Placement, PrintZone }
-
 export function clampDpr(): number {
   return Math.max(1, Math.min(window.devicePixelRatio || 1, 2))
 }

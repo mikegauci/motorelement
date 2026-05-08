@@ -99,12 +99,12 @@ function colorSlug(title: string): string {
   return COLOR_TITLE_TO_SLUG[lower] ?? lower.replace(/\s+/g, '-')
 }
 
-export function getGarmentColorSlug(colorTitle: string | null | undefined): string | null {
+function getGarmentColorSlug(colorTitle: string | null | undefined): string | null {
   if (colorTitle == null || !String(colorTitle).trim()) return null
   return colorSlug(String(colorTitle))
 }
 
-export type CornerLogoPreset =
+type CornerLogoPreset =
   | { id: string; label: string; kind: 'single'; src: string }
   | { id: string; label: string; kind: 'paired'; lightSrc: string; darkSrc: string }
 
@@ -158,7 +158,7 @@ export interface ProductProfile {
   printExportMultiplier: Record<'front' | 'back', number>
 }
 
-export const PRODUCT_PROFILES: Record<string, ProductProfile> = {
+const PRODUCT_PROFILES: Record<string, ProductProfile> = {
   't-shirt': {
     mockupZone: {
       front: { xPct: 0.38, yPct: 0.28, widthPct: 0.25 },

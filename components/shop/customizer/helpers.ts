@@ -164,7 +164,7 @@ function getTextLayerCenterY(ctx: CanvasRenderingContext2D, layer: TextLayer, te
   return minY + clampTextPct(layer.yPct) * Math.max(0, maxY - minY)
 }
 
-export interface PrintZoneCornerAnchorOptions {
+interface PrintZoneCornerAnchorOptions {
   productType?: string
   side: 'front' | 'back'
   placement: Placement
@@ -683,7 +683,7 @@ export function joinNotes(base: string, extra: string) {
   return [a, b].filter(Boolean).join('\n\n')
 }
 
-export function withPrintExportMultiplier(
+function withPrintExportMultiplier(
   placement: Placement,
   productType: string | undefined,
   side: 'front' | 'back',
