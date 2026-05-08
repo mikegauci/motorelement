@@ -15,6 +15,8 @@ interface CustomizerContextValue {
   setArtworkOnlyDataUrl: (url: string | null) => void
   textOnlyDataUrl: string | null
   setTextOnlyDataUrl: (url: string | null) => void
+  cornersOnlyDataUrl: string | null
+  setCornersOnlyDataUrl: (url: string | null) => void
   mockupPlacement: MockupPlacement
   setMockupPlacement: (p: MockupPlacement) => void
   generationStatus: 'idle' | 'running' | 'done' | 'error'
@@ -47,6 +49,7 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
   const [compositeDataUrl, setCompositeDataUrl] = useState<string | null>(null)
   const [artworkOnlyDataUrl, setArtworkOnlyDataUrl] = useState<string | null>(null)
   const [textOnlyDataUrl, setTextOnlyDataUrl] = useState<string | null>(null)
+  const [cornersOnlyDataUrl, setCornersOnlyDataUrl] = useState<string | null>(null)
   const [productType, setProductType] = useState('t-shirt')
   const [mockupPlacement, setMockupPlacementRaw] = useState<MockupPlacement>({
     xPct: 0.5,
@@ -108,6 +111,8 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
         setArtworkOnlyDataUrl,
         textOnlyDataUrl,
         setTextOnlyDataUrl,
+        cornersOnlyDataUrl,
+        setCornersOnlyDataUrl,
         mockupPlacement,
         setMockupPlacement,
         generationStatus,

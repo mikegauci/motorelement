@@ -541,6 +541,8 @@ interface CompositeOpts {
   bgScale?: number
   omitArtwork?: boolean
   omitText?: boolean
+  omitFreeText?: boolean
+  omitCornerItems?: boolean
   productType?: string
   mockupPlacement?: Placement
   printZoneSide?: 'front' | 'back'
@@ -571,6 +573,8 @@ export function drawCompositeContent(
     bgScale: bgScaleVal = 1,
     omitArtwork = false,
     omitText = false,
+    omitFreeText = false,
+    omitCornerItems = false,
     productType,
     mockupPlacement,
     printZoneSide = 'front',
@@ -661,13 +665,18 @@ export function drawCompositeContent(
         }
       : undefined
     for (const layer of layers) {
+      const isCornerLayer = !!layer.printZoneCorner
+      if (isCornerLayer && omitCornerItems) continue
+      if (!isCornerLayer && omitFreeText) continue
       ctx.save()
       drawTextLayer(ctx, size, layer, printZoneCornerOptions)
       ctx.restore()
     }
-    ctx.save()
-    drawPrintZoneCornerImage(ctx, printZoneCornerImageElement, printZoneCornerImage, printZoneCornerOptions)
-    ctx.restore()
+    if (!omitCornerItems) {
+      ctx.save()
+      drawPrintZoneCornerImage(ctx, printZoneCornerImageElement, printZoneCornerImage, printZoneCornerOptions)
+      ctx.restore()
+    }
   }
 }
 
@@ -703,14 +712,16 @@ export async function buildMockupThumbnail(
   placement: Placement,
   productType?: string,
   side: 'front' | 'back' = 'front',
+  cornersSrc?: string | null,
 ): Promise<Blob> {
   const { getMockupPrintZone } = await import('./constants')
   const { letterbox, printZoneRect, drawArtworkClipped } = await import('./canvas')
   const zone = getMockupPrintZone(productType, side)
 
-  const [baseImg, artImg] = await Promise.all([
+  const [baseImg, artImg, cornersImg] = await Promise.all([
     loadImageElement(baseSrc),
     loadImageElement(artworkSrc),
+    cornersSrc ? loadImageElement(cornersSrc) : Promise.resolve(null),
   ])
 
   const size = 400
@@ -726,6 +737,9 @@ export async function buildMockupThumbnail(
 
   const pzr = printZoneRect(baseRect, zone)
   drawArtworkClipped(ctx, artImg, pzr, placement)
+  if (cornersImg) {
+    drawArtworkClipped(ctx, cornersImg, pzr, { xPct: 0.5, yPct: 0.5, scale: 1 })
+  }
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -742,28 +756,47 @@ export async function buildPrintAreaPng(
   productType?: string,
   side: 'front' | 'back' = 'front',
   printMultiplierOverrides?: PrintExportMultiplierOverrides | null,
+  cornersSrc?: string | null,
 ): Promise<Blob> {
   const { getProductProfile } = await import('./constants')
   const { getArtworkRect, getPrintAreaRect } = await import('./placement')
   const profile = getProductProfile(productType)
   const { width: paW, height: paH } = profile.printArea[side]
+  const printAreaRect = getPrintAreaRect(profile, side)
 
-  const img = await loadImageElement(artworkSrc)
-
-  const aspect = img.naturalWidth / img.naturalHeight
-
-  const art = getArtworkRect(
-    getPrintAreaRect(profile, side),
-    aspect,
-    withPrintExportMultiplier(placement, productType, side, printMultiplierOverrides),
-  )
+  const [img, cornersImg] = await Promise.all([
+    loadImageElement(artworkSrc),
+    cornersSrc ? loadImageElement(cornersSrc) : Promise.resolve(null),
+  ])
 
   const canvas = document.createElement('canvas')
   canvas.width = paW
   canvas.height = paH
   const ctx = canvas.getContext('2d', { alpha: true })!
   ctx.clearRect(0, 0, paW, paH)
+
+  const aspect = img.naturalWidth / img.naturalHeight
+  const art = getArtworkRect(
+    printAreaRect,
+    aspect,
+    withPrintExportMultiplier(placement, productType, side, printMultiplierOverrides),
+  )
   ctx.drawImage(img, art.x, art.y, art.w, art.h)
+
+  if (cornersImg) {
+    const cornersAspect = cornersImg.naturalWidth / cornersImg.naturalHeight
+    const cornersRect = getArtworkRect(
+      printAreaRect,
+      cornersAspect,
+      withPrintExportMultiplier(
+        { xPct: 0.5, yPct: 0.5, scale: 1 },
+        productType,
+        side,
+        printMultiplierOverrides,
+      ),
+    )
+    ctx.drawImage(cornersImg, cornersRect.x, cornersRect.y, cornersRect.w, cornersRect.h)
+  }
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(

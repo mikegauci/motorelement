@@ -18,6 +18,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     compositeDataUrl,
     artworkOnlyDataUrl,
     textOnlyDataUrl,
+    cornersOnlyDataUrl,
     mockupPlacement,
     tshirtBaseImage,
     productType,
@@ -29,6 +30,11 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
 
   const hasBothSides = textPlacement === 'opposite' && !!textOnlyDataUrl
 
+  const textSide: 'front' | 'back' =
+    textPlacement === 'opposite'
+      ? (artworkSide === 'front' ? 'back' : 'front')
+      : artworkSide
+
   let overlayUrl: string | null = null
   if (mockupViewSide === artworkSide) {
     overlayUrl = textPlacement === 'opposite'
@@ -37,11 +43,13 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
   } else if (textPlacement === 'opposite') {
     overlayUrl = textOnlyDataUrl
   }
+  const cornersUrl = mockupViewSide === textSide ? cornersOnlyDataUrl : null
   const pz = getMockupPrintZone(productType, mockupViewSide)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const baseImgRef = useRef<HTMLImageElement | null>(null)
   const artworkImgRef = useRef<HTMLImageElement | null>(null)
+  const cornersImgRef = useRef<HTMLImageElement | null>(null)
 
   const offscreenRef = useRef<HTMLCanvasElement | null>(null)
 
@@ -122,6 +130,10 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     if (artworkImg) {
       drawArtworkClipped(offCtx, artworkImg, pzr, overlayPlacement)
     }
+    const cornersImg = cornersImgRef.current
+    if (cornersImg) {
+      drawArtworkClipped(offCtx, cornersImg, pzr, { xPct: 0.5, yPct: 0.5, scale: 1 })
+    }
 
     let sx: number
     let sy: number
@@ -164,6 +176,19 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
           if (!cancelled) artworkImgRef.current = null
         })
       )
+    } else {
+      artworkImgRef.current = null
+    }
+    if (cornersUrl) {
+      promises.push(
+        loadImageElement(cornersUrl).then((img) => {
+          if (!cancelled) cornersImgRef.current = img
+        }).catch(() => {
+          if (!cancelled) cornersImgRef.current = null
+        })
+      )
+    } else {
+      cornersImgRef.current = null
     }
 
     Promise.all(promises).then(() => {
@@ -171,7 +196,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     })
 
     return () => { cancelled = true }
-  }, [open, tshirtBaseImage, overlayUrl, paint])
+  }, [open, tshirtBaseImage, overlayUrl, cornersUrl, paint])
 
   useEffect(() => {
     if (!open) return

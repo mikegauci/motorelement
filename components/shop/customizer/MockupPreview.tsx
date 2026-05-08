@@ -12,6 +12,7 @@ export default function MockupPreview() {
     compositeDataUrl,
     artworkOnlyDataUrl,
     textOnlyDataUrl,
+    cornersOnlyDataUrl,
     mockupPlacement,
     tshirtBaseImage,
     productType,
@@ -32,6 +33,11 @@ export default function MockupPreview() {
     }
   }, [hasBothSides, mockupViewSide, artworkSide, setMockupViewSide])
 
+  const textSide: 'front' | 'back' =
+    textPlacement === 'opposite'
+      ? (artworkSide === 'front' ? 'back' : 'front')
+      : artworkSide
+
   let overlayUrl: string | null = null
   if (mockupViewSide === artworkSide) {
     overlayUrl = textPlacement === 'opposite'
@@ -41,12 +47,15 @@ export default function MockupPreview() {
     overlayUrl = textOnlyDataUrl
   }
 
+  const cornersUrl = mockupViewSide === textSide ? cornersOnlyDataUrl : null
+
   const pz = useMemo(() => getMockupPrintZone(productType, mockupViewSide), [productType, mockupViewSide])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const baseImgRef = useRef<HTMLImageElement | null>(null)
   const artworkImgRef = useRef<HTMLImageElement | null>(null)
+  const cornersImgRef = useRef<HTMLImageElement | null>(null)
   const tintCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const thumbCanvasRef = useRef<HTMLCanvasElement | null>(null)
 
@@ -109,6 +118,7 @@ export default function MockupPreview() {
       }
 
       const artworkImg = artworkImgRef.current
+      const cornersImg = cornersImgRef.current
       const pzr = printZoneRect(baseRect, pz)
 
       const isOppositeSideTextOnly = mockupViewSide !== artworkSide
@@ -118,6 +128,10 @@ export default function MockupPreview() {
 
       if (artworkImg) {
         drawArtworkClipped(ctx, artworkImg, pzr, overlayPlacement)
+      }
+
+      if (cornersImg) {
+        drawArtworkClipped(ctx, cornersImg, pzr, { xPct: 0.5, yPct: 0.5, scale: 1 })
       }
 
       if (artworkImg) {
@@ -183,6 +197,25 @@ export default function MockupPreview() {
     })
     return () => { cancelled = true }
   }, [tshirtBaseImage, paint, setMockupBaseNaturalSize])
+
+  useEffect(() => {
+    if (!cornersUrl) {
+      cornersImgRef.current = null
+      paint()
+      return
+    }
+    let cancelled = false
+    loadImageElement(cornersUrl).then((img) => {
+      if (cancelled) return
+      cornersImgRef.current = img
+      paint()
+    }).catch(() => {
+      if (cancelled) return
+      cornersImgRef.current = null
+      paint()
+    })
+    return () => { cancelled = true }
+  }, [cornersUrl, paint])
 
   // Load artwork/composite overlay image
   useEffect(() => {

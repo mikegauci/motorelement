@@ -52,6 +52,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
     setCompositeDataUrl,
     setArtworkOnlyDataUrl,
     setTextOnlyDataUrl,
+    setCornersOnlyDataUrl,
   } = useCustomizer()
   const compositeStageRef = useRef<HTMLDivElement>(null)
   const compositeCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -71,6 +72,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
   const printZoneCornerImageElementRef = useRef<HTMLImageElement | null>(null)
   const artworkOnlyCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const textOnlyCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const cornersOnlyCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const resultCardRef = useRef<HTMLDivElement>(null)
 
   const [mobileCompositePreviewSrc, setMobileCompositePreviewSrc] = useState('')
@@ -227,12 +229,43 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
         printZoneCornerImage: printZoneCornerImageRef.current,
         printZoneCornerImageElement: printZoneCornerImageElementRef.current,
       }
-      drawCompositeContent(ctx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, sharedOpts)
+      const layers = deps.textLayersRef.current ?? []
+      const hasCornerText = layers.some((l) => !!l.printZoneCorner)
+      const hasCornerImage =
+        !!printZoneCornerImageRef.current.enabled &&
+        !!printZoneCornerImageElementRef.current
+      const hasCornerItems = hasCornerText || hasCornerImage
+
+      drawCompositeContent(ctx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, {
+        ...sharedOpts,
+        omitCornerItems: true,
+      })
       try {
         const dataUrl = canvas!.toDataURL('image/png')
         setMobileCompositePreviewSrc(dataUrl)
         setCompositeDataUrl(dataUrl)
       } catch (_) { /* ignore */ }
+
+      if (hasCornerItems) {
+        try {
+          if (!cornersOnlyCanvasRef.current) cornersOnlyCanvasRef.current = document.createElement('canvas')
+          const cCanvas = cornersOnlyCanvasRef.current
+          if (cCanvas.width !== pixelSize) cCanvas.width = pixelSize
+          if (cCanvas.height !== pixelH) cCanvas.height = pixelH
+          const cCtx = cCanvas.getContext('2d', { alpha: true })!
+          cCtx.setTransform(1, 0, 0, 1, 0, 0)
+          cCtx.imageSmoothingEnabled = true; cCtx.imageSmoothingQuality = 'high'
+          drawCompositeContent(cCtx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, {
+            ...sharedOpts,
+            omitArtwork: true,
+            omitFreeText: true,
+            mockupPlacement: { xPct: 0.5, yPct: 0.5, scale: 1 },
+          })
+          setCornersOnlyDataUrl(cCanvas.toDataURL('image/png'))
+        } catch (_) { /* ignore */ }
+      } else {
+        setCornersOnlyDataUrl(null)
+      }
 
       if (textPlacementRef.current === 'opposite') {
         try {
@@ -261,6 +294,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
           drawCompositeContent(tCtx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, {
             ...sharedOpts,
             omitArtwork: true,
+            omitCornerItems: true,
             mockupPlacement: { xPct: 0.5, yPct: 0.5, scale: 1 },
           })
           setTextOnlyDataUrl(tCanvas.toDataURL('image/png'))
@@ -284,8 +318,9 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
       setCompositeDataUrl(null)
       setArtworkOnlyDataUrl(null)
       setTextOnlyDataUrl(null)
+      setCornersOnlyDataUrl(null)
     }
-  }, [deps.transparentCarUrlForPreset, setCompositeDataUrl, setArtworkOnlyDataUrl, setTextOnlyDataUrl])
+  }, [deps.transparentCarUrlForPreset, setCompositeDataUrl, setArtworkOnlyDataUrl, setTextOnlyDataUrl, setCornersOnlyDataUrl])
 
   // Mobile dock visibility
   useEffect(() => {

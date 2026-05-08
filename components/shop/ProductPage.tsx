@@ -63,7 +63,7 @@ export default function ProductPage({
   const { addItem, openCart } = useCart();
   const {
     setTshirtBaseImage, tshirtBaseImage, artworkUrl, compositeDataUrl,
-    artworkOnlyDataUrl, textOnlyDataUrl,
+    artworkOnlyDataUrl, textOnlyDataUrl, cornersOnlyDataUrl,
     mockupPlacement, setProductType, setSelectedColorHex, setSelectedColorTitle, generationStatus,
     artworkSide, textPlacement, mockupViewSide,
   } = useCustomizer();
@@ -177,12 +177,15 @@ export default function ProductPage({
     if (printSource) {
       setUploading(true);
       try {
+        const cornersForArtworkSide = textPlacement === 'same' ? cornersOnlyDataUrl : null;
+        const cornersForOppositeSide = textPlacement === 'opposite' ? cornersOnlyDataUrl : null;
         const printBlob = buildPrintAreaPng(
           printSource,
           mockupPlacement,
           product.type,
           artworkSide,
           printMultiplierOverrides,
+          cornersForArtworkSide,
         );
         const thumbSource = isOpposite
           ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
@@ -199,6 +202,7 @@ export default function ProductPage({
               mockupPlacement,
               product.type,
               artworkSide,
+              cornersForArtworkSide,
             )
           : null;
         const textBlob = isOpposite && textOnlyDataUrl
@@ -208,6 +212,7 @@ export default function ProductPage({
               product.type,
               oppositeSide,
               printMultiplierOverrides,
+              cornersForOppositeSide,
             )
           : null;
 
