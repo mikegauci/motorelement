@@ -47,110 +47,6 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
 
   const [zoomedIn, setZoomedIn] = useState(true)
 
-  const [transform, setTransform] = useState({ scale: 1, tx: 0, ty: 0 })
-  const pinchRef = useRef<{
-    initialDistance: number
-    initialScale: number
-    initialTx: number
-    initialTy: number
-  } | null>(null)
-  const panRef = useRef<{
-    startX: number
-    startY: number
-    initialTx: number
-    initialTy: number
-  } | null>(null)
-  const lastTapRef = useRef<number>(0)
-
-  useEffect(() => {
-    setTransform({ scale: 1, tx: 0, ty: 0 })
-  }, [zoomedIn, open, mockupViewSide])
-
-  function clampPan(scale: number, tx: number, ty: number, size: number) {
-    const max = (size * (scale - 1)) / 2
-    return {
-      tx: Math.max(-max, Math.min(max, tx)),
-      ty: Math.max(-max, Math.min(max, ty)),
-    }
-  }
-
-  function touchDistance(t1: React.Touch, t2: React.Touch) {
-    return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
-  }
-
-  function onTouchStart(e: React.TouchEvent) {
-    if (e.touches.length === 2) {
-      pinchRef.current = {
-        initialDistance: touchDistance(e.touches[0], e.touches[1]),
-        initialScale: transform.scale,
-        initialTx: transform.tx,
-        initialTy: transform.ty,
-      }
-      panRef.current = null
-      return
-    }
-    if (e.touches.length === 1) {
-      const now = Date.now()
-      if (now - lastTapRef.current < 300) {
-        setTransform({ scale: 1, tx: 0, ty: 0 })
-        lastTapRef.current = 0
-        return
-      }
-      lastTapRef.current = now
-      if (transform.scale > 1) {
-        panRef.current = {
-          startX: e.touches[0].clientX,
-          startY: e.touches[0].clientY,
-          initialTx: transform.tx,
-          initialTy: transform.ty,
-        }
-      }
-    }
-  }
-
-  function onTouchMove(e: React.TouchEvent) {
-    const canvas = canvasRef.current
-    const size = canvas?.clientWidth ?? 0
-
-    if (e.touches.length === 2 && pinchRef.current) {
-      e.preventDefault()
-      const newDist = touchDistance(e.touches[0], e.touches[1])
-      const ratio = newDist / pinchRef.current.initialDistance
-      let newScale = pinchRef.current.initialScale * ratio
-      newScale = Math.max(1, Math.min(4, newScale))
-      let newTx = pinchRef.current.initialTx
-      let newTy = pinchRef.current.initialTy
-      if (newScale === 1) {
-        newTx = 0
-        newTy = 0
-      } else {
-        const clamped = clampPan(newScale, newTx, newTy, size)
-        newTx = clamped.tx
-        newTy = clamped.ty
-      }
-      setTransform({ scale: newScale, tx: newTx, ty: newTy })
-      return
-    }
-
-    if (e.touches.length === 1 && panRef.current && transform.scale > 1) {
-      e.preventDefault()
-      const dx = e.touches[0].clientX - panRef.current.startX
-      const dy = e.touches[0].clientY - panRef.current.startY
-      const clamped = clampPan(
-        transform.scale,
-        panRef.current.initialTx + dx,
-        panRef.current.initialTy + dy,
-        size
-      )
-      setTransform((prev) => ({ scale: prev.scale, tx: clamped.tx, ty: clamped.ty }))
-    }
-  }
-
-  function onTouchEnd(e: React.TouchEvent) {
-    if (e.touches.length < 2) pinchRef.current = null
-    if (e.touches.length === 0) panRef.current = null
-  }
-
   useEffect(() => {
     if (!open) return
 
@@ -335,25 +231,11 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
             })}
           </div>
         )}
-        <div
-          className="overflow-hidden rounded border border-border/50"
-          style={{ touchAction: 'none' }}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          onTouchCancel={onTouchEnd}
-        >
-          <canvas
-            ref={canvasRef}
-            className="block"
-            style={{
-              transform: `translate(${transform.tx}px, ${transform.ty}px) scale(${transform.scale})`,
-              transformOrigin: 'center center',
-              transition: pinchRef.current || panRef.current ? 'none' : 'transform 120ms ease-out',
-            }}
-            aria-label="Mockup preview"
-          />
-        </div>
+        <canvas
+          ref={canvasRef}
+          className="rounded border border-border/50"
+          aria-label="Mockup preview"
+        />
       </div>
     </div>
   )
