@@ -261,6 +261,7 @@ export function useCompositeCanvas(deps: CompositeCanvasDeps) {
           drawCompositeContent(tCtx, pixelSize, deps.selectedBackgroundSrc ? bgImg : null, carImg, {
             ...sharedOpts,
             omitArtwork: true,
+            mockupPlacement: { xPct: 0.5, yPct: 0.5, scale: 1 },
           })
           setTextOnlyDataUrl(tCanvas.toDataURL('image/png'))
         } catch (_) { /* ignore */ }

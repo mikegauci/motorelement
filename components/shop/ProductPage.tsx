@@ -204,7 +204,7 @@ export default function ProductPage({
         const textBlob = isOpposite && textOnlyDataUrl
           ? buildPrintAreaPng(
               textOnlyDataUrl,
-              mockupPlacement,
+              { xPct: 0.5, yPct: 0.5, scale: 1 },
               product.type,
               oppositeSide,
               printMultiplierOverrides,

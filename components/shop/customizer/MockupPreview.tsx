@@ -111,8 +111,13 @@ export default function MockupPreview() {
       const artworkImg = artworkImgRef.current
       const pzr = printZoneRect(baseRect, pz)
 
+      const isOppositeSideTextOnly = mockupViewSide !== artworkSide
+      const overlayPlacement = isOppositeSideTextOnly
+        ? { xPct: 0.5, yPct: 0.5, scale: 1 }
+        : mockupPlacement
+
       if (artworkImg) {
-        drawArtworkClipped(ctx, artworkImg, pzr, mockupPlacement)
+        drawArtworkClipped(ctx, artworkImg, pzr, overlayPlacement)
       }
 
       if (artworkImg) {
@@ -151,7 +156,7 @@ export default function MockupPreview() {
       ctx.textAlign = 'center'
       ctx.fillText('Select a product to see mockup', w / 2, h / 2)
     }
-  }, [mockupPlacement, pz, selectedColorHex, tshirtBaseImage, setMockupThumbnailUrl])
+  }, [mockupPlacement, pz, selectedColorHex, tshirtBaseImage, setMockupThumbnailUrl, mockupViewSide, artworkSide])
 
   // Load base t-shirt image
   useEffect(() => {

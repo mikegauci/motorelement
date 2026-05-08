@@ -115,8 +115,12 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     offCtx.drawImage(baseImg, baseRect.x, baseRect.y, baseRect.w, baseRect.h)
 
     const pzr = printZoneRect(baseRect, pz)
+    const isOppositeSideTextOnly = mockupViewSide !== artworkSide
+    const overlayPlacement = isOppositeSideTextOnly
+      ? { xPct: 0.5, yPct: 0.5, scale: 1 }
+      : mockupPlacement
     if (artworkImg) {
-      drawArtworkClipped(offCtx, artworkImg, pzr, mockupPlacement)
+      drawArtworkClipped(offCtx, artworkImg, pzr, overlayPlacement)
     }
 
     let sx: number
@@ -136,7 +140,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     }
 
     ctx.drawImage(off, sx, sy, cropSide, cropSide, 0, 0, px, px)
-  }, [mockupPlacement, pz, zoomedIn])
+  }, [mockupPlacement, pz, zoomedIn, mockupViewSide, artworkSide])
 
   useEffect(() => {
     if (!open) return
