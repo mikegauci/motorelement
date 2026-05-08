@@ -24,7 +24,10 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     artworkSide,
     textPlacement,
     mockupViewSide,
+    setMockupViewSide,
   } = useCustomizer()
+
+  const hasBothSides = textPlacement === 'opposite' && !!textOnlyDataUrl
 
   let overlayUrl: string | null = null
   if (mockupViewSide === artworkSide) {
@@ -61,7 +64,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
 
   useEffect(() => {
     setTransform({ scale: 1, tx: 0, ty: 0 })
-  }, [zoomedIn, open])
+  }, [zoomedIn, open, mockupViewSide])
 
   function clampPan(scale: number, tx: number, ty: number, size: number) {
     const max = (size * (scale - 1)) / 2
@@ -310,6 +313,28 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
           {zoomedIn ? <ZoomOut size={16} /> : <ZoomIn size={16} />}
           <span>{zoomedIn ? 'Zoom Out' : 'Zoom In'}</span>
         </button>
+        {hasBothSides && (
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex gap-1 rounded border border-border/40 bg-black/40 p-1">
+            {(['front', 'back'] as const).map((side) => {
+              const isActive = mockupViewSide === side
+              return (
+                <button
+                  key={side}
+                  type="button"
+                  onClick={() => setMockupViewSide(side)}
+                  aria-pressed={isActive}
+                  className={`px-3 py-1 text-[11px] font-sub font-bold uppercase tracking-widest border transition-colors cursor-pointer ${
+                    isActive
+                      ? 'border-ignition bg-ignition/20 text-white'
+                      : 'border-transparent text-muted hover:text-white'
+                  }`}
+                >
+                  {side === 'front' ? 'Front' : 'Back'}
+                </button>
+              )
+            })}
+          </div>
+        )}
         <div
           className="overflow-hidden rounded border border-border/50"
           style={{ touchAction: 'none' }}
