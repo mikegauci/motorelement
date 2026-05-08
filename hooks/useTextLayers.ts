@@ -52,7 +52,10 @@ export function useTextLayers(availableFontOptions: FontOption[]) {
   }
 
   function removeTextLayer(layerId: string) {
-    setTextLayers((prev) => prev.filter((l) => l.id !== layerId))
+    const prev = textLayersRef.current
+    const next = prev.filter((l) => l.id !== layerId)
+    setTextLayers(next)
+    setSelectedTextLayerId((id) => (id !== layerId ? id : (next[0]?.id ?? null)))
   }
 
   function moveTextLayer(layerId: string, direction: number) {

@@ -108,6 +108,122 @@ export default function TextLayerEditor({
     onUpdatePrintZoneCornerImage({ corner })
   }
 
+  const showCornerImageStandalone =
+    !selectedTextLayer && printZoneCornerImage.enabled
+
+  function cornerImageSection() {
+    return (
+          <div className={styles.setupBlock}>
+            <button
+              type="button"
+              className={`${styles.printZoneCheckboxLabel} ${printZoneCornerImage.enabled ? styles.printZoneCheckboxLabelActive : ''}`}
+              onClick={() => onUpdatePrintZoneCornerImage({ enabled: !printZoneCornerImage.enabled })}
+              disabled={backgroundControlsLocked}
+            >
+              <input
+                type="checkbox"
+                className={styles.printZoneCheckbox}
+                checked={printZoneCornerImage.enabled}
+                readOnly
+                tabIndex={-1}
+              />
+              <span>Add image in corner?</span>
+            </button>
+            {printZoneCornerImage.enabled && (
+              <>
+                {printZoneCornerImage.src ? (
+                  <div className={styles.printZoneImagePreviewRow}>
+                    <Image
+                      src={printZoneCornerImage.src}
+                      alt="Corner image"
+                      width={64}
+                      height={64}
+                      unoptimized
+                      className={styles.printZoneImagePreview}
+                    />
+                    <div className={styles.printZoneImageActions}>
+                      {printZoneCornerImage.presetId ? (
+                        <CornerLogoPresetPicker
+                          disabled={backgroundControlsLocked}
+                          garmentColorTitle={garmentColorTitle}
+                          onSelect={onApplyCornerPreset}
+                          buttonLabel="Replace preset"
+                          buttonClassName={styles.btn}
+                          wrapperClassName="relative"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.btn}
+                          onClick={onUploadCornerImage}
+                          disabled={backgroundControlsLocked}
+                        >
+                          Replace image
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.btn}
+                        onClick={onRemoveCornerImage}
+                        disabled={backgroundControlsLocked}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className={`${styles.printZoneImageUpload} flex-1 min-w-0`}
+                      onClick={onUploadCornerImage}
+                      disabled={backgroundControlsLocked}
+                    >
+                      Upload corner image
+                    </button>
+                    <CornerLogoPresetPicker
+                      disabled={backgroundControlsLocked}
+                      garmentColorTitle={garmentColorTitle}
+                      onSelect={onApplyCornerPreset}
+                    />
+                  </div>
+                )}
+                {printZoneCornerImage.src && (
+                  <>
+                    <div className={styles.printZoneCornerGrid}>
+                      {CORNER_OPTIONS.map((corner) => (
+                        <button
+                          key={corner.value}
+                          type="button"
+                          className={`${styles.printZoneCornerBtn} ${printZoneCornerImage.corner === corner.value ? styles.printZoneCornerBtnActive : ''}`}
+                          onClick={() => setCornerImageCorner(corner.value)}
+                          disabled={backgroundControlsLocked}
+                          aria-label={corner.label}
+                          title={corner.label}
+                        >
+                          <CornerIcon corner={corner.value} />
+                        </button>
+                      ))}
+                    </div>
+                    <SliderRow
+                      label="Image size"
+                      displayValue={`${Math.round(printZoneCornerImage.sizePct * 100)}%`}
+                      min={5}
+                      max={35}
+                      value={Math.round(printZoneCornerImage.sizePct * 100)}
+                      disabled={backgroundControlsLocked}
+                      onNudgeDown={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct - 0.01 })}
+                      onNudgeUp={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct + 0.01 })}
+                      onChange={(v) => onUpdatePrintZoneCornerImage({ sizePct: v / 100 })}
+                    />
+                  </>
+                )}
+              </>
+            )}
+          </div>
+    )
+  }
+
   return (
     <div className={styles.textOverlayBlock}>
       <div className={styles.textOverlayHeader}>
@@ -121,9 +237,9 @@ export default function TextLayerEditor({
           + Add text layer
         </button>
       </div>
-      {textLayers.length === 0 ? (
+      {!showCornerImageStandalone && textLayers.length === 0 ? (
         <p className={styles.textOverlayEmpty}>No text layers yet.</p>
-      ) : (
+      ) : !showCornerImageStandalone ? (
         <div className={styles.textLayerList}>
           {textLayers.map((layer, idx) => (
             <div
@@ -168,7 +284,7 @@ export default function TextLayerEditor({
             </div>
           ))}
         </div>
-      )}
+      ) : null}
       {selectedTextLayer && (
         <div className={styles.textLayerEditor}>
           <div className={styles.textLayerTextFontRow}>
@@ -336,115 +452,11 @@ export default function TextLayerEditor({
               </div>
             )}
           </div>
-          <div className={styles.setupBlock}>
-            <button
-              type="button"
-              className={`${styles.printZoneCheckboxLabel} ${printZoneCornerImage.enabled ? styles.printZoneCheckboxLabelActive : ''}`}
-              onClick={() => onUpdatePrintZoneCornerImage({ enabled: !printZoneCornerImage.enabled })}
-              disabled={backgroundControlsLocked}
-            >
-              <input
-                type="checkbox"
-                className={styles.printZoneCheckbox}
-                checked={printZoneCornerImage.enabled}
-                readOnly
-                tabIndex={-1}
-              />
-              <span>Add image in corner?</span>
-            </button>
-            {printZoneCornerImage.enabled && (
-              <>
-                {printZoneCornerImage.src ? (
-                  <div className={styles.printZoneImagePreviewRow}>
-                    <Image
-                      src={printZoneCornerImage.src}
-                      alt="Corner image"
-                      width={64}
-                      height={64}
-                      unoptimized
-                      className={styles.printZoneImagePreview}
-                    />
-                    <div className={styles.printZoneImageActions}>
-                      {printZoneCornerImage.presetId ? (
-                        <CornerLogoPresetPicker
-                          disabled={backgroundControlsLocked}
-                          garmentColorTitle={garmentColorTitle}
-                          onSelect={onApplyCornerPreset}
-                          buttonLabel="Replace preset"
-                          buttonClassName={styles.btn}
-                          wrapperClassName="relative"
-                        />
-                      ) : (
-                        <button
-                          type="button"
-                          className={styles.btn}
-                          onClick={onUploadCornerImage}
-                          disabled={backgroundControlsLocked}
-                        >
-                          Replace image
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className={styles.btn}
-                        onClick={onRemoveCornerImage}
-                        disabled={backgroundControlsLocked}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className={`${styles.printZoneImageUpload} flex-1 min-w-0`}
-                      onClick={onUploadCornerImage}
-                      disabled={backgroundControlsLocked}
-                    >
-                      Upload corner image
-                    </button>
-                    <CornerLogoPresetPicker
-                      disabled={backgroundControlsLocked}
-                      garmentColorTitle={garmentColorTitle}
-                      onSelect={onApplyCornerPreset}
-                    />
-                  </div>
-                )}
-                {printZoneCornerImage.src && (
-                  <>
-                    <div className={styles.printZoneCornerGrid}>
-                      {CORNER_OPTIONS.map((corner) => (
-                        <button
-                          key={corner.value}
-                          type="button"
-                          className={`${styles.printZoneCornerBtn} ${printZoneCornerImage.corner === corner.value ? styles.printZoneCornerBtnActive : ''}`}
-                          onClick={() => setCornerImageCorner(corner.value)}
-                          disabled={backgroundControlsLocked}
-                          aria-label={corner.label}
-                          title={corner.label}
-                        >
-                          <CornerIcon corner={corner.value} />
-                        </button>
-                      ))}
-                    </div>
-                    <SliderRow
-                      label="Image size"
-                      displayValue={`${Math.round(printZoneCornerImage.sizePct * 100)}%`}
-                      min={5}
-                      max={35}
-                      value={Math.round(printZoneCornerImage.sizePct * 100)}
-                      disabled={backgroundControlsLocked}
-                      onNudgeDown={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct - 0.01 })}
-                      onNudgeUp={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct + 0.01 })}
-                      onChange={(v) => onUpdatePrintZoneCornerImage({ sizePct: v / 100 })}
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </div>
+          {cornerImageSection()}
         </div>
+      )}
+      {showCornerImageStandalone && (
+        <div className={styles.textLayerEditor}>{cornerImageSection()}</div>
       )}
     </div>
   )
