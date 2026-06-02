@@ -522,46 +522,36 @@ export default function ProductPage({
           ) : (
             <>
               {hasGeneratedImage && (
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    {useSkeletonHero ? (
-                      <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
-                        Generating realistic Printify mockups for your size and color…
-                      </p>
-                    ) : printifyMockups.length > 0 ? (
-                      <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
-                        Your artwork on supplier mockups for this variant.
-                      </p>
-                    ) : (
-                      <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
-                        Catalog photos until mockups finish loading or if Printify preview is
-                        unavailable.
-                      </p>
-                    )}
-                    {showMockupUpsellBanner && (
-                      <p className="font-body text-[11px] text-amber-200/90">
-                        {printifyMockups.length > 0 ? (
-                          <>
-                            Latest mockup refresh failed ({printifyMocksError}). Showing the last
-                            successful mockups.
-                          </>
-                        ) : (
-                          <>
-                            Mockup preview failed ({printifyMocksError}). Showing store catalog
-                            imagery until it succeeds.
-                          </>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => buildMockupPhotosRef.current()}
-                    disabled={printifyMocksLoading || generationRunning}
-                    className="shrink-0 px-3 py-1.5 text-[11px] font-sub font-bold uppercase tracking-widest border border-border text-muted hover:border-white/30 hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {printifyMocksLoading ? "Rebuilding…" : "Rebuild mockup photos"}
-                  </button>
+                <div className="mb-3 space-y-1">
+                  {useSkeletonHero ? (
+                    <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
+                      Generating realistic Printify mockups for your size and color…
+                    </p>
+                  ) : printifyMockups.length > 0 ? (
+                    <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
+                      Your artwork on supplier mockups for this variant.
+                    </p>
+                  ) : (
+                    <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
+                      Catalog photos until mockups finish loading or if Printify preview is
+                      unavailable.
+                    </p>
+                  )}
+                  {showMockupUpsellBanner && (
+                    <p className="font-body text-[11px] text-amber-200/90">
+                      {printifyMockups.length > 0 ? (
+                        <>
+                          Latest mockup refresh failed ({printifyMocksError}). Showing the last
+                          successful mockups.
+                        </>
+                      ) : (
+                        <>
+                          Mockup preview failed ({printifyMocksError}). Showing store catalog
+                          imagery until it succeeds.
+                        </>
+                      )}
+                    </p>
+                  )}
                 </div>
               )}
               <div className="relative aspect-square overflow-hidden bg-obsidian border border-border">

@@ -1,5 +1,8 @@
 import { printifyFetch, shopPath } from "./client";
-import { uploadPrintifyImageByUrl } from "./uploads";
+import { uploadPrintifyImageByBase64, uploadPrintifyImageByUrl } from "./uploads";
+
+const TRANSPARENT_1PX_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 const POLL_INTERVAL_MS = 750;
 const POLL_TIMEOUT_MS = 6000;
@@ -44,19 +47,30 @@ interface ProductPayload {
   images?: ProductImage[];
 }
 
+function sideFromPosition(position: string | undefined): "front" | "back" | null {
+  if (!position) return null;
+  if (position === "front" || position.startsWith("front_") || position.startsWith("front-")) {
+    return "front";
+  }
+  if (position === "back" || position.startsWith("back_") || position.startsWith("back-")) {
+    return "back";
+  }
+  return null;
+}
+
 function assignFreshPlaceholderImages(
   printAreas: PrintArea[],
   variantId: number,
   uploadIds: Partial<Record<"front" | "back", string>>,
+  transparentUploadId: string,
 ): void {
   for (const area of printAreas) {
     const variantAppliesHere = Boolean(area.variant_ids?.includes(variantId));
     for (const ph of area.placeholders ?? []) {
-      const pos = ph.position === "front" || ph.position === "back" ? ph.position : null;
-      const uploadId = variantAppliesHere && pos ? uploadIds[pos] : undefined;
-      ph.images = uploadId
-        ? [{ id: uploadId, x: 0.5, y: 0.5, scale: 1, angle: 0 }]
-        : [];
+      const side = sideFromPosition(ph.position);
+      const uploadId =
+        (variantAppliesHere && side && uploadIds[side]) || transparentUploadId;
+      ph.images = [{ id: uploadId, x: 0.5, y: 0.5, scale: 1, angle: 0 }];
     }
   }
 }
@@ -111,6 +125,13 @@ export async function renderMockProductPreview(opts: {
     uploadIds.back = up.id;
   }
 
+  const transparent = await uploadPrintifyImageByBase64({
+    file_name: `preview-empty-${Date.now()}.png`,
+    contents: TRANSPARENT_1PX_PNG_BASE64,
+  });
+
+  await new Promise((r) => setTimeout(r, 1500));
+
   const productPath = `/products/${mockProductId}.json`;
   const fresh = (await printifyFetch<ProductPayload>(shopPath(productPath))) as ProductPayload;
 
@@ -119,7 +140,7 @@ export async function renderMockProductPreview(opts: {
     throw new Error("Mock product has no print_areas");
   }
 
-  assignFreshPlaceholderImages(printAreas, variantId, uploadIds);
+  assignFreshPlaceholderImages(printAreas, variantId, uploadIds, transparent.id);
 
   const updated = (await printifyFetch<ProductPayload>(shopPath(productPath), {
     method: "PUT",
