@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { printifyFetch, shopPath } from "@/lib/printify/client";
 
+export const dynamic = "force-dynamic";
+
 interface PrintifyVariant {
   id: number;
   title: string;

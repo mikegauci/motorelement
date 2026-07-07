@@ -4,6 +4,8 @@ import ProductPage from "@/components/shop/ProductPage";
 import ProductCustomizer from "@/components/shop/customizer/ProductCustomizer";
 import { CustomizerProvider } from "@/components/shop/customizer/CustomizerContext";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({
   params,
 }: {

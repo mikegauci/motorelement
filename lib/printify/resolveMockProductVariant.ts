@@ -28,6 +28,20 @@ export async function resolveMockProductVariantId(opts: {
 }): Promise<number> {
   const { listingProductId, listingVariantId, mockProductId } = opts;
 
+  if (listingProductId === mockProductId) {
+    const product = (await getProduct(listingProductId)) as ShopProductPayload;
+    const variant = product.variants?.find(
+      (v) =>
+        v.id === listingVariantId && v.is_enabled && v.is_available,
+    );
+    if (!variant) {
+      throw new Error(
+        `Variant ${listingVariantId} not found on product ${listingProductId}`,
+      );
+    }
+    return listingVariantId;
+  }
+
   const [listingRaw, mockRaw] = await Promise.all([
     getProduct(listingProductId),
     getProduct(mockProductId),

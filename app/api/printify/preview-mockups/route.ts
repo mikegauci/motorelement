@@ -4,9 +4,13 @@ import { NextResponse } from "next/server";
 import { resolveMockProductVariantId } from "@/lib/printify/resolveMockProductVariant";
 import { renderMockProductPreview } from "@/lib/printify/syncMockups";
 import { assertSupabasePublicArtworkUrl } from "@/lib/printify/validatePreviewAssetUrl";
+import { getProductBySlug } from "@/lib/supabase/queries/products";
+
+export const dynamic = "force-dynamic";
 
 interface BodyJson {
   shopProductId?: string;
+  productSlug?: string;
   variantId?: number;
   printFileUrls?: Partial<Record<"front" | "back", string>>;
 }
@@ -22,9 +26,16 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as BodyJson;
-    const listingProductId = body.shopProductId?.trim();
+    let listingProductId = body.shopProductId?.trim() ?? "";
     const listingVariantId = body.variantId;
     const printFileUrls = body.printFileUrls ?? {};
+
+    if (body.productSlug?.trim()) {
+      const { data: dbProduct } = await getProductBySlug(body.productSlug.trim());
+      if (dbProduct?.printifyBlueprintId) {
+        listingProductId = dbProduct.printifyBlueprintId;
+      }
+    }
 
     if (
       !listingProductId ||

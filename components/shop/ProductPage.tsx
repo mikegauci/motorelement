@@ -86,6 +86,8 @@ export default function ProductPage({
   const [printifyMocksLoading, setPrintifyMocksLoading] = useState(false);
   const [printifyMocksError, setPrintifyMocksError] = useState<string | null>(null);
   const [printifyMockupsVersion, setPrintifyMockupsVersion] = useState(0);
+  const [mockupsStale, setMockupsStale] = useState(false);
+  const lastBuiltMockupKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     setProductType(product.type);
@@ -103,7 +105,9 @@ export default function ProductPage({
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/printify/product/${printifyProductId}`);
+        const res = await fetch(`/api/printify/product/${printifyProductId}`, {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Failed to load");
         const json: PrintifyData = await res.json();
         setData(json);
@@ -175,10 +179,34 @@ export default function ProductPage({
 
   const activeBuildControllerRef = useRef<AbortController | null>(null);
 
+  const mockupArtworkKey = useMemo(() => {
+    return [
+      artworkUrl,
+      compositeDataUrl,
+      artworkOnlyDataUrl,
+      textOnlyDataUrl,
+      cornersOnlyDataUrl,
+      artworkSide,
+      textPlacement,
+      mockupPlacement.xPct,
+      mockupPlacement.yPct,
+      mockupPlacement.scale,
+    ].join("|");
+  }, [
+    artworkUrl,
+    compositeDataUrl,
+    artworkOnlyDataUrl,
+    textOnlyDataUrl,
+    cornersOnlyDataUrl,
+    artworkSide,
+    textPlacement,
+    mockupPlacement,
+  ]);
+
   const buildMockupPhotos = useCallback(async () => {
     if (!hasGeneratedImage || !selectedVariant || !data?.id || generationRunning) return;
 
-    const shopProductId = data.id;
+    const shopProductId = product.printifyBlueprintId || data.id;
     const variantId = selectedVariant.id;
 
     activeBuildControllerRef.current?.abort();
@@ -253,6 +281,7 @@ export default function ProductPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shopProductId,
+          productSlug: product.slug,
           variantId,
           printFileUrls,
         }),
@@ -272,6 +301,8 @@ export default function ProductPage({
       setPrintifyMockups(nextMockups);
       if (nextMockups.length > 0) {
         setPrintifyMockupsVersion((v) => v + 1);
+        lastBuiltMockupKeyRef.current = `${mockupArtworkKey}|${selectedVariant.id}`;
+        setMockupsStale(false);
       }
     } catch (e) {
       if (controller.signal.aborted) return;
@@ -297,6 +328,9 @@ export default function ProductPage({
     printMultiplierOverrides,
     cornersOnlyDataUrl,
     uploadPng,
+    mockupArtworkKey,
+    product.slug,
+    product.printifyBlueprintId,
   ]);
 
   const buildMockupPhotosRef = useRef(buildMockupPhotos);
@@ -304,62 +338,27 @@ export default function ProductPage({
     buildMockupPhotosRef.current = buildMockupPhotos;
   }, [buildMockupPhotos]);
 
-  const mockupArtworkKey = useMemo(() => {
-    return [
-      artworkUrl,
-      compositeDataUrl,
-      artworkOnlyDataUrl,
-      textOnlyDataUrl,
-      cornersOnlyDataUrl,
-      artworkSide,
-      textPlacement,
-      mockupPlacement.xPct,
-      mockupPlacement.yPct,
-      mockupPlacement.scale,
-    ].join("|");
-  }, [
-    artworkUrl,
-    compositeDataUrl,
-    artworkOnlyDataUrl,
-    textOnlyDataUrl,
-    cornersOnlyDataUrl,
-    artworkSide,
-    textPlacement,
-    mockupPlacement,
-  ]);
-
   useEffect(() => {
-    if (
-      !hasGeneratedImage ||
-      !selectedVariant ||
-      !data?.id ||
-      generationRunning
-    ) {
+    if (!hasGeneratedImage || !selectedVariant || !data?.id || generationRunning) {
       activeBuildControllerRef.current?.abort();
       setPrintifyMockups([]);
       setPrintifyMocksError(null);
       setPrintifyMocksLoading(false);
-      return;
+      setMockupsStale(false);
     }
+  }, [hasGeneratedImage, selectedVariant, data?.id, generationRunning]);
 
-    activeBuildControllerRef.current?.abort();
-    setPrintifyMockups([]);
-    setPrintifyMocksError(null);
-
-    const timer = window.setTimeout(() => {
-      buildMockupPhotosRef.current();
-    }, 1000);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [
-    hasGeneratedImage,
-    selectedVariant,
-    data?.id,
-    generationRunning,
-    mockupArtworkKey,
-  ]);
+  useEffect(() => {
+    if (printifyMockups.length === 0) return;
+    const currentKey = `${mockupArtworkKey}|${selectedVariant?.id ?? ""}`;
+    if (
+      lastBuiltMockupKeyRef.current !== null &&
+      lastBuiltMockupKeyRef.current !== currentKey
+    ) {
+      setMockupsStale(true);
+      setShowMockup(true);
+    }
+  }, [mockupArtworkKey, selectedVariant?.id, printifyMockups.length]);
 
   async function handleAddToCart() {
     if (!selectedVariant || !selectedSizeObj) return;
@@ -555,7 +554,11 @@ export default function ProductPage({
                 disabled={printifyMocksLoading || generationRunning}
                 className="ml-auto px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border border-ignition/60 text-white hover:bg-ignition/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {printifyMocksLoading ? "Rebuilding…" : "Rebuild mockup photos"}
+                {printifyMocksLoading
+                  ? "Building…"
+                  : printifyMockups.length > 0
+                    ? "Rebuild mockup photos"
+                    : "Build mockup photos"}
               </button>
             </div>
           )}
@@ -576,8 +579,14 @@ export default function ProductPage({
                     </p>
                   ) : (
                     <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
-                      Catalog photos until mockups finish loading or if Printify preview is
-                      unavailable.
+                      Click &ldquo;Build mockup photos&rdquo; to preview your design on real
+                      product photos.
+                    </p>
+                  )}
+                  {mockupsStale && printifyMockups.length > 0 && (
+                    <p className="font-body text-[11px] text-amber-200/90">
+                      Showing mockups from a previous version of your design. Click
+                      &ldquo;Rebuild mockup photos&rdquo; to update.
                     </p>
                   )}
                   {showMockupUpsellBanner && (

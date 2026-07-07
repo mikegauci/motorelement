@@ -24,7 +24,7 @@ export async function printifyFetch<T = unknown>(
     ...(options.headers as Record<string, string>),
   };
 
-  const res = await fetch(url, { ...options, headers });
+  const res = await fetch(url, { ...options, headers, cache: "no-store" });
 
   if (!res.ok) {
     const body = await res.text();
