@@ -60,10 +60,10 @@ export const TEXT_FONTS: FontOption[] = [
 const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string, string>>> = {
   front: {
     't-shirt': {
-      white: '/images/mockups/t-shirt/front-white-t-shirt.png',
-      black: '/images/mockups/t-shirt/front-black-t-shirt.png',
-      grey:  '/images/mockups/t-shirt/front-grey-t-shirt.png',
-      navy:  '/images/mockups/t-shirt/front-navy-t-shirt.png',
+      white: '/images/mockups/t-shirt/front-white-t-shirt.jpg',
+      black: '/images/mockups/t-shirt/front-black-t-shirt.jpg',
+      grey:  '/images/mockups/t-shirt/front-grey-t-shirt.jpg',
+      navy:  '/images/mockups/t-shirt/front-navy-t-shirt.jpg',
     },
     hoodie: {
       white: '/images/mockups/hoodie/front-white-hoodie.png',
@@ -74,10 +74,10 @@ const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string
   },
   back: {
     't-shirt': {
-      white: '/images/mockups/t-shirt/back-white-t-shirt.png',
-      black: '/images/mockups/t-shirt/back-black-t-shirt.png',
-      grey:  '/images/mockups/t-shirt/back-grey-t-shirt.png',
-      navy:  '/images/mockups/t-shirt/back-navy-t-shirt.png',
+      white: '/images/mockups/t-shirt/back-white-t-shirt.jpg',
+      black: '/images/mockups/t-shirt/back-black-t-shirt.jpg',
+      grey:  '/images/mockups/t-shirt/back-grey-t-shirt.jpg',
+      navy:  '/images/mockups/t-shirt/back-navy-t-shirt.jpg',
     },
     hoodie: {
       white: '/images/mockups/hoodie/back-white-hoodie.png',
