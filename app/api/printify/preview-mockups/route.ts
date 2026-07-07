@@ -66,11 +66,18 @@ export async function POST(request: Request) {
       printFileUrls: sanitized,
     });
 
-    return NextResponse.json({
-      mockups,
-      shopProductUsed: mockProductId,
-      variantIdUsed: mockVariantId,
-    });
+    return NextResponse.json(
+      {
+        mockups,
+        shopProductUsed: mockProductId,
+        variantIdUsed: mockVariantId,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[preview-mockups]", message);

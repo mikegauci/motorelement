@@ -85,6 +85,7 @@ export default function ProductPage({
   const [printifyMockups, setPrintifyMockups] = useState<PrintifyMockupItem[]>([]);
   const [printifyMocksLoading, setPrintifyMocksLoading] = useState(false);
   const [printifyMocksError, setPrintifyMocksError] = useState<string | null>(null);
+  const [printifyMockupsVersion, setPrintifyMockupsVersion] = useState(0);
 
   useEffect(() => {
     setProductType(product.type);
@@ -186,6 +187,7 @@ export default function ProductPage({
 
     setPrintifyMocksLoading(true);
     setPrintifyMocksError(null);
+    setPrintifyMockups([]);
 
     try {
       const isOpposite = textPlacement === "opposite" && !!textOnlyDataUrl;
@@ -266,7 +268,11 @@ export default function ProductPage({
         throw new Error(json.error ?? "Mockup request failed");
       }
 
-      setPrintifyMockups(Array.isArray(json.mockups) ? json.mockups : []);
+      const nextMockups = Array.isArray(json.mockups) ? json.mockups : [];
+      setPrintifyMockups(nextMockups);
+      if (nextMockups.length > 0) {
+        setPrintifyMockupsVersion((v) => v + 1);
+      }
     } catch (e) {
       if (controller.signal.aborted) return;
       setPrintifyMocksError(e instanceof Error ? e.message : String(e));
@@ -298,6 +304,30 @@ export default function ProductPage({
     buildMockupPhotosRef.current = buildMockupPhotos;
   }, [buildMockupPhotos]);
 
+  const mockupArtworkKey = useMemo(() => {
+    return [
+      artworkUrl,
+      compositeDataUrl,
+      artworkOnlyDataUrl,
+      textOnlyDataUrl,
+      cornersOnlyDataUrl,
+      artworkSide,
+      textPlacement,
+      mockupPlacement.xPct,
+      mockupPlacement.yPct,
+      mockupPlacement.scale,
+    ].join("|");
+  }, [
+    artworkUrl,
+    compositeDataUrl,
+    artworkOnlyDataUrl,
+    textOnlyDataUrl,
+    cornersOnlyDataUrl,
+    artworkSide,
+    textPlacement,
+    mockupPlacement,
+  ]);
+
   useEffect(() => {
     if (
       !hasGeneratedImage ||
@@ -312,6 +342,10 @@ export default function ProductPage({
       return;
     }
 
+    activeBuildControllerRef.current?.abort();
+    setPrintifyMockups([]);
+    setPrintifyMocksError(null);
+
     const timer = window.setTimeout(() => {
       buildMockupPhotosRef.current();
     }, 1000);
@@ -319,7 +353,13 @@ export default function ProductPage({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [hasGeneratedImage, selectedVariant, data?.id, generationRunning]);
+  }, [
+    hasGeneratedImage,
+    selectedVariant,
+    data?.id,
+    generationRunning,
+    mockupArtworkKey,
+  ]);
 
   async function handleAddToCart() {
     if (!selectedVariant || !selectedSizeObj) return;
@@ -433,10 +473,13 @@ export default function ProductPage({
       return allImages.map((src) => ({ src, position: "catalog" }));
     }
     if (printifyMockups.length > 0) {
-      return printifyMockups;
+      return printifyMockups.map((item) => ({
+        ...item,
+        src: `${item.src}${item.src.includes("?") ? "&" : "?"}v=${printifyMockupsVersion}`,
+      }));
     }
     return allImages.map((src) => ({ src, position: "catalog" }));
-  }, [hasGeneratedImage, printifyMockups, allImages]);
+  }, [hasGeneratedImage, printifyMockups, allImages, printifyMockupsVersion]);
 
   useEffect(() => {
     const n = slideshowItems.length;
