@@ -3,10 +3,9 @@ import { printifyFetch, shopPath } from "./client";
 import { uploadPrintifyImageByBase64, uploadPrintifyImageByUrl } from "./uploads";
 
 const POLL_INTERVAL_MS = 2000;
-const MOCKUP_SETTLE_MS = 2000;
-const MOCKUP_POLL_WINDOW_MS = 60000;
+const MOCKUP_MIN_RENDER_MS = 45000;
+const MOCKUP_POLL_WINDOW_MS = 90000;
 const TRANSPARENT_PNG_SIZE = 2000;
-const FLAT_MOCKUP_POSITIONS = new Set(["front", "back"]);
 
 function pngChunk(type: string, data: Buffer): Buffer {
   const length = Buffer.alloc(4);
@@ -87,6 +86,7 @@ interface ProductImage {
 interface ProductPayload {
   print_areas?: PrintArea[];
   images?: ProductImage[];
+  updated_at?: string;
 }
 
 function sideFromPosition(position: string | undefined): "front" | "back" | null {
@@ -117,12 +117,11 @@ function assignFreshPlaceholderImages(
   }
 }
 
-function sortMockupsForVariant(list: MockupGalleryImage[]): MockupGalleryImage[] {
-  return [...list].sort((a, b) => {
-    const ad = a.is_default ? 1 : 0;
-    const bd = b.is_default ? 1 : 0;
-    return bd - ad;
-  });
+function mockupSortRank(position: string, isDefault?: boolean): number {
+  if (isDefault) return 0;
+  if (position === "front") return 1;
+  if (position === "back") return 2;
+  return 3;
 }
 
 function extractMockups(product: ProductPayload, variantId: number): MockupGalleryImage[] {
@@ -131,7 +130,6 @@ function extractMockups(product: ProductPayload, variantId: number): MockupGalle
   const seen = new Set<string>();
   for (const img of imgs) {
     if (!img.variant_ids?.includes(variantId) || !img.src) continue;
-    if (!FLAT_MOCKUP_POSITIONS.has(img.position ?? "")) continue;
     if (seen.has(img.src)) continue;
     seen.add(img.src);
     out.push({
@@ -140,7 +138,12 @@ function extractMockups(product: ProductPayload, variantId: number): MockupGalle
       is_default: img.is_default,
     });
   }
-  return sortMockupsForVariant(out);
+  return [...out].sort((a, b) => {
+    const rank = mockupSortRank(a.position, a.is_default) -
+      mockupSortRank(b.position, b.is_default);
+    if (rank !== 0) return rank;
+    return a.src.localeCompare(b.src);
+  });
 }
 
 export async function renderMockProductPreview(opts: {
@@ -189,30 +192,33 @@ export async function renderMockProductPreview(opts: {
 
   assignFreshPlaceholderImages(printAreas, variantId, uploadIds, transparent.id);
 
+  const putStartedAt = Date.now();
+
   await printifyFetch<ProductPayload>(shopPath(productPath), {
     method: "PUT",
     body: JSON.stringify({ print_areas: printAreas }),
   });
 
-  await new Promise((r) => setTimeout(r, MOCKUP_SETTLE_MS));
-
   let mockups: MockupGalleryImage[] = [];
-  const deadline = Date.now() + MOCKUP_POLL_WINDOW_MS;
+  const deadline = putStartedAt + MOCKUP_POLL_WINDOW_MS;
   while (true) {
     const refreshed = (await printifyFetch<ProductPayload>(shopPath(productPath), {
       cache: "no-store",
     })) as ProductPayload;
     mockups = extractMockups(refreshed, variantId);
-    const allFresh =
-      mockups.length > 0 && mockups.every((m) => !previousSrcs.has(m.src));
-    if (allFresh) break;
+    const elapsed = Date.now() - putStartedAt;
+    const renderWindowElapsed = elapsed >= MOCKUP_MIN_RENDER_MS;
+    const urlsChanged =
+      mockups.length > 0 &&
+      mockups.some((m) => !previousSrcs.has(m.src));
+    const ready =
+      mockups.length > 0 && (renderWindowElapsed || urlsChanged);
+    if (ready) break;
     if (Date.now() >= deadline) {
-      if (!allFresh) {
-        throw new Error(
-          "Printify mockup refresh timed out before new images were ready",
-        );
-      }
-      break;
+      if (mockups.length > 0) break;
+      throw new Error(
+        "Printify mockup refresh timed out before new images were ready",
+      );
     }
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
