@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import Image from "next/image";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/Button";
 import { ShoppingBag, Check, Eye } from "lucide-react";
@@ -47,11 +46,6 @@ interface PrintifyData {
   images: Record<number, PrintifyImages>;
 }
 
-interface PrintifyMockupItem {
-  src: string;
-  position: string;
-}
-
 function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
@@ -76,18 +70,9 @@ export default function ProductPage({
   const [loading, setLoading] = useState(true);
   const [selectedColor, setSelectedColor] = useState<number | null>(null);
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
-  const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [added, setAdded] = useState(false);
-  const [showMockup, setShowMockup] = useState(true);
-  const prevGenerationStatusRef = useRef(generationStatus);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [printifyMockups, setPrintifyMockups] = useState<PrintifyMockupItem[]>([]);
-  const [printifyMocksLoading, setPrintifyMocksLoading] = useState(false);
-  const [printifyMocksError, setPrintifyMocksError] = useState<string | null>(null);
-  const [printifyMockupsVersion, setPrintifyMockupsVersion] = useState(0);
-  const [mockupsStale, setMockupsStale] = useState(false);
-  const lastBuiltMockupKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     setProductType(product.type);
@@ -129,12 +114,6 @@ export default function ProductPage({
 
   const selectedColorObj = data?.colors.find((c) => c.id === selectedColor);
 
-  const allImages = useMemo(() => {
-    const front = getBlankMockupImage(product.type, selectedColorObj?.title, "front");
-    const back = getBlankMockupImage(product.type, selectedColorObj?.title, "back");
-    return [front, back].filter(Boolean) as string[];
-  }, [product.type, selectedColorObj?.title]);
-
   const selectedSizeObj = data?.sizes.find((s) => s.id === selectedSize);
   const displayPrice = selectedVariant?.price ?? product.basePrice;
   const hasGeneratedImage = Boolean(artworkUrl);
@@ -158,13 +137,6 @@ export default function ProductPage({
     setSelectedColorTitle(selectedColorObj?.title ?? null);
   }, [selectedColorObj?.title, setSelectedColorTitle]);
 
-  useEffect(() => {
-    if (prevGenerationStatusRef.current === "running" && generationStatus === "done") {
-      setShowMockup(true);
-    }
-    prevGenerationStatusRef.current = generationStatus;
-  }, [generationStatus]);
-
   const uploadPng = useCallback(
     async (blob: Blob, kind: string, filename: string) => {
       const fd = new FormData();
@@ -176,189 +148,6 @@ export default function ProductPage({
     },
     [mockupPlacement],
   );
-
-  const activeBuildControllerRef = useRef<AbortController | null>(null);
-
-  const mockupArtworkKey = useMemo(() => {
-    return [
-      artworkUrl,
-      compositeDataUrl,
-      artworkOnlyDataUrl,
-      textOnlyDataUrl,
-      cornersOnlyDataUrl,
-      artworkSide,
-      textPlacement,
-      mockupPlacement.xPct,
-      mockupPlacement.yPct,
-      mockupPlacement.scale,
-    ].join("|");
-  }, [
-    artworkUrl,
-    compositeDataUrl,
-    artworkOnlyDataUrl,
-    textOnlyDataUrl,
-    cornersOnlyDataUrl,
-    artworkSide,
-    textPlacement,
-    mockupPlacement,
-  ]);
-
-  const buildMockupPhotos = useCallback(async () => {
-    if (!hasGeneratedImage || !selectedVariant || !data?.id || generationRunning) return;
-
-    const shopProductId = product.printifyBlueprintId || data.id;
-    const variantId = selectedVariant.id;
-
-    activeBuildControllerRef.current?.abort();
-    const controller = new AbortController();
-    activeBuildControllerRef.current = controller;
-
-    setPrintifyMocksLoading(true);
-    setPrintifyMocksError(null);
-    setPrintifyMockups([]);
-
-    try {
-      const isOpposite = textPlacement === "opposite" && !!textOnlyDataUrl;
-      const printSource = isOpposite
-        ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl!)
-        : (compositeDataUrl ?? artworkUrl!);
-
-      const oppositeSide: "front" | "back" =
-        artworkSide === "front" ? "back" : "front";
-
-      const cornersForArtworkSide =
-        textPlacement === "same" ? cornersOnlyDataUrl : null;
-      const cornersForOppositeSide =
-        textPlacement === "opposite" ? cornersOnlyDataUrl : null;
-
-      const printFileUrls: Partial<Record<"front" | "back", string>> = {};
-
-      if (!isOpposite) {
-        const blob = await buildPrintAreaPng(
-          printSource,
-          mockupPlacement,
-          product.type,
-          artworkSide,
-          printMultiplierOverrides,
-          cornersForArtworkSide,
-        );
-        const url = await uploadPng(blob, "preview_print", "preview-print.png");
-        if (!url) throw new Error("Could not upload print preview");
-        printFileUrls[artworkSide] = url;
-      } else {
-        const [artBlob, textBlob] = await Promise.all([
-          buildPrintAreaPng(
-            printSource,
-            mockupPlacement,
-            product.type,
-            artworkSide,
-            printMultiplierOverrides,
-            cornersForArtworkSide,
-          ),
-          buildPrintAreaPng(
-            textOnlyDataUrl!,
-            { xPct: 0.5, yPct: 0.5, scale: 1 },
-            product.type,
-            oppositeSide,
-            printMultiplierOverrides,
-            cornersForOppositeSide,
-          ),
-        ]);
-        const [artUrl, textUrl] = await Promise.all([
-          uploadPng(artBlob, "preview_print", "preview-print-art.png"),
-          uploadPng(textBlob, "preview_print_text", "preview-print-text.png"),
-        ]);
-        if (!artUrl || !textUrl)
-          throw new Error("Could not upload print preview");
-        printFileUrls[artworkSide] = artUrl;
-        printFileUrls[oppositeSide] = textUrl;
-      }
-
-      if (controller.signal.aborted) return;
-
-      const res = await fetch("/api/printify/preview-mockups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shopProductId,
-          productSlug: product.slug,
-          variantId,
-          printFileUrls,
-        }),
-        signal: controller.signal,
-      });
-
-      const json = (await res.json()) as {
-        mockups?: PrintifyMockupItem[];
-        error?: string;
-      };
-
-      if (!res.ok) {
-        throw new Error(json.error ?? "Mockup request failed");
-      }
-
-      const nextMockups = Array.isArray(json.mockups) ? json.mockups : [];
-      setPrintifyMockups(nextMockups);
-      if (nextMockups.length > 0) {
-        setPrintifyMockupsVersion((v) => v + 1);
-        lastBuiltMockupKeyRef.current = `${mockupArtworkKey}|${selectedVariant.id}`;
-        setMockupsStale(false);
-      }
-    } catch (e) {
-      if (controller.signal.aborted) return;
-      setPrintifyMocksError(e instanceof Error ? e.message : String(e));
-    } finally {
-      if (!controller.signal.aborted) {
-        setPrintifyMocksLoading(false);
-      }
-    }
-  }, [
-    hasGeneratedImage,
-    selectedVariant,
-    data?.id,
-    generationRunning,
-    textPlacement,
-    textOnlyDataUrl,
-    artworkOnlyDataUrl,
-    compositeDataUrl,
-    artworkUrl,
-    artworkSide,
-    mockupPlacement,
-    product.type,
-    printMultiplierOverrides,
-    cornersOnlyDataUrl,
-    uploadPng,
-    mockupArtworkKey,
-    product.slug,
-    product.printifyBlueprintId,
-  ]);
-
-  const buildMockupPhotosRef = useRef(buildMockupPhotos);
-  useEffect(() => {
-    buildMockupPhotosRef.current = buildMockupPhotos;
-  }, [buildMockupPhotos]);
-
-  useEffect(() => {
-    if (!hasGeneratedImage || !selectedVariant || !data?.id || generationRunning) {
-      activeBuildControllerRef.current?.abort();
-      setPrintifyMockups([]);
-      setPrintifyMocksError(null);
-      setPrintifyMocksLoading(false);
-      setMockupsStale(false);
-    }
-  }, [hasGeneratedImage, selectedVariant, data?.id, generationRunning]);
-
-  useEffect(() => {
-    if (printifyMockups.length === 0) return;
-    const currentKey = `${mockupArtworkKey}|${selectedVariant?.id ?? ""}`;
-    if (
-      lastBuiltMockupKeyRef.current !== null &&
-      lastBuiltMockupKeyRef.current !== currentKey
-    ) {
-      setMockupsStale(true);
-      setShowMockup(true);
-    }
-  }, [mockupArtworkKey, selectedVariant?.id, printifyMockups.length]);
 
   async function handleAddToCart() {
     if (!selectedVariant || !selectedSizeObj) return;
@@ -467,33 +256,6 @@ export default function ProductPage({
       .map((v) => v.sizeId) ?? []
   );
 
-  const slideshowItems = useMemo((): PrintifyMockupItem[] => {
-    if (!hasGeneratedImage) {
-      return allImages.map((src) => ({ src, position: "catalog" }));
-    }
-    if (printifyMockups.length > 0) {
-      return printifyMockups.map((item) => ({
-        ...item,
-        src: `${item.src}${item.src.includes("?") ? "&" : "?"}v=${printifyMockupsVersion}`,
-      }));
-    }
-    return allImages.map((src) => ({ src, position: "catalog" }));
-  }, [hasGeneratedImage, printifyMockups, allImages, printifyMockupsVersion]);
-
-  useEffect(() => {
-    const n = slideshowItems.length;
-    if (n === 0) return;
-    if (activeImageIdx >= n) setActiveImageIdx(0);
-  }, [slideshowItems.length, activeImageIdx]);
-
-  const useSkeletonHero =
-    hasGeneratedImage &&
-    !!selectedVariant &&
-    printifyMocksLoading &&
-    printifyMockups.length === 0;
-
-  const showMockupUpsellBanner = hasGeneratedImage && Boolean(printifyMocksError);
-
   if (loading) {
     return (
       <div className="mx-auto max-w-7xl px-6 py-24">
@@ -517,27 +279,10 @@ export default function ProductPage({
         <div className="min-w-0 lg:sticky lg:top-20 lg:self-start">
           {hasGeneratedImage && (
             <div className="flex flex-wrap items-center gap-1 mb-3">
-              <button
-                onClick={() => setShowMockup(false)}
-                className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
-                  !showMockup
-                    ? "border-ignition bg-ignition/10 text-white"
-                    : "border-border text-muted hover:border-white/30 hover:text-white"
-                }`}
-              >
-                Mockup photos
-              </button>
-              <button
-                onClick={() => setShowMockup(true)}
-                className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition ${
-                  showMockup
-                    ? "border-ignition bg-ignition/10 text-white"
-                    : "border-border text-muted hover:border-white/30 hover:text-white"
-                }`}
-              >
+              <span className="px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border border-ignition bg-ignition/10 text-white">
                 Live Mockup
                 <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-ignition" />
-              </button>
+              </span>
               <button
                 onClick={() => setShowPreviewModal(true)}
                 className="px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border border-border text-muted hover:border-white/30 hover:text-white transition flex items-center gap-1.5"
@@ -545,131 +290,10 @@ export default function ProductPage({
                 <Eye size={14} />
                 Preview
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMockup(false);
-                  buildMockupPhotosRef.current();
-                }}
-                disabled={printifyMocksLoading || generationRunning}
-                className="ml-auto px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border border-ignition/60 text-white hover:bg-ignition/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {printifyMocksLoading
-                  ? "Building…"
-                  : printifyMockups.length > 0
-                    ? "Rebuild mockup photos"
-                    : "Build mockup photos"}
-              </button>
             </div>
           )}
 
-          {showMockup ? (
-            <MockupPreview />
-          ) : (
-            <>
-              {hasGeneratedImage && (
-                <div className="mb-3 space-y-1">
-                  {useSkeletonHero ? (
-                    <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
-                      Generating realistic Printify mockups for your size and color…
-                    </p>
-                  ) : printifyMockups.length > 0 ? (
-                    <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
-                      Your artwork on supplier mockups for this variant.
-                    </p>
-                  ) : (
-                    <p className="font-sub text-[11px] text-muted uppercase tracking-widest">
-                      Click &ldquo;Build mockup photos&rdquo; to preview your design on real
-                      product photos.
-                    </p>
-                  )}
-                  {mockupsStale && printifyMockups.length > 0 && (
-                    <p className="font-body text-[11px] text-amber-200/90">
-                      Showing mockups from a previous version of your design. Click
-                      &ldquo;Rebuild mockup photos&rdquo; to update.
-                    </p>
-                  )}
-                  {showMockupUpsellBanner && (
-                    <p className="font-body text-[11px] text-amber-200/90">
-                      {printifyMockups.length > 0 ? (
-                        <>
-                          Latest mockup refresh failed ({printifyMocksError}). Showing the last
-                          successful mockups.
-                        </>
-                      ) : (
-                        <>
-                          Mockup preview failed ({printifyMocksError}). Showing store catalog
-                          imagery until it succeeds.
-                        </>
-                      )}
-                    </p>
-                  )}
-                </div>
-              )}
-              <div className="relative aspect-square overflow-hidden bg-obsidian border border-border">
-                {useSkeletonHero ? (
-                  <div className="flex h-full w-full animate-pulse items-center justify-center bg-carbon">
-                    <span className="font-sub text-xs uppercase tracking-widest text-muted">
-                      Building mockups…
-                    </span>
-                  </div>
-                ) : slideshowItems[activeImageIdx]?.src ? (
-                  <Image
-                    src={slideshowItems[activeImageIdx].src}
-                    alt={`${product.name} - ${selectedColorObj?.title ?? ""}`}
-                    fill
-                    className="object-contain"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    priority
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <span className="font-sub text-sm text-muted">
-                      {hasGeneratedImage
-                        ? "No preview image for this color yet"
-                        : "No image"}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {(useSkeletonHero ? 6 : slideshowItems.length) > 1 &&
-                (useSkeletonHero ? (
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    {Array.from({ length: 6 }).map((_, idx) => (
-                      <div
-                        key={`sk-${idx}`}
-                        className="h-16 w-16 shrink-0 animate-pulse rounded border border-border bg-carbon"
-                        aria-hidden
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    {slideshowItems.map((item, idx) => (
-                      <button
-                        key={`${item.src}-${idx}`}
-                        type="button"
-                        onClick={() => setActiveImageIdx(idx)}
-                        className={`relative h-16 w-16 overflow-hidden border transition ${
-                          idx === activeImageIdx
-                            ? "border-ignition"
-                            : "border-border hover:border-white/30"
-                        }`}
-                      >
-                        <Image
-                          src={item.src}
-                          alt={`View ${idx + 1}`}
-                          fill
-                          className="object-contain"
-                          sizes="64px"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                ))}
-            </>
-          )}
+          <MockupPreview />
         </div>
 
         <div className="min-w-0">
@@ -696,7 +320,6 @@ export default function ProductPage({
                     key={color.id}
                     onClick={() => {
                       setSelectedColor(color.id);
-                      setActiveImageIdx(0);
                     }}
                     title={color.title}
                     className={`relative h-9 w-9 rounded-full border-2 transition ${

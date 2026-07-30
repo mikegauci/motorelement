@@ -18,7 +18,7 @@ See `.env.example`. The app will crash at runtime if these are missing:
 - **Supabase**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only, used by `lib/supabase/storage.ts#getServiceClient`). `SUPABASE_SECRET_KEY` is accepted as an alias.
 - **Stripe**: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - **fal.ai**: `FAL_API_KEY` (image generation in `app/api/generate` + `lib/api/fal.ts`)
-- **Printify**: `PRINTIFY_API_KEY`, `PRINTIFY_SHOP_ID`, optional `PRINTIFY_MOCKUP_PRODUCT_ID` (dedicated mockup product — see `lib/printify/resolveMockProductVariant.ts`)
+- **Printify**: `PRINTIFY_API_KEY`, `PRINTIFY_SHOP_ID`
 - **Resend**: `RESEND_API_KEY`
 
 ## Architecture
@@ -51,16 +51,13 @@ The customer journey on a product page ([components/shop/customizer/ProductCusto
 1. **Vehicle input** → uploaded car photo + customer notes posted to `POST /api/generate` (`action: 'submit'`).
 2. **fal.ai job** — `app/api/generate/route.ts` uploads the photo and a fixed style reference (`public/style-reference/style-reference.png`) to fal, queues the model (`openai/gpt-image-2/edit` for cars, `fal-ai/nano-banana-2*` for backgrounds, `fal-ai/gemini-3-pro-image-preview/edit` for tweaks), and polls via `action: 'status'`. The same route handles background generation (`mode: 'background'`) and iterative tweaks (`tweakImageUrl` / `backgroundTweakImageUrl`).
 3. **Persistence** — when a job completes, `lib/customizer/persistGeneratedToSupabase.ts` downloads the fal-hosted image and writes it to the `car-images` or `backgrounds` Supabase bucket, inserting a row in `generated_car_images` / `generated_backgrounds`. Failures are logged but do not break the response.
-4. **Composite editing** — `CompositeEditor`, `TextLayerEditor`, `BackgroundPresets`, `WhiteGapEraser` etc. let the user position artwork + text on the t-shirt. The hook `useCompositeCanvas` rasterizes the layers; `lib/customizer/persistArtworkToSupabase.ts` and `persistCustomBackground.ts` save the final assets.
-5. **Mockup preview** — `POST /api/printify/preview-mockups` (and `lib/printify/syncMockups.ts`, `resolveMockProductVariant.ts`) calls Printify to render the customized design on the product mockup (front/back). `validatePreviewAssetUrl.ts` rejects non-Supabase / unreachable asset URLs before posting to Printify.
-6. **Cart & checkout** — `useCart` (a hook backed by `CartProvider`) holds items; `POST /api/checkout` builds a Stripe Checkout Session via `lib/stripe/helpers.ts#createCheckoutSession`, attaching the artwork URLs (front/back) in metadata.
-7. **Fulfillment** — Stripe redirects to `/order-confirmation`. The `app/api/webhooks/stripe/route.ts` webhook creates the order row in Supabase and submits the Printify order via helpers in [lib/printify/helpers.ts](lib/printify/helpers.ts). `app/api/webhooks/printify/route.ts` receives shipping/status updates back from Printify.
+4. **Composite editing** — `CompositeEditor`, `TextLayerEditor`, `BackgroundPresets`, `WhiteGapEraser` etc. let the user position artwork + text on the t-shirt. The hook `useCompositeCanvas` rasterizes the layers; `lib/customizer/persistArtworkToSupabase.ts` and `persistCustomBackground.ts` save the final assets. Live Mockup (`MockupPreview`) overlays the design on a blank garment; the Preview modal opens a larger view.
+5. **Cart & checkout** — `useCart` (a hook backed by `CartProvider`) holds items; `POST /api/checkout` builds a Stripe Checkout Session via `lib/stripe/helpers.ts#createCheckoutSession`, attaching the artwork URLs (front/back) in metadata.
+6. **Fulfillment** — Stripe redirects to `/order-confirmation`. The `app/api/webhooks/stripe/route.ts` webhook creates the order row in Supabase and submits the Printify order via helpers in [lib/printify/helpers.ts](lib/printify/helpers.ts). `app/api/webhooks/printify/route.ts` receives shipping/status updates back from Printify.
 
 ### Printify integration
 
-[lib/printify/client.ts](lib/printify/client.ts) is the only place that talks to `https://api.printify.com/v1` — it injects auth headers, throws on non-2xx, and provides `shopPath()` to scope to the configured shop. All other Printify helpers (`helpers.ts`, `variants.ts`, `uploads.ts`, `syncMockups.ts`) go through `printifyFetch`.
-
-Mockup previews use a separate Printify product (`PRINTIFY_MOCKUP_PRODUCT_ID`) when configured — see `resolveMockProductVariant.ts`.
+[lib/printify/client.ts](lib/printify/client.ts) is the only place that talks to `https://api.printify.com/v1` — it injects auth headers, throws on non-2xx, and provides `shopPath()` to scope to the configured shop. All other Printify helpers (`helpers.ts`, `variants.ts`, `uploads.ts`) go through `printifyFetch`.
 
 ### Images / Next image config
 
