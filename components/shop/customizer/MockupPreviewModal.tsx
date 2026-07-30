@@ -139,7 +139,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     let sy: number
     let cropSide: number
     if (zoomedIn) {
-      const padding = 0.3
+      const padding = 0.01
       const cropCx = pzr.x + pzr.w / 2
       const cropCy = pzr.y + pzr.h / 2
       cropSide = Math.max(pzr.w, pzr.h) * (1 + padding)
