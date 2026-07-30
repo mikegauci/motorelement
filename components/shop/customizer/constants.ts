@@ -161,12 +161,12 @@ export interface ProductProfile {
 const PRODUCT_PROFILES: Record<string, ProductProfile> = {
   't-shirt': {
     mockupZone: {
-      front: { xPct: 0.38, yPct: 0.28, widthPct: 0.25 },
-      back:  { xPct: 0.38, yPct: 0.24, widthPct: 0.25 },
+      front: { xPct: 0.35, yPct: 0.29, widthPct: 0.30 },
+      back:  { xPct: 0.35, yPct: 0.25, widthPct: 0.30 },
     },
     printArea: {
-      front: { width: 3852, height: 4398 },
-      back:  { width: 3852, height: 4398 },
+      front: { width: 3951, height: 4919 },
+      back:  { width: 3951, height: 4919 },
     },
     printExportMultiplier: { front: 1, back: 1 },
   },
