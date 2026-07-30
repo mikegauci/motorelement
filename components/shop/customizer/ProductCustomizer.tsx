@@ -1,7 +1,7 @@
 'use client'
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import styles from './styles'
 import {
   SESSION_KEY,
@@ -84,6 +84,7 @@ export default function ProductCustomizer() {
   const [desktopDragEnabled, setDesktopDragEnabled] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [mobileDockDismissed, setMobileDockDismissed] = useState(false)
+  const [adjustCompositionInView, setAdjustCompositionInView] = useState(false)
   const [customFontOptions, setCustomFontOptions] = useState<FontOption[]>([])
   const [addTextEnabled, setAddTextEnabled] = useState(false)
   const [printZoneCornerImage, setPrintZoneCornerImage] = useState<PrintZoneCornerImage>(() => createPrintZoneCornerImage())
@@ -171,6 +172,14 @@ export default function ProductCustomizer() {
   }
 
   const mobileResultDockSrc = mockupThumbnailUrl || viewingUrl
+  const forceDockForComposition = adjustCompositionInView
+  const mobileDockVisible =
+    !!mobileResultDockSrc &&
+    (forceDockForComposition || (composite.showMobileResultDock && !mobileDockDismissed))
+
+  const handleAdjustCompositionInView = useCallback((inView: boolean) => {
+    setAdjustCompositionInView(inView)
+  }, [])
 
   // ---- Session ----
   const { sessionRestored } = useSession(
@@ -399,6 +408,7 @@ export default function ProductCustomizer() {
   }
 
   function handleMobileDockTouchEnd(e: React.TouchEvent<HTMLButtonElement>) {
+    if (forceDockForComposition) return
     const startX = mobileDockTouchStartXRef.current
     const endX = e.changedTouches[0]?.clientX
     mobileDockTouchStartXRef.current = null
@@ -574,6 +584,7 @@ export default function ProductCustomizer() {
                           setCompositionZoom={setCompositionZoom}
                           setCarAdjustXPct={setCarAdjustXPct}
                           backgroundControlsLocked={backgroundControlsLocked}
+                          onInViewChange={handleAdjustCompositionInView}
                         />
                         <ArtworkPositionSelector
                           artworkSide={artworkSide}
@@ -627,7 +638,7 @@ export default function ProductCustomizer() {
       {!!mobileResultDockSrc && (
         <button
           type="button"
-          className={`${styles.mobileResultDock} ${composite.showMobileResultDock && !mobileDockDismissed ? styles.mobileResultDockVisible : ''}`}
+          className={`${styles.mobileResultDock} ${mobileDockVisible ? styles.mobileResultDockVisible : ''}`}
           onClick={() => {
             if (mobileDockDidSwipeRef.current) {
               mobileDockDidSwipeRef.current = false
@@ -638,15 +649,15 @@ export default function ProductCustomizer() {
           onTouchStart={handleMobileDockTouchStart}
           onTouchEnd={handleMobileDockTouchEnd}
           aria-label="Open mockup preview"
-          aria-hidden={!composite.showMobileResultDock || mobileDockDismissed}
-          tabIndex={composite.showMobileResultDock && !mobileDockDismissed ? 0 : -1}
+          aria-hidden={!mobileDockVisible}
+          tabIndex={mobileDockVisible ? 0 : -1}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={mobileResultDockSrc} alt="" />
         </button>
       )}
 
-      {!!mobileResultDockSrc && composite.showMobileResultDock && mobileDockDismissed && (
+      {!!mobileResultDockSrc && composite.showMobileResultDock && mobileDockDismissed && !forceDockForComposition && (
         <button
           type="button"
           className={styles.mobileResultDockEdgeHandle}

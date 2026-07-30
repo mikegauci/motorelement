@@ -31,35 +31,44 @@ export default function SliderRow({
 }: SliderRowProps) {
   return (
     <div className={styles.compositeAdjustControl}>
-      <div className={styles.compositeAdjustHead}>
-        <span>{label}</span>
-        <span className={styles.compositeAdjustValue}>{displayValue}</span>
-      </div>
-      <div className={styles.compositeAdjustInputRow}>
-        <button
-          type="button"
-          className={styles.compositeNudgeBtn}
-          onClick={onNudgeDown}
-          disabled={disabled || nudgeDownDisabled}
-        >
-          -
-        </button>
-        <input
-          type="range"
-          min={min}
-          max={max}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          disabled={disabled}
-        />
-        <button
-          type="button"
-          className={styles.compositeNudgeBtn}
-          onClick={onNudgeUp}
-          disabled={disabled || nudgeUpDisabled}
-        >
-          +
-        </button>
+      <div className={styles.compositeAdjustMain}>
+        <div className={styles.compositeAdjustHead}>
+          <span>{label}</span>
+          <span className={styles.compositeAdjustValue}>{displayValue}</span>
+        </div>
+        <div className={styles.compositeAdjustInputRow}>
+          <button
+            type="button"
+            className={styles.compositeNudgeBtn}
+            onClick={onNudgeDown}
+            disabled={disabled || nudgeDownDisabled}
+            aria-label={`Decrease ${label}`}
+          >
+            -
+          </button>
+          <input
+            type="range"
+            className={styles.compositeAdjustRange}
+            min={min}
+            max={max}
+            value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+            disabled={disabled}
+            aria-label={label}
+          />
+          <span className={styles.compositeAdjustStepperValue} aria-hidden>
+            {displayValue}
+          </span>
+          <button
+            type="button"
+            className={styles.compositeNudgeBtn}
+            onClick={onNudgeUp}
+            disabled={disabled || nudgeUpDisabled}
+            aria-label={`Increase ${label}`}
+          >
+            +
+          </button>
+        </div>
       </div>
     </div>
   )

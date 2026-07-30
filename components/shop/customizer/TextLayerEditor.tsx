@@ -5,6 +5,7 @@ import type { TextLayer, FontOption, PrintZoneCorner, PrintZoneCornerImage } fro
 import styles from './styles'
 import SliderRow from './parts/SliderRow'
 import CornerLogoPresetPicker from './parts/CornerLogoPresetPicker'
+import { useCustomizer } from './CustomizerContext'
 
 interface TextLayerEditorProps {
   textLayers: TextLayer[]
@@ -74,6 +75,16 @@ export default function TextLayerEditor({
   onApplyCornerPreset,
   setSelectedTextLayerId,
 }: TextLayerEditorProps) {
+  const { artworkSide, textPlacement, setMockupViewSide } = useCustomizer()
+
+  function showTextSide() {
+    setMockupViewSide(
+      textPlacement === 'opposite'
+        ? (artworkSide === 'front' ? 'back' : 'front')
+        : artworkSide
+    )
+  }
+
   function setPrintZoneCorner(layer: TextLayer, corner: PrintZoneCorner) {
     const position = getPrintZoneCornerPosition(corner)
     onUpdateTextLayer(layer.id, {
@@ -225,7 +236,10 @@ export default function TextLayerEditor({
   }
 
   return (
-    <div className={styles.textOverlayBlock}>
+    <div
+      className={styles.textOverlayBlock}
+      onPointerDown={showTextSide}
+    >
       <div className={styles.textOverlayHeader}>
         <p className={`${styles.compositeLabel} !mb-0`}>Text overlays</p>
         <button

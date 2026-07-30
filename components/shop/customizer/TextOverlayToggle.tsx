@@ -1,6 +1,7 @@
 'use client'
 
 import styles from './styles'
+import { useCustomizer } from './CustomizerContext'
 
 interface TextOverlayToggleProps {
   enabled: boolean
@@ -13,6 +14,7 @@ export default function TextOverlayToggle({
   onChange,
   disabled = false,
 }: TextOverlayToggleProps) {
+  const { artworkSide, textPlacement, setMockupViewSide } = useCustomizer()
   const options: { value: boolean; label: string }[] = [
     { value: true, label: 'Yes' },
     { value: false, label: 'No' },
@@ -31,7 +33,16 @@ export default function TextOverlayToggle({
             <button
               key={opt.label}
               type="button"
-              onClick={() => onChange(opt.value)}
+              onClick={() => {
+                if (opt.value) {
+                  setMockupViewSide(
+                    textPlacement === 'opposite'
+                      ? (artworkSide === 'front' ? 'back' : 'front')
+                      : artworkSide
+                  )
+                }
+                onChange(opt.value)
+              }}
               disabled={disabled}
               aria-pressed={isActive}
               className={`h-10 min-w-[120px] px-5 text-xs font-sub font-bold uppercase tracking-widest border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
