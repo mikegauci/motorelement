@@ -5,6 +5,11 @@ import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/Button";
 import { Minus, Plus, Trash2 } from "lucide-react";
+import {
+  DOWNLOAD_ARTWORK_LABEL,
+  DOWNLOAD_ARTWORK_PRICE_CENTS,
+  downloadArtworkFeeCents,
+} from "@/lib/shop/downloadArtwork";
 
 function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -13,6 +18,9 @@ function formatPrice(cents: number) {
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clear, totalItems, totalPrice } =
     useCart();
+
+  const downloadFee = downloadArtworkFeeCents(items);
+  const downloadLines = items.filter((item) => item.downloadArtwork).length;
 
   if (items.length === 0) {
     return (
@@ -68,6 +76,7 @@ export default function CartPage() {
                   </h3>
                   <p className="mt-1 font-sub text-[10px] font-bold uppercase tracking-widest text-muted sm:text-xs">
                     {item.color && `${item.color} · `}Size: {item.size}
+                    {item.downloadArtwork ? " · Download" : ""}
                   </p>
                 </div>
 
@@ -127,8 +136,21 @@ export default function CartPage() {
               <span className="text-muted">
                 Items ({totalItems})
               </span>
-              <span className="text-white">{formatPrice(totalPrice)}</span>
+              <span className="text-white">
+                {formatPrice(totalPrice - downloadFee)}
+              </span>
             </div>
+            {downloadFee > 0 && (
+              <div className="flex justify-between font-body text-sm">
+                <span className="text-muted">
+                  {DOWNLOAD_ARTWORK_LABEL}
+                  {downloadLines > 1 ? ` × ${downloadLines}` : ""}
+                </span>
+                <span className="text-white">
+                  {formatPrice(downloadLines * DOWNLOAD_ARTWORK_PRICE_CENTS)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between font-body text-sm">
               <span className="text-muted">Shipping</span>
               <span className="text-white">Calculated at checkout</span>

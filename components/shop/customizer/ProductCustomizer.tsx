@@ -29,6 +29,7 @@ import TextLayerEditor from './TextLayerEditor'
 import TextOverlayToggle from './TextOverlayToggle'
 import TextPlacementSelector from './TextPlacementSelector'
 import ArtworkPositionSelector from './ArtworkPositionSelector'
+import DownloadArtworkSection from './DownloadArtworkSection'
 import MockupPreviewModal from './MockupPreviewModal'
 import CollapsibleTweak from './parts/CollapsibleTweak'
 import WhiteGapEraser from './WhiteGapEraser'
@@ -54,6 +55,9 @@ export default function ProductCustomizer() {
     mockupBaseNaturalWidth,
     mockupBaseNaturalHeight,
     selectedColorTitle,
+    downloadArtworkEnabled,
+    setDownloadArtworkEnabled,
+    setArtworkHasExtras,
   } = useCustomizer()
 
   // ---- Vehicle input state (owned by this component) ----
@@ -141,6 +145,28 @@ export default function ProductCustomizer() {
   const showCustomPanel = selectedPresetId === CUSTOM_BACKGROUND_NEW
   const backgroundControlsLocked = bgGen.customBackgroundGenerating
   const canGenerateCustomBackground = !!customBackgroundValue.trim() && !bgGen.customBackgroundGenerating && !bgGen.customBackgroundRemoving
+
+  useEffect(() => {
+    const hasBackground = !!selectedBackgroundSrc
+    const hasText =
+      addTextEnabled &&
+      textLayerHook.textLayers.some((layer) => layer.text.trim().length > 0)
+    const hasCornerText =
+      addTextEnabled &&
+      textLayerHook.textLayers.some((layer) => !!layer.printZoneCorner)
+    const hasCornerImage =
+      !!printZoneCornerImage.enabled &&
+      (!!printZoneCornerImage.src || !!printZoneCornerImage.presetId)
+    setArtworkHasExtras(hasBackground || hasText || hasCornerText || hasCornerImage)
+  }, [
+    selectedBackgroundSrc,
+    addTextEnabled,
+    textLayerHook.textLayers,
+    printZoneCornerImage.enabled,
+    printZoneCornerImage.src,
+    printZoneCornerImage.presetId,
+    setArtworkHasExtras,
+  ])
 
   const composite = useCompositeCanvas({
     transparentCarUrlForPreset, selectedBackgroundSrc, selectedBackgroundIsCustom,
@@ -395,6 +421,8 @@ export default function ProductCustomizer() {
     setAddTextEnabled(false)
     setPrintZoneCornerImage(createPrintZoneCornerImage())
     setTextPlacement('same')
+    setDownloadArtworkEnabled(false)
+    setArtworkHasExtras(false)
     setArtworkOnlyDataUrl(null)
     setTextOnlyDataUrl(null)
     carGen.resetCarGeneration()
@@ -625,6 +653,11 @@ export default function ProductCustomizer() {
                             onApplyCornerPreset={applyCornerPreset}
                           />
                         )}
+                        <DownloadArtworkSection
+                          enabled={downloadArtworkEnabled}
+                          onChange={setDownloadArtworkEnabled}
+                          disabled={backgroundControlsLocked}
+                        />
                       </>
                     )}
                   </>

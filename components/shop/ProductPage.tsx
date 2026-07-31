@@ -64,7 +64,7 @@ export default function ProductPage({
     setTshirtBaseImage, tshirtBaseImage, artworkUrl, compositeDataUrl,
     artworkOnlyDataUrl, textOnlyDataUrl, cornersOnlyDataUrl,
     mockupPlacement, setProductType, setSelectedColorHex, setSelectedColorTitle, generationStatus,
-    artworkSide, textPlacement, mockupViewSide,
+    artworkSide, textPlacement, mockupViewSide, downloadArtworkEnabled, artworkHasExtras,
   } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,6 +156,8 @@ export default function ProductPage({
     let persistedArtworkUrl: string | undefined;
     let persistedThumbnailUrl: string | undefined;
     let persistedTextArtworkUrl: string | undefined;
+    let persistedDownloadFullUrl: string | undefined;
+    let persistedDownloadCarOnlyUrl: string | undefined;
 
     const isOpposite = textPlacement === 'opposite' && !!textOnlyDataUrl;
     const printSource = isOpposite
@@ -224,6 +226,34 @@ export default function ProductPage({
         persistedArtworkUrl = printResult;
         persistedThumbnailUrl = thumbResult;
         persistedTextArtworkUrl = textResult;
+
+        if (downloadArtworkEnabled) {
+          if (artworkHasExtras) {
+            persistedDownloadFullUrl = printResult;
+
+            if (artworkUrl) {
+              try {
+                const carOnlyBlob = await buildPrintAreaPng(
+                  artworkUrl,
+                  mockupPlacement,
+                  product.type,
+                  artworkSide,
+                  printMultiplierOverrides,
+                  null,
+                );
+                persistedDownloadCarOnlyUrl = await uploadPng(
+                  carOnlyBlob,
+                  "download_car_only",
+                  "download-car-only.png"
+                );
+              } catch (err) {
+                console.error("Failed to save download car-only artwork:", err);
+              }
+            }
+          } else {
+            persistedDownloadCarOnlyUrl = printResult;
+          }
+        }
       } catch (err) {
         console.error("Failed to build artwork:", err);
       } finally {
@@ -239,10 +269,17 @@ export default function ProductPage({
       color: selectedColorObj?.title ?? "",
       price: displayPrice,
       artworkSide,
+      ...(downloadArtworkEnabled ? { downloadArtwork: true } : {}),
       ...(persistedArtworkUrl ? { artworkUrl: persistedArtworkUrl } : {}),
       ...(persistedThumbnailUrl ? { thumbnailUrl: persistedThumbnailUrl } : {}),
       ...(persistedTextArtworkUrl
         ? { textArtworkUrl: persistedTextArtworkUrl, textArtworkSide: oppositeSide }
+        : {}),
+      ...(persistedDownloadFullUrl
+        ? { downloadFullUrl: persistedDownloadFullUrl }
+        : {}),
+      ...(persistedDownloadCarOnlyUrl
+        ? { downloadCarOnlyUrl: persistedDownloadCarOnlyUrl }
         : {}),
     });
     setAdded(true);

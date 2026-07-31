@@ -40,6 +40,10 @@ interface CustomizerContextValue {
   mockupBaseNaturalWidth: number | null
   mockupBaseNaturalHeight: number | null
   setMockupBaseNaturalSize: (size: { width: number; height: number } | null) => void
+  downloadArtworkEnabled: boolean
+  setDownloadArtworkEnabled: (enabled: boolean) => void
+  artworkHasExtras: boolean
+  setArtworkHasExtras: (hasExtras: boolean) => void
 }
 
 const CustomizerContext = createContext<CustomizerContextValue | null>(null)
@@ -66,6 +70,8 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
   const [mockupViewSide, setMockupViewSide] = useState<ArtworkSide>('front')
   const [mockupBaseNaturalWidth, setMockupBaseNaturalWidth] = useState<number | null>(null)
   const [mockupBaseNaturalHeight, setMockupBaseNaturalHeight] = useState<number | null>(null)
+  const [downloadArtworkEnabled, setDownloadArtworkEnabled] = useState(false)
+  const [artworkHasExtras, setArtworkHasExtras] = useState(false)
 
   useEffect(() => {
     setMockupPlacementRaw((prev) =>
@@ -136,6 +142,10 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
         mockupBaseNaturalWidth,
         mockupBaseNaturalHeight,
         setMockupBaseNaturalSize,
+        downloadArtworkEnabled,
+        setDownloadArtworkEnabled,
+        artworkHasExtras,
+        setArtworkHasExtras,
       }}
     >
       {children}

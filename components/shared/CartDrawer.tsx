@@ -6,6 +6,11 @@ import Image from "next/image";
 import { X, Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/Button";
+import {
+  DOWNLOAD_ARTWORK_LABEL,
+  DOWNLOAD_ARTWORK_PRICE_CENTS,
+  downloadArtworkFeeCents,
+} from "@/lib/shop/downloadArtwork";
 
 function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -21,6 +26,9 @@ export function CartDrawer() {
     isOpen,
     closeCart,
   } = useCart();
+
+  const downloadFee = downloadArtworkFeeCents(items);
+  const downloadLines = items.filter((item) => item.downloadArtwork).length;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -106,6 +114,7 @@ export function CartDrawer() {
                         </h3>
                         <p className="mt-0.5 font-sub text-[10px] font-bold uppercase tracking-widest text-muted">
                           {item.color && `${item.color} · `}Size: {item.size}
+                          {item.downloadArtwork ? " · Download" : ""}
                         </p>
                       </div>
                       <button
@@ -166,6 +175,19 @@ export function CartDrawer() {
 
         {items.length > 0 && (
           <div className="border-t border-border p-6 space-y-4">
+            {downloadFee > 0 && (
+              <div className="flex items-center justify-between font-body text-sm">
+                <span className="text-muted">
+                  {DOWNLOAD_ARTWORK_LABEL}
+                  {downloadLines > 1 ? ` × ${downloadLines}` : ""}
+                </span>
+                <span className="font-mono text-white">
+                  {formatPrice(
+                    downloadLines * DOWNLOAD_ARTWORK_PRICE_CENTS
+                  )}
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between font-body text-sm">
               <span className="text-muted">Subtotal</span>
               <span className="font-mono text-white">

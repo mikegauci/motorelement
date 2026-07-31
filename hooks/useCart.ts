@@ -15,6 +15,9 @@ export interface CartItem {
   artworkSide?: "front" | "back";
   textArtworkUrl?: string;
   textArtworkSide?: "front" | "back";
+  downloadArtwork?: boolean;
+  downloadFullUrl?: string;
+  downloadCarOnlyUrl?: string;
 }
 
 interface CartContextValue {
