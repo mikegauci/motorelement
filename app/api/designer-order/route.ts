@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
 import { sendDesignerBrief, type DesignerBriefItem } from '@/lib/email/sendDesignerBrief'
 import { isRealBackgroundUrl } from '@/components/shop/customizer/constants'
+import { sanitizeBriefImageUrl } from '@/lib/email/safeImageUrl'
+import { clientIp, isSameOriginRequest, rateLimit } from '@/lib/api/rateLimit'
 
 export const runtime = 'nodejs'
+
+const RATE_LIMIT = 8
+const RATE_WINDOW_MS = 15 * 60 * 1000
 
 interface DesignerOrderItem {
   productId: string
@@ -29,6 +34,22 @@ interface DesignerOrderItem {
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const ip = clientIp(request)
+    const limited = rateLimit(`designer-order:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)
+    if (!limited.ok) {
+      return NextResponse.json(
+        { error: 'Too many designer requests. Please try again later.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(limited.retryAfterSec) },
+        }
+      )
+    }
+
     const { items } = (await request.json()) as { items: DesignerOrderItem[] }
 
     console.log('[designer-order] received', {
@@ -48,28 +69,30 @@ export async function POST(request: Request) {
 
     const briefs: DesignerBriefItem[] = []
     for (const item of designerItems) {
-      if (!item.customerPhotoUrl) {
+      const customerPhotoUrl = sanitizeBriefImageUrl(item.customerPhotoUrl)
+      if (!customerPhotoUrl) {
         return NextResponse.json(
-          { error: 'Designer items require the original car photo' },
+          { error: 'Designer items require a valid original car photo URL' },
           { status: 400 }
         )
       }
+      const backgroundUrl = isRealBackgroundUrl(item.backgroundUrl)
+        ? sanitizeBriefImageUrl(item.backgroundUrl)
+        : undefined
       briefs.push({
         productType: item.type,
         productName: item.name,
         color: item.color ?? '',
-        customerPhotoUrl: item.customerPhotoUrl,
+        customerPhotoUrl,
         customerNotes: item.customerNotes,
-        aiArtworkUrl: item.aiArtworkUrl,
-        backgroundUrl: isRealBackgroundUrl(item.backgroundUrl)
-          ? item.backgroundUrl
-          : undefined,
-        textArtworkUrl: item.textArtworkUrl,
+        aiArtworkUrl: sanitizeBriefImageUrl(item.aiArtworkUrl),
+        backgroundUrl,
+        textArtworkUrl: sanitizeBriefImageUrl(item.textArtworkUrl),
         requestedText: item.requestedText,
         artworkSide: item.artworkSide === 'back' ? 'back' : 'front',
         textPlacement: item.textPlacement === 'opposite' ? 'opposite' : 'same',
         textCorner: item.textCorner,
-        cornerImageUrl: item.cornerImageUrl,
+        cornerImageUrl: sanitizeBriefImageUrl(item.cornerImageUrl),
         cornerImageLabel: item.cornerImageLabel,
         includeSourceFiles: !!item.includeSourceFiles,
         designerPriority: !!item.designerPriority,

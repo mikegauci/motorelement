@@ -77,8 +77,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           textCorner: item.textCorner ?? existing.textCorner,
           cornerImageUrl: item.cornerImageUrl ?? existing.cornerImageUrl,
           cornerImageLabel: item.cornerImageLabel ?? existing.cornerImageLabel,
-          includeSourceFiles: !!item.includeSourceFiles,
-          designerPriority: !!item.designerPriority,
+          includeSourceFiles:
+            !!existing.includeSourceFiles || !!item.includeSourceFiles,
+          designerPriority:
+            !!existing.designerPriority || !!item.designerPriority,
         };
         return updated;
       }

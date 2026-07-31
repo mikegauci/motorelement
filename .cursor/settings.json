@@ -1,7 +1,0 @@
-{
-  "plugins": {
-    "resend": {
-      "enabled": true
-    }
-  }
-}

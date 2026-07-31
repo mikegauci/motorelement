@@ -1,5 +1,6 @@
 import { getResend } from './resend'
 import { isRealBackgroundUrl } from '@/components/shop/customizer/constants'
+import { sanitizeBriefImageUrl } from './safeImageUrl'
 
 export interface DesignerBriefItem {
   productType: string
@@ -50,13 +51,17 @@ function buildItemHtml(item: DesignerBriefItem, index: number) {
   ]
 
   if (item.aiArtworkUrl) {
-    parts.push(imageBlock('Generated car artwork', item.aiArtworkUrl))
+    const safeAi = sanitizeBriefImageUrl(item.aiArtworkUrl)
+    if (safeAi) parts.push(imageBlock('Generated car artwork', safeAi))
   }
   if (item.customerNotes?.trim()) {
     parts.push(`<p><strong>Notes:</strong></p><p>${escapeHtml(item.customerNotes.trim()).replace(/\n/g, '<br/>')}</p>`)
   }
-  if (isRealBackgroundUrl(item.backgroundUrl)) {
-    parts.push(imageBlock('Background', item.backgroundUrl!))
+  const safeBackground = isRealBackgroundUrl(item.backgroundUrl)
+    ? sanitizeBriefImageUrl(item.backgroundUrl)
+    : undefined
+  if (safeBackground) {
+    parts.push(imageBlock('Background', safeBackground))
   }
   if (item.requestedText?.trim()) {
     parts.push(
@@ -73,14 +78,16 @@ function buildItemHtml(item: DesignerBriefItem, index: number) {
       `<p><strong>Text corner:</strong> ${escapeHtml(item.textCorner.trim())}</p>`
     )
   }
-  if (item.cornerImageUrl) {
+  const safeCornerImage = sanitizeBriefImageUrl(item.cornerImageUrl)
+  if (safeCornerImage) {
     const cornerLabel = item.cornerImageLabel?.trim()
       ? `Corner image (${item.cornerImageLabel.trim()})`
       : 'Corner image'
-    parts.push(imageBlock(cornerLabel, item.cornerImageUrl))
+    parts.push(imageBlock(cornerLabel, safeCornerImage))
   }
-  if (item.textArtworkUrl) {
-    parts.push(imageBlock('Text artwork', item.textArtworkUrl))
+  const safeTextArtwork = sanitizeBriefImageUrl(item.textArtworkUrl)
+  if (safeTextArtwork) {
+    parts.push(imageBlock('Text artwork', safeTextArtwork))
   }
 
   return parts.join('\n')
@@ -90,34 +97,49 @@ export async function sendDesignerBrief(items: DesignerBriefItem[]) {
   const to = process.env.DESIGNER_EMAIL
   const from = process.env.EMAIL_FROM || 'Motor Element <onboarding@resend.dev>'
 
+  const safeItems = items.map((item) => {
+    const customerPhotoUrl = sanitizeBriefImageUrl(item.customerPhotoUrl)
+    if (!customerPhotoUrl) {
+      throw new Error('Designer brief requires a valid original car photo URL')
+    }
+    return {
+      ...item,
+      customerPhotoUrl,
+      aiArtworkUrl: sanitizeBriefImageUrl(item.aiArtworkUrl),
+      backgroundUrl: sanitizeBriefImageUrl(item.backgroundUrl),
+      cornerImageUrl: sanitizeBriefImageUrl(item.cornerImageUrl),
+      textArtworkUrl: sanitizeBriefImageUrl(item.textArtworkUrl),
+    }
+  })
+
   console.log('[designer-email] preparing send', {
     to,
     from,
-    itemCount: items.length,
+    itemCount: safeItems.length,
     hasApiKey: Boolean(process.env.RESEND_API_KEY),
-    subjects: items.map((item) => `${item.productType} / ${item.color}`),
-    photoUrls: items.map((item) => item.customerPhotoUrl),
-    backgroundUrls: items.map((item) => item.backgroundUrl ?? null),
-    hasNotes: items.map((item) => Boolean(item.customerNotes?.trim())),
-    hasRequestedText: items.map((item) => Boolean(item.requestedText?.trim())),
+    subjects: safeItems.map((item) => `${item.productType} / ${item.color}`),
+    photoUrls: safeItems.map((item) => item.customerPhotoUrl),
+    backgroundUrls: safeItems.map((item) => item.backgroundUrl ?? null),
+    hasNotes: safeItems.map((item) => Boolean(item.customerNotes?.trim())),
+    hasRequestedText: safeItems.map((item) => Boolean(item.requestedText?.trim())),
   })
 
   if (!to) {
     throw new Error('DESIGNER_EMAIL is not set')
   }
-  if (!items.length) {
+  if (!safeItems.length) {
     throw new Error('No designer items provided')
   }
 
-  const hasPriority = items.some((item) => item.designerPriority)
+  const hasPriority = safeItems.some((item) => item.designerPriority)
   const subject =
-    items.length === 1
-      ? `${hasPriority ? 'PRIORITY — ' : ''}Designer illustration brief — ${items[0].productType} (${items[0].color || 'no color'})`
-      : `${hasPriority ? 'PRIORITY — ' : ''}Designer illustration brief — ${items.length} items`
+    safeItems.length === 1
+      ? `${hasPriority ? 'PRIORITY — ' : ''}Designer illustration brief — ${safeItems[0].productType} (${safeItems[0].color || 'no color'})`
+      : `${hasPriority ? 'PRIORITY — ' : ''}Designer illustration brief — ${safeItems.length} items`
 
   const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111;">
-      ${items.map((item, i) => buildItemHtml(item, i)).join('<hr style="margin:24px 0;border:none;border-top:1px solid #ddd;" />')}
+      ${safeItems.map((item, i) => buildItemHtml(item, i)).join('<hr style="margin:24px 0;border:none;border-top:1px solid #ddd;" />')}
     </div>
   `
 

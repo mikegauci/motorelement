@@ -13,25 +13,43 @@ export function formatDesignerPriorityPrice() {
 }
 
 export function designerSourceFilesFeeCents(
-  items: { includeSourceFiles?: boolean }[]
+  items: { includeSourceFiles?: boolean; quantity?: number }[]
 ): number {
-  return (
-    items.filter((item) => item.includeSourceFiles).length *
-    DESIGNER_SOURCE_FILES_PRICE_CENTS
-  )
+  return items.reduce((sum, item) => {
+    if (!item.includeSourceFiles) return sum
+    return sum + DESIGNER_SOURCE_FILES_PRICE_CENTS * Math.max(1, item.quantity ?? 1)
+  }, 0)
 }
 
 export function designerPriorityFeeCents(
-  items: { designerPriority?: boolean }[]
+  items: { designerPriority?: boolean; quantity?: number }[]
 ): number {
-  return (
-    items.filter((item) => item.designerPriority).length *
-    DESIGNER_PRIORITY_PRICE_CENTS
-  )
+  return items.reduce((sum, item) => {
+    if (!item.designerPriority) return sum
+    return sum + DESIGNER_PRIORITY_PRICE_CENTS * Math.max(1, item.quantity ?? 1)
+  }, 0)
 }
 
 export function designerAddonsFeeCents(
-  items: { includeSourceFiles?: boolean; designerPriority?: boolean }[]
+  items: { includeSourceFiles?: boolean; designerPriority?: boolean; quantity?: number }[]
 ): number {
   return designerSourceFilesFeeCents(items) + designerPriorityFeeCents(items)
+}
+
+export function designerSourceFilesUnits(
+  items: { includeSourceFiles?: boolean; quantity?: number }[]
+): number {
+  return items.reduce((sum, item) => {
+    if (!item.includeSourceFiles) return sum
+    return sum + Math.max(1, item.quantity ?? 1)
+  }, 0)
+}
+
+export function designerPriorityUnits(
+  items: { designerPriority?: boolean; quantity?: number }[]
+): number {
+  return items.reduce((sum, item) => {
+    if (!item.designerPriority) return sum
+    return sum + Math.max(1, item.quantity ?? 1)
+  }, 0)
 }

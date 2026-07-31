@@ -13,11 +13,11 @@ import {
 } from "@/lib/shop/downloadArtwork";
 import {
   DESIGNER_SOURCE_FILES_LABEL,
-  DESIGNER_SOURCE_FILES_PRICE_CENTS,
   DESIGNER_PRIORITY_LABEL,
-  DESIGNER_PRIORITY_PRICE_CENTS,
   designerSourceFilesFeeCents,
   designerPriorityFeeCents,
+  designerSourceFilesUnits,
+  designerPriorityUnits,
 } from "@/lib/shop/designerAddons";
 
 function formatPrice(cents: number) {
@@ -38,9 +38,9 @@ export function CartDrawer() {
   const downloadFee = downloadArtworkFeeCents(items);
   const downloadLines = items.filter((item) => item.downloadArtwork).length;
   const sourceFilesFee = designerSourceFilesFeeCents(items);
-  const sourceFilesLines = items.filter((item) => item.includeSourceFiles).length;
+  const sourceFilesUnits = designerSourceFilesUnits(items);
   const priorityFee = designerPriorityFeeCents(items);
-  const priorityLines = items.filter((item) => item.designerPriority).length;
+  const priorityUnits = designerPriorityUnits(items);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -210,12 +210,10 @@ export function CartDrawer() {
               <div className="flex items-center justify-between font-body text-sm">
                 <span className="text-muted">
                   {DESIGNER_SOURCE_FILES_LABEL}
-                  {sourceFilesLines > 1 ? ` × ${sourceFilesLines}` : ""}
+                  {sourceFilesUnits > 1 ? ` × ${sourceFilesUnits}` : ""}
                 </span>
                 <span className="font-mono text-white">
-                  {formatPrice(
-                    sourceFilesLines * DESIGNER_SOURCE_FILES_PRICE_CENTS
-                  )}
+                  {formatPrice(sourceFilesFee)}
                 </span>
               </div>
             )}
@@ -223,10 +221,10 @@ export function CartDrawer() {
               <div className="flex items-center justify-between font-body text-sm">
                 <span className="text-muted">
                   {DESIGNER_PRIORITY_LABEL}
-                  {priorityLines > 1 ? ` × ${priorityLines}` : ""}
+                  {priorityUnits > 1 ? ` × ${priorityUnits}` : ""}
                 </span>
                 <span className="font-mono text-white">
-                  {formatPrice(priorityLines * DESIGNER_PRIORITY_PRICE_CENTS)}
+                  {formatPrice(priorityFee)}
                 </span>
               </div>
             )}

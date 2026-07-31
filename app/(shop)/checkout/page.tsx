@@ -12,11 +12,11 @@ import {
 } from "@/lib/shop/downloadArtwork";
 import {
   DESIGNER_SOURCE_FILES_LABEL,
-  DESIGNER_SOURCE_FILES_PRICE_CENTS,
   DESIGNER_PRIORITY_LABEL,
-  DESIGNER_PRIORITY_PRICE_CENTS,
   designerSourceFilesFeeCents,
   designerPriorityFeeCents,
+  designerSourceFilesUnits,
+  designerPriorityUnits,
 } from "@/lib/shop/designerAddons";
 
 function formatPrice(cents: number) {
@@ -54,7 +54,7 @@ function isDesignerItem(item: CartItem) {
 }
 
 export default function CheckoutPage() {
-  const { items, totalPrice, totalItems, clear } = useCart();
+  const { items, totalPrice, totalItems, clear, removeItem } = useCart();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,9 +71,9 @@ export default function CheckoutPage() {
   const downloadFee = downloadArtworkFeeCents(items);
   const downloadLines = items.filter((item) => item.downloadArtwork).length;
   const sourceFilesFee = designerSourceFilesFeeCents(items);
-  const sourceFilesLines = items.filter((item) => item.includeSourceFiles).length;
+  const sourceFilesUnits = designerSourceFilesUnits(items);
   const priorityFee = designerPriorityFeeCents(items);
-  const priorityLines = items.filter((item) => item.designerPriority).length;
+  const priorityUnits = designerPriorityUnits(items);
   const designerItems = items.filter(isDesignerItem);
   const aiItems = items.filter((item) => !isDesignerItem(item));
   const hasDesigner = designerItems.length > 0;
@@ -118,6 +118,11 @@ export default function CheckoutPage() {
             ? "Your rush order has been placed — we'll be in touch within 24 hours."
             : "Your order has been placed — we'll be in touch in 1–3 days."
         );
+        if (hasAi) {
+          for (const item of designerItems) {
+            removeItem(item.productId, item.size, item.color);
+          }
+        }
       }
 
       if (hasAi) {
@@ -399,13 +404,11 @@ export default function CheckoutPage() {
                     </p>
                     <p className="font-sub text-xs font-bold uppercase tracking-widest text-muted">
                       Editable designer source files
-                      {sourceFilesLines > 1 ? ` · × ${sourceFilesLines}` : ""}
+                      {sourceFilesUnits > 1 ? ` · × ${sourceFilesUnits}` : ""}
                     </p>
                   </div>
                   <p className="font-mono text-sm text-white">
-                    {formatPrice(
-                      sourceFilesLines * DESIGNER_SOURCE_FILES_PRICE_CENTS
-                    )}
+                    {formatPrice(sourceFilesFee)}
                   </p>
                 </div>
               )}
@@ -417,11 +420,11 @@ export default function CheckoutPage() {
                     </p>
                     <p className="font-sub text-xs font-bold uppercase tracking-widest text-muted">
                       Under 24 hours
-                      {priorityLines > 1 ? ` · × ${priorityLines}` : ""}
+                      {priorityUnits > 1 ? ` · × ${priorityUnits}` : ""}
                     </p>
                   </div>
                   <p className="font-mono text-sm text-white">
-                    {formatPrice(priorityLines * DESIGNER_PRIORITY_PRICE_CENTS)}
+                    {formatPrice(priorityFee)}
                   </p>
                 </div>
               )}
