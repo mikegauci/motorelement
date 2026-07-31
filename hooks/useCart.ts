@@ -18,6 +18,7 @@ export interface CartItem {
   downloadArtwork?: boolean;
   downloadFullUrl?: string;
   downloadCarOnlyUrl?: string;
+  downloadTextUrl?: string;
 }
 
 interface CartContextValue {

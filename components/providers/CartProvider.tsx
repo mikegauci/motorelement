@@ -57,15 +57,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updated[idx] = {
           ...existing,
           quantity: existing.quantity + 1,
-          downloadArtwork: existing.downloadArtwork || item.downloadArtwork,
           artworkUrl: item.artworkUrl ?? existing.artworkUrl,
           thumbnailUrl: item.thumbnailUrl ?? existing.thumbnailUrl,
           artworkSide: item.artworkSide ?? existing.artworkSide,
           textArtworkUrl: item.textArtworkUrl ?? existing.textArtworkUrl,
           textArtworkSide: item.textArtworkSide ?? existing.textArtworkSide,
-          downloadFullUrl: item.downloadFullUrl ?? existing.downloadFullUrl,
-          downloadCarOnlyUrl:
-            item.downloadCarOnlyUrl ?? existing.downloadCarOnlyUrl,
+          downloadArtwork: !!item.downloadArtwork,
+          downloadFullUrl: item.downloadFullUrl,
+          downloadCarOnlyUrl: item.downloadCarOnlyUrl,
+          downloadTextUrl: item.downloadTextUrl,
         };
         return updated;
       }

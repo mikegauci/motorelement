@@ -73,6 +73,7 @@ export default function ProductPage({
   const [added, setAdded] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [downloadExportError, setDownloadExportError] = useState<string | null>(null);
 
   useEffect(() => {
     setProductType(product.type);
@@ -158,6 +159,8 @@ export default function ProductPage({
     let persistedTextArtworkUrl: string | undefined;
     let persistedDownloadFullUrl: string | undefined;
     let persistedDownloadCarOnlyUrl: string | undefined;
+    let persistedDownloadTextUrl: string | undefined;
+    setDownloadExportError(null);
 
     const isOpposite = textPlacement === 'opposite' && !!textOnlyDataUrl;
     const printSource = isOpposite
@@ -250,6 +253,10 @@ export default function ProductPage({
                 console.error("Failed to save download car-only artwork:", err);
               }
             }
+
+            if (persistedTextArtworkUrl) {
+              persistedDownloadTextUrl = persistedTextArtworkUrl;
+            }
           } else {
             persistedDownloadCarOnlyUrl = printResult;
           }
@@ -261,6 +268,18 @@ export default function ProductPage({
       }
     }
 
+    const downloadExportsReady = downloadArtworkEnabled
+      ? artworkHasExtras
+        ? !!(persistedDownloadFullUrl && persistedDownloadCarOnlyUrl)
+        : !!persistedDownloadCarOnlyUrl
+      : false;
+
+    if (downloadArtworkEnabled && !downloadExportsReady) {
+      setDownloadExportError(
+        "Digital download could not be saved. The item was added without the download add-on — try again."
+      );
+    }
+
     addItem({
       productId: product.id,
       name: product.name,
@@ -269,17 +288,20 @@ export default function ProductPage({
       color: selectedColorObj?.title ?? "",
       price: displayPrice,
       artworkSide,
-      ...(downloadArtworkEnabled ? { downloadArtwork: true } : {}),
+      ...(downloadExportsReady ? { downloadArtwork: true } : {}),
       ...(persistedArtworkUrl ? { artworkUrl: persistedArtworkUrl } : {}),
       ...(persistedThumbnailUrl ? { thumbnailUrl: persistedThumbnailUrl } : {}),
       ...(persistedTextArtworkUrl
         ? { textArtworkUrl: persistedTextArtworkUrl, textArtworkSide: oppositeSide }
         : {}),
-      ...(persistedDownloadFullUrl
+      ...(downloadExportsReady && persistedDownloadFullUrl
         ? { downloadFullUrl: persistedDownloadFullUrl }
         : {}),
-      ...(persistedDownloadCarOnlyUrl
+      ...(downloadExportsReady && persistedDownloadCarOnlyUrl
         ? { downloadCarOnlyUrl: persistedDownloadCarOnlyUrl }
+        : {}),
+      ...(downloadExportsReady && persistedDownloadTextUrl
+        ? { downloadTextUrl: persistedDownloadTextUrl }
         : {}),
     });
     setAdded(true);
@@ -450,6 +472,12 @@ export default function ProductPage({
                 </>
               )}
             </Button>
+
+            {downloadExportError && (
+              <p className="mt-3 font-body text-xs text-redline">
+                {downloadExportError}
+              </p>
+            )}
 
             {!selectedVariant && selectedColor && selectedSize && (
               <p className="mt-3 font-body text-xs text-redline">

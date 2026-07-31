@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useCart } from "@/hooks/useCart";
+import { useCart, type CartItem } from "@/hooks/useCart";
 import { Button } from "@/components/ui/Button";
 import {
   DOWNLOAD_ARTWORK_LABEL,
@@ -15,26 +15,46 @@ function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+type DownloadKind = "full" | "car" | "text";
+
+type CheckoutDownloadItem = {
+  key: string;
+  label: string;
+  downloadFullUrl?: string;
+  downloadCarOnlyUrl?: string;
+  downloadTextUrl?: string;
+};
+
+function toCheckoutDownloads(items: CartItem[]): CheckoutDownloadItem[] {
+  return items
+    .filter(
+      (item) =>
+        item.downloadArtwork &&
+        (item.downloadFullUrl || item.downloadCarOnlyUrl || item.downloadTextUrl)
+    )
+    .map((item, index) => ({
+      key: `${item.productId}-${item.size}-${item.color}-${index}`,
+      label: `${item.name}${item.color ? ` · ${item.color}` : ""} · Size ${item.size}`,
+      downloadFullUrl: item.downloadFullUrl,
+      downloadCarOnlyUrl: item.downloadCarOnlyUrl,
+      downloadTextUrl: item.downloadTextUrl,
+    }));
+}
+
 export default function CheckoutPage() {
   const { items, totalPrice, totalItems, clear } = useCart();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [downloadFullUrl, setDownloadFullUrl] = useState<string | null>(null);
-  const [downloadCarOnlyUrl, setDownloadCarOnlyUrl] = useState<string | null>(
-    null
+  const [downloadItems, setDownloadItems] = useState<CheckoutDownloadItem[]>(
+    []
   );
   const [downloadError, setDownloadError] = useState<string | null>(null);
-  const [downloadingKind, setDownloadingKind] = useState<
-    "full" | "car" | null
-  >(null);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   const downloadFee = downloadArtworkFeeCents(items);
   const downloadLines = items.filter((item) => item.downloadArtwork).length;
-  const hasBundle = !!downloadFullUrl && !!downloadCarOnlyUrl;
-  const hasSingleDownload =
-    !!downloadCarOnlyUrl || !!downloadFullUrl;
 
   useEffect(() => {
     if (items.length === 0 && !success) {
@@ -46,17 +66,10 @@ export default function CheckoutPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    setDownloadFullUrl(null);
-    setDownloadCarOnlyUrl(null);
+    setDownloadItems([]);
     setDownloadError(null);
 
-    const downloadItem = items.find(
-      (item) =>
-        item.downloadArtwork &&
-        (item.downloadFullUrl || item.downloadCarOnlyUrl)
-    );
-    const nextFullUrl = downloadItem?.downloadFullUrl ?? null;
-    const nextCarOnlyUrl = downloadItem?.downloadCarOnlyUrl ?? null;
+    const nextDownloads = toCheckoutDownloads(items);
     const wantedDownload = items.some((item) => item.downloadArtwork);
 
     try {
@@ -80,9 +93,8 @@ export default function CheckoutPage() {
       clear();
       setLoading(false);
 
-      if (nextFullUrl || nextCarOnlyUrl) {
-        setDownloadFullUrl(nextFullUrl);
-        setDownloadCarOnlyUrl(nextCarOnlyUrl);
+      if (nextDownloads.length > 0) {
+        setDownloadItems(nextDownloads);
       } else if (wantedDownload) {
         setDownloadError(
           "Download was selected but artwork exports were not saved. Remove the item, set Download Artwork to Yes, and add to cart again."
@@ -94,31 +106,44 @@ export default function CheckoutPage() {
     }
   }
 
-  async function handleDownload(kind: "full" | "car") {
-    const url = kind === "full" ? downloadFullUrl : downloadCarOnlyUrl;
+  async function handleDownload(
+    item: CheckoutDownloadItem,
+    kind: DownloadKind
+  ) {
+    const url =
+      kind === "full"
+        ? item.downloadFullUrl
+        : kind === "car"
+          ? item.downloadCarOnlyUrl
+          : item.downloadTextUrl;
     if (!url) return;
-    setDownloadingKind(kind);
+
+    const actionKey = `${item.key}:${kind}`;
+    setDownloadingKey(actionKey);
     setDownloadError(null);
     try {
-      await triggerBrowserDownload(
-        url,
+      const filename =
         kind === "full"
           ? "motorelement-artwork-full.png"
-          : "motorelement-artwork-car-only.png"
-      );
+          : kind === "text"
+            ? "motorelement-artwork-text.png"
+            : item.downloadFullUrl || item.downloadTextUrl
+              ? "motorelement-artwork-car-only.png"
+              : "motorelement-artwork.png";
+      await triggerBrowserDownload(url, filename);
     } catch (err) {
       setDownloadError(
         err instanceof Error ? err.message : "Download failed"
       );
     } finally {
-      setDownloadingKind(null);
+      setDownloadingKey(null);
     }
   }
 
   if (items.length === 0 && !success) return null;
 
   const showDownloadSection =
-    hasSingleDownload || !!downloadError;
+    downloadItems.length > 0 || !!downloadError;
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-24">
@@ -145,47 +170,80 @@ export default function CheckoutPage() {
                     {downloadError}
                   </p>
                 )}
-                {hasSingleDownload && (
-                  <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                    {hasBundle ? (
-                      <>
-                        <Button
-                          variant="primary"
-                          size="lg"
-                          onClick={() => handleDownload("full")}
-                          disabled={downloadingKind !== null}
-                        >
-                          {downloadingKind === "full"
-                            ? "DOWNLOADING…"
-                            : "DOWNLOAD FULL ARTWORK"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="lg"
-                          onClick={() => handleDownload("car")}
-                          disabled={downloadingKind !== null}
-                        >
-                          {downloadingKind === "car"
-                            ? "DOWNLOADING…"
-                            : "DOWNLOAD CAR ONLY"}
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        variant="primary"
-                        size="lg"
-                        onClick={() =>
-                          handleDownload(downloadCarOnlyUrl ? "car" : "full")
-                        }
-                        disabled={downloadingKind !== null}
-                      >
-                        {downloadingKind !== null
-                          ? "DOWNLOADING…"
-                          : "DOWNLOAD IMAGE"}
-                      </Button>
-                    )}
-                  </div>
-                )}
+                <div className="mt-4 space-y-6">
+                  {downloadItems.map((item) => {
+                    const hasBundle = !!(
+                      item.downloadFullUrl && item.downloadCarOnlyUrl
+                    );
+                    const busy = downloadingKey?.startsWith(`${item.key}:`);
+
+                    return (
+                      <div key={item.key} className="space-y-3">
+                        {downloadItems.length > 1 && (
+                          <p className="font-sub text-xs font-bold uppercase tracking-widest text-muted">
+                            {item.label}
+                          </p>
+                        )}
+                        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:flex-wrap">
+                          {hasBundle ? (
+                            <>
+                              <Button
+                                variant="primary"
+                                size="lg"
+                                onClick={() => handleDownload(item, "full")}
+                                disabled={!!downloadingKey}
+                              >
+                                {downloadingKey === `${item.key}:full`
+                                  ? "DOWNLOADING…"
+                                  : "DOWNLOAD FULL ARTWORK"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="lg"
+                                onClick={() => handleDownload(item, "car")}
+                                disabled={!!downloadingKey}
+                              >
+                                {downloadingKey === `${item.key}:car`
+                                  ? "DOWNLOADING…"
+                                  : "DOWNLOAD CAR ONLY"}
+                              </Button>
+                              {item.downloadTextUrl && (
+                                <Button
+                                  variant="outline"
+                                  size="lg"
+                                  onClick={() => handleDownload(item, "text")}
+                                  disabled={!!downloadingKey}
+                                >
+                                  {downloadingKey === `${item.key}:text`
+                                    ? "DOWNLOADING…"
+                                    : "DOWNLOAD TEXT"}
+                                </Button>
+                              )}
+                            </>
+                          ) : (
+                            <Button
+                              variant="primary"
+                              size="lg"
+                              onClick={() =>
+                                handleDownload(
+                                  item,
+                                  item.downloadCarOnlyUrl
+                                    ? "car"
+                                    : item.downloadFullUrl
+                                      ? "full"
+                                      : "text"
+                                )
+                              }
+                              disabled={!!downloadingKey}
+                            >
+                              {busy ? "DOWNLOADING…" : "DOWNLOAD IMAGE"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

@@ -1,7 +1,7 @@
 'use client'
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react'
 import styles from './styles'
 import {
   SESSION_KEY,
@@ -146,7 +146,7 @@ export default function ProductCustomizer() {
   const backgroundControlsLocked = bgGen.customBackgroundGenerating
   const canGenerateCustomBackground = !!customBackgroundValue.trim() && !bgGen.customBackgroundGenerating && !bgGen.customBackgroundRemoving
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const hasBackground = !!selectedBackgroundSrc
     const hasText =
       addTextEnabled &&
