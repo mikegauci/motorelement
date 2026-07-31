@@ -3,13 +3,19 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/Button";
+import Image from "next/image";
 import { ShoppingBag, Check, Eye } from "lucide-react";
 import type { Product } from "@/types/product";
 import MockupPreview from "./customizer/MockupPreview";
 import MockupPreviewModal from "./customizer/MockupPreviewModal";
 import { useCustomizer } from "./customizer/CustomizerContext";
 import { buildPrintAreaPng, buildMockupThumbnail } from "./customizer/helpers";
-import { getBlankMockupImage, isRealBackgroundUrl, type PrintExportMultiplierOverrides } from "./customizer/constants";
+import {
+  getBlankMockupImage,
+  getProductGalleryImages,
+  isRealBackgroundUrl,
+  type PrintExportMultiplierOverrides,
+} from "./customizer/constants";
 
 interface PrintifyColor {
   id: number;
@@ -79,6 +85,7 @@ export default function ProductPage({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [downloadExportError, setDownloadExportError] = useState<string | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setProductType(product.type);
@@ -125,6 +132,11 @@ export default function ProductPage({
   const hasGeneratedImage = Boolean(artworkUrl);
   const generationRunning = generationStatus === "running";
   const isDesignerMode = illustrationMode === "designer";
+  const galleryImages = useMemo(
+    () => getProductGalleryImages(product.type),
+    [product.type]
+  );
+  const showingGallery = galleryIndex != null && galleryImages[galleryIndex] != null;
   const canFinalizeCart = isDesignerMode
     ? !!selectedVariant && !!customerPhotoDataUrl && !uploading
     : !!selectedVariant &&
@@ -525,7 +537,7 @@ export default function ProductPage({
     <div className="mx-auto max-w-7xl p-6">
       <div className="grid gap-12 lg:grid-cols-2">
         <div className="min-w-0 lg:sticky lg:top-20 lg:self-start">
-          {hasGeneratedImage && (
+          {hasGeneratedImage && !isDesignerMode && !showingGallery && (
             <div className="flex flex-wrap items-center gap-1 mb-3">
               <span className="px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border border-ignition bg-ignition/10 text-white">
                 Live Mockup
@@ -541,7 +553,72 @@ export default function ProductPage({
             </div>
           )}
 
-          <MockupPreview />
+          {showingGallery ? (
+            <div className="relative w-full aspect-square overflow-hidden border border-border bg-obsidian">
+              <Image
+                src={galleryImages[galleryIndex]!}
+                alt={`${product.name} gallery`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                priority
+              />
+            </div>
+          ) : (
+            <MockupPreview />
+          )}
+
+          {galleryImages.length > 0 && (
+            <div className="mt-3 flex gap-2 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setGalleryIndex(null)}
+                aria-label="Show live mockup"
+                aria-pressed={!showingGallery}
+                className={`relative h-20 w-20 shrink-0 overflow-hidden border transition ${
+                  !showingGallery
+                    ? "border-ignition"
+                    : "border-border hover:border-white/40"
+                }`}
+              >
+                <Image
+                  src={
+                    getBlankMockupImage(
+                      product.type,
+                      selectedColorObj?.title,
+                      "front"
+                    ) ?? galleryImages[0]
+                  }
+                  alt="Mockup"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                />
+              </button>
+              {galleryImages.map((src, i) => (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setGalleryIndex(i)}
+                  aria-label={`Show gallery image ${i + 1}`}
+                  aria-pressed={galleryIndex === i}
+                  className={`relative h-20 w-20 shrink-0 overflow-hidden border transition ${
+                    galleryIndex === i
+                      ? "border-ignition"
+                      : "border-border hover:border-white/40"
+                  }`}
+                >
+                  <Image
+                    src={src}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="min-w-0">

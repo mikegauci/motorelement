@@ -75,7 +75,7 @@ export default function VehicleInputForm({
             placeholder="Add any details you wish to include or exclude"
             value={customerNotes}
             onChange={(e) => setCustomerNotes(e.target.value)}
-            disabled={vehicleLocked}
+            disabled={vehicleLocked && illustrationMode !== 'designer'}
           />
         </div>
         {showModeChoice && (
@@ -119,7 +119,7 @@ export default function VehicleInputForm({
         {showDesignerLocked && (
           <div className={styles.vehicleActionsStack}>
             <p className={styles.hint}>
-              A designer will illustrate your ride in 1 – 3 days. Pick a background and optional text below, then finalise and add to cart.
+              A designer will illustrate your ride in 1 – 3 days. Continue with the customisation below, then finalise and add to cart.
             </p>
             <button
               type="button"

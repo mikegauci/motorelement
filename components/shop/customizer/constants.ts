@@ -13,21 +13,21 @@ export function isRealBackgroundUrl(url: string | null | undefined): boolean {
 }
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = [
+  { id: 'retrowave', name: 'Retrowave', src: '/presets/retrowave.png' },
+  { id: 'mount-fuji', name: 'Mount Fuji', src: '/presets/mount-fuji.png' },
+  { id: 'mountain-pass', name: 'Mountain Pass', src: '/presets/mountain-pass.png' },
+  { id: 'eternal-path', name: 'Eternal Path', src: '/presets/eternal-path.png' },
+  { id: 'miami', name: 'Miami', src: '/presets/miami.png' },
+  { id: 'racetrack', name: 'Racetrack', src: '/presets/racetrack.png' },
+  { id: 'las-vegas', name: 'Las Vegas', src: '/presets/las-vegas.png' },
   { id: 'cyberpunk', name: 'Cyberpunk', src: '/presets/cyberpunk.png' },
   { id: 'daikouku', name: 'Daikouku', src: '/presets/daikouku.png' },
   { id: 'daytona-beach', name: 'Daytona Beach', src: '/presets/daytona-beach.png' },
   { id: 'dystopia', name: 'Dystopia', src: '/presets/dystopia.png' },
-  { id: 'eternal-path', name: 'Eternal Path', src: '/presets/eternal-path.png' },
   { id: 'forest', name: 'Forest', src: '/presets/forest.png' },
   { id: 'godzilla', name: 'Godzilla', src: '/presets/godzilla.png' },
-  { id: 'las-vegas', name: 'Las Vegas', src: '/presets/las-vegas.png' },
   { id: 'london', name: 'London', src: '/presets/london.png' },
-  { id: 'miami', name: 'Miami', src: '/presets/miami.png' },
-  { id: 'mount-fuji', name: 'Mount Fuji', src: '/presets/mount-fuji.png' },
-  { id: 'mountain-pass', name: 'Mountain Pass', src: '/presets/mountain-pass.png' },
   { id: 'new-york', name: 'New York', src: '/presets/new-york.png' },
-  { id: 'racetrack', name: 'Racetrack', src: '/presets/racetrack.png' },
-  { id: 'retrowave', name: 'Retrowave', src: '/presets/retrowave.png' },
   { id: 'sakura', name: 'Sakura', src: '/presets/sakura.png' },
   { id: 'sand-dunes', name: 'Sand Dunes', src: '/presets/sand-dunes.png' },
   { id: 'shibuya-crossing', name: 'Shibuya Crossing', src: '/presets/shibuya-crossing.png' },
@@ -64,6 +64,18 @@ export const TEXT_FONTS: FontOption[] = [
   { value: 'Tahoma', label: 'Tahoma' },
 ]
 
+
+export const PRODUCT_GALLERY_IMAGES: Record<string, string[]> = {
+  't-shirt': [
+    '/images/gallery/t-shirt/lifestyle-golf.png',
+    '/images/gallery/t-shirt/lifestyle-nsx.jpg',
+  ],
+}
+
+export function getProductGalleryImages(productType?: string): string[] {
+  if (!productType) return []
+  return PRODUCT_GALLERY_IMAGES[productType] ?? []
+}
 
 const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string, string>>> = {
   front: {
