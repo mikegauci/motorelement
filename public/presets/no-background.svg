@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 210" fill="none">
+  <defs>
+    <linearGradient id="noBgSlash" x1="0" y1="0" x2="210" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="50%" stop-color="#ef4444" />
+      <stop offset="50%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#dc2626" />
+    </linearGradient>
+  </defs>
+  <circle cx="105" cy="105" r="78" stroke="url(#noBgSlash)" stroke-width="28" fill="none" />
+  <line
+    x1="55"
+    y1="55"
+    x2="155"
+    y2="155"
+    stroke="url(#noBgSlash)"
+    stroke-width="28"
+    stroke-linecap="round"
+  />
+</svg>

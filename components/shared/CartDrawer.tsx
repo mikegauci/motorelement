@@ -11,6 +11,14 @@ import {
   DOWNLOAD_ARTWORK_PRICE_CENTS,
   downloadArtworkFeeCents,
 } from "@/lib/shop/downloadArtwork";
+import {
+  DESIGNER_SOURCE_FILES_LABEL,
+  DESIGNER_SOURCE_FILES_PRICE_CENTS,
+  DESIGNER_PRIORITY_LABEL,
+  DESIGNER_PRIORITY_PRICE_CENTS,
+  designerSourceFilesFeeCents,
+  designerPriorityFeeCents,
+} from "@/lib/shop/designerAddons";
 
 function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -29,6 +37,10 @@ export function CartDrawer() {
 
   const downloadFee = downloadArtworkFeeCents(items);
   const downloadLines = items.filter((item) => item.downloadArtwork).length;
+  const sourceFilesFee = designerSourceFilesFeeCents(items);
+  const sourceFilesLines = items.filter((item) => item.includeSourceFiles).length;
+  const priorityFee = designerPriorityFeeCents(items);
+  const priorityLines = items.filter((item) => item.designerPriority).length;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -114,6 +126,12 @@ export function CartDrawer() {
                         </h3>
                         <p className="mt-0.5 font-sub text-[10px] font-bold uppercase tracking-widest text-muted">
                           {item.color && `${item.color} · `}Size: {item.size}
+                          {item.illustrationMode === "designer"
+                            ? item.designerPriority
+                              ? " · Designer Priority"
+                              : " · Designer"
+                            : ""}
+                          {item.includeSourceFiles ? " · Source files" : ""}
                           {item.downloadArtwork ? " · Download" : ""}
                         </p>
                       </div>
@@ -185,6 +203,30 @@ export function CartDrawer() {
                   {formatPrice(
                     downloadLines * DOWNLOAD_ARTWORK_PRICE_CENTS
                   )}
+                </span>
+              </div>
+            )}
+            {sourceFilesFee > 0 && (
+              <div className="flex items-center justify-between font-body text-sm">
+                <span className="text-muted">
+                  {DESIGNER_SOURCE_FILES_LABEL}
+                  {sourceFilesLines > 1 ? ` × ${sourceFilesLines}` : ""}
+                </span>
+                <span className="font-mono text-white">
+                  {formatPrice(
+                    sourceFilesLines * DESIGNER_SOURCE_FILES_PRICE_CENTS
+                  )}
+                </span>
+              </div>
+            )}
+            {priorityFee > 0 && (
+              <div className="flex items-center justify-between font-body text-sm">
+                <span className="text-muted">
+                  {DESIGNER_PRIORITY_LABEL}
+                  {priorityLines > 1 ? ` × ${priorityLines}` : ""}
+                </span>
+                <span className="font-mono text-white">
+                  {formatPrice(priorityLines * DESIGNER_PRIORITY_PRICE_CENTS)}
                 </span>
               </div>
             )}

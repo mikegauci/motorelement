@@ -12,6 +12,9 @@ import {
   CUSTOM_BACKGROUND_PREFIX,
   TEXT_FONTS,
   resolveCornerLogoPresetSrc,
+  resolveDesignerPlaceholderUrl,
+  isRealBackgroundUrl,
+  LOGO_CORNER_PRESETS,
 } from './constants'
 import {
   readFileAsDataUrl,
@@ -30,6 +33,7 @@ import TextOverlayToggle from './TextOverlayToggle'
 import TextPlacementSelector from './TextPlacementSelector'
 import ArtworkPositionSelector from './ArtworkPositionSelector'
 import DownloadArtworkSection from './DownloadArtworkSection'
+import DesignerYesNoSection from './DesignerYesNoSection'
 import MockupPreviewModal from './MockupPreviewModal'
 import CollapsibleTweak from './parts/CollapsibleTweak'
 import WhiteGapEraser from './WhiteGapEraser'
@@ -40,6 +44,10 @@ import { useCarGeneration } from '@/hooks/useCarGeneration'
 import { useBackgroundGeneration } from '@/hooks/useBackgroundGeneration'
 import { useCompositeCanvas } from '@/hooks/useCompositeCanvas'
 import { useSession } from '@/hooks/useSession'
+import {
+  formatDesignerSourceFilesPrice,
+  formatDesignerPriorityPrice,
+} from '@/lib/shop/designerAddons'
 
 export default function ProductCustomizer() {
   const {
@@ -48,8 +56,13 @@ export default function ProductCustomizer() {
     setArtworkSide,
     textPlacement,
     setTextPlacement,
+    setArtworkUrl,
+    artworkOnlyDataUrl,
     setArtworkOnlyDataUrl,
     setTextOnlyDataUrl,
+    setCornersOnlyDataUrl,
+    setCompositeDataUrl,
+    setGenerationStatus,
     productType,
     mockupPlacement,
     mockupBaseNaturalWidth,
@@ -58,6 +71,21 @@ export default function ProductCustomizer() {
     downloadArtworkEnabled,
     setDownloadArtworkEnabled,
     setArtworkHasExtras,
+    illustrationMode,
+    setIllustrationMode,
+    setCustomerPhotoDataUrl,
+    setCustomerNotes: setContextCustomerNotes,
+    setDesignerBackgroundUrl,
+    setDesignerRequestedText,
+    setDesignerTextCorner,
+    setDesignerCornerImageUrl,
+    setDesignerCornerImageLabel,
+    aiArtworkUrl,
+    setAiArtworkUrl,
+    designerIncludeSourceFiles,
+    setDesignerIncludeSourceFiles,
+    designerPriority,
+    setDesignerPriority,
   } = useCustomizer()
 
   // ---- Vehicle input state (owned by this component) ----
@@ -74,6 +102,7 @@ export default function ProductCustomizer() {
   const [customBackgroundImagePreview, setCustomBackgroundImagePreview] = useState<string | null>(null)
   const [customBackgroundValue, setCustomBackgroundValue] = useState('')
   const [isVehicleTweakOpen, setIsVehicleTweakOpen] = useState(false)
+  const [isDesignerHandoffOpen, setIsDesignerHandoffOpen] = useState(false)
   const [isBackgroundTweakOpen, setIsBackgroundTweakOpen] = useState(false)
   const [isErasingArtwork, setIsErasingArtwork] = useState(false)
 
@@ -121,9 +150,41 @@ export default function ProductCustomizer() {
   const canRun = vehicleLocked ? baseReady && !!tweakNotes.trim() : baseReady
   const isRunning = carGen.status === 'running'
   const isDone = carGen.status === 'done'
-  const showResults = isRunning || carGen.status.startsWith('error') || carGen.revisions.length > 0
+  const isDesignerMode = illustrationMode === 'designer'
+  const showResults =
+    !isDesignerMode &&
+    (isRunning || carGen.status.startsWith('error') || carGen.revisions.length > 0)
   const viewingUrl = carGen.revisions.length > 0 ? carGen.revisions[carGen.viewIndex]?.url : null
   const hasTransparentRevision = carGen.revisions.some((r) => r.transparent)
+
+  useEffect(() => {
+    setContextCustomerNotes(customerNotes)
+  }, [customerNotes, setContextCustomerNotes])
+
+  useEffect(() => {
+    setCustomerPhotoDataUrl(carImageDataUrl)
+  }, [carImageDataUrl, setCustomerPhotoDataUrl])
+
+  useEffect(() => {
+    if (illustrationMode !== 'designer') return
+    setArtworkUrl(resolveDesignerPlaceholderUrl(selectedColorTitle))
+    setGenerationStatus('done')
+    if (!vehicleLocked) setVehicleLocked(true)
+  }, [illustrationMode, vehicleLocked, selectedColorTitle, setArtworkUrl, setGenerationStatus])
+
+  useEffect(() => {
+    if (vehicleLocked && illustrationMode === null && carGen.revisions.length === 0 && !carGen.running) {
+      setVehicleLocked(false)
+    }
+  }, [vehicleLocked, illustrationMode, carGen.revisions.length, carGen.running])
+
+  useEffect(() => {
+    if (illustrationMode === 'ai' || carGen.revisions.length > 0 || carGen.running) {
+      if (illustrationMode !== 'ai' && illustrationMode !== 'designer') {
+        setIllustrationMode('ai')
+      }
+    }
+  }, [carGen.revisions.length, carGen.running, illustrationMode, setIllustrationMode])
 
   const transparentCarUrlForPreset = useMemo(() => {
     const cur = carGen.revisions[carGen.viewIndex]
@@ -145,6 +206,76 @@ export default function ProductCustomizer() {
   const showCustomPanel = selectedPresetId === CUSTOM_BACKGROUND_NEW
   const backgroundControlsLocked = bgGen.customBackgroundGenerating
   const canGenerateCustomBackground = !!customBackgroundValue.trim() && !bgGen.customBackgroundGenerating && !bgGen.customBackgroundRemoving
+
+  useEffect(() => {
+    if (!isDesignerMode) {
+      setDesignerBackgroundUrl(null)
+      return
+    }
+    setDesignerBackgroundUrl(
+      isRealBackgroundUrl(selectedBackgroundSrc) ? selectedBackgroundSrc : null
+    )
+  }, [isDesignerMode, selectedBackgroundSrc, setDesignerBackgroundUrl])
+
+  useEffect(() => {
+    if (!isDesignerMode) return
+    if (!addTextEnabled) {
+      setDesignerRequestedText('')
+      setDesignerTextCorner(null)
+      return
+    }
+    const texts = textLayerHook.textLayers
+      .map((layer) => layer.text.trim())
+      .filter(Boolean)
+    setDesignerRequestedText(texts.join('\n'))
+
+    const corners: string[] = []
+    for (const layer of textLayerHook.textLayers) {
+      if (!layer.printZoneCorner) continue
+      corners.push(layer.printZoneCorner)
+    }
+    setDesignerTextCorner(corners.length ? corners.join('; ') : null)
+  }, [
+    isDesignerMode,
+    addTextEnabled,
+    textLayerHook.textLayers,
+    setDesignerRequestedText,
+    setDesignerTextCorner,
+  ])
+
+  useEffect(() => {
+    if (!isDesignerMode) {
+      setDesignerCornerImageUrl(null)
+      setDesignerCornerImageLabel(null)
+      return
+    }
+    if (
+      !addTextEnabled ||
+      !printZoneCornerImage.enabled ||
+      !printZoneCornerImage.src
+    ) {
+      setDesignerCornerImageUrl(null)
+      setDesignerCornerImageLabel(null)
+      return
+    }
+    setDesignerCornerImageUrl(printZoneCornerImage.src)
+    const presetLabel = printZoneCornerImage.presetId
+      ? LOGO_CORNER_PRESETS.find((p) => p.id === printZoneCornerImage.presetId)?.label
+      : null
+    const source = presetLabel
+      ? `${presetLabel} preset`
+      : 'Uploaded image'
+    setDesignerCornerImageLabel(`${source} @ ${printZoneCornerImage.corner}`)
+  }, [
+    isDesignerMode,
+    addTextEnabled,
+    printZoneCornerImage.enabled,
+    printZoneCornerImage.src,
+    printZoneCornerImage.presetId,
+    printZoneCornerImage.corner,
+    setDesignerCornerImageUrl,
+    setDesignerCornerImageLabel,
+  ])
 
   useLayoutEffect(() => {
     const hasBackground = !!selectedBackgroundSrc
@@ -169,7 +300,8 @@ export default function ProductCustomizer() {
   ])
 
   const composite = useCompositeCanvas({
-    transparentCarUrlForPreset, selectedBackgroundSrc, selectedBackgroundIsCustom,
+    transparentCarUrlForPreset: isDesignerMode ? null : transparentCarUrlForPreset,
+    selectedBackgroundSrc, selectedBackgroundIsCustom,
     selectedPreset, isCustomSavedSelection, selectedCustomBg,
     carAdjustXPct, setCarAdjustXPct, carAdjustYPct, setCarAdjustYPct,
     carScale, compositionZoom, setCompositionZoom, bgScale,
@@ -222,6 +354,10 @@ export default function ProductCustomizer() {
       artworkSide,
       addTextEnabled,
       textPlacement,
+      illustrationMode,
+      aiArtworkUrl,
+      designerIncludeSourceFiles,
+      designerPriority,
     },
     {
       setCustomerNotes,
@@ -236,6 +372,10 @@ export default function ProductCustomizer() {
       setArtworkSide,
       setAddTextEnabled,
       setTextPlacement,
+      setIllustrationMode,
+      setAiArtworkUrl,
+      setDesignerIncludeSourceFiles,
+      setDesignerPriority,
       setStatus: carGen.setStatus,
       resumePendingGeneration: carGen.resumePendingGeneration,
       resumePendingBackgroundGeneration: bgGen.resumePendingBackgroundGeneration,
@@ -411,11 +551,14 @@ export default function ProductCustomizer() {
     if (cornerImageFileRef.current) cornerImageFileRef.current.value = ''
     setCustomerNotes('')
     setCarImageDataUrl(null); setCarImagePreview(null)
+    setCustomerPhotoDataUrl(null)
+    setContextCustomerNotes('')
     setVehicleLocked(false); setComposedPromptNotes(''); setTweakNotes('')
     setSelectedPresetId(null)
     setCustomBackgroundImageDataUrl(null); setCustomBackgroundImagePreview(null)
     setCustomBackgroundValue('')
     setIsVehicleTweakOpen(false); setIsBackgroundTweakOpen(false)
+    setIsDesignerHandoffOpen(false)
     setCarAdjustXPct(0); setCarAdjustYPct(0); setCarScale(1); setCompositionZoom(1); setBgScale(1)
     setArtworkSide('front')
     setAddTextEnabled(false)
@@ -425,9 +568,106 @@ export default function ProductCustomizer() {
     setArtworkHasExtras(false)
     setArtworkOnlyDataUrl(null)
     setTextOnlyDataUrl(null)
+    setArtworkUrl(null)
+    setGenerationStatus('idle')
+    setIllustrationMode(null)
+    setDesignerRequestedText('')
+    setDesignerTextCorner(null)
+    setDesignerBackgroundUrl(null)
+    setDesignerCornerImageUrl(null)
+    setDesignerCornerImageLabel(null)
+    setAiArtworkUrl(null)
+    setDesignerIncludeSourceFiles(false)
+    setDesignerPriority(false)
     carGen.resetCarGeneration()
     bgGen.resetBackgroundGeneration()
     textLayerHook.resetTextLayers()
+  }
+
+  function handleChooseAi() {
+    if (!canRun || isDesignerMode) return
+    setIllustrationMode('ai')
+    carGen.runGeneration()
+  }
+
+  function handleChooseDesigner() {
+    if (!canRun || carGen.running || illustrationMode === 'ai') return
+    setIllustrationMode('designer')
+    setAiArtworkUrl(null)
+    setDesignerIncludeSourceFiles(false)
+    setDesignerPriority(false)
+    setVehicleLocked(true)
+    setArtworkUrl(resolveDesignerPlaceholderUrl(selectedColorTitle))
+    setGenerationStatus('done')
+    setArtworkOnlyDataUrl(null)
+    setTextOnlyDataUrl(null)
+    setDownloadArtworkEnabled(false)
+    setArtworkHasExtras(false)
+  }
+
+  function handleSwitchToAi() {
+    if (carGen.running || !carImageDataUrl) return
+
+    if (carGen.revisions.length > 0) {
+      setIllustrationMode('ai')
+      setAiArtworkUrl(null)
+      setDesignerIncludeSourceFiles(false)
+      setDesignerPriority(false)
+      setVehicleLocked(true)
+      setGenerationStatus('done')
+      setIsDesignerHandoffOpen(false)
+      return
+    }
+
+    setIllustrationMode('ai')
+    setAiArtworkUrl(null)
+    setDesignerIncludeSourceFiles(false)
+    setDesignerPriority(false)
+    setVehicleLocked(false)
+    setArtworkUrl(null)
+    setGenerationStatus('idle')
+    setArtworkOnlyDataUrl(null)
+    setTextOnlyDataUrl(null)
+    setDesignerBackgroundUrl(null)
+    setDesignerRequestedText('')
+    setDesignerTextCorner(null)
+    setDesignerCornerImageUrl(null)
+    setDesignerCornerImageLabel(null)
+    setAddTextEnabled(false)
+    setTextPlacement('same')
+    setPrintZoneCornerImage(createPrintZoneCornerImage())
+    textLayerHook.resetTextLayers()
+    setSelectedPresetId(null)
+    carGen.runGeneration()
+  }
+
+  function handleSwitchToDesigner() {
+    if (carGen.running || !viewingUrl) return
+    const carOnlyUrl =
+      artworkOnlyDataUrl || transparentCarUrlForPreset || viewingUrl
+    setAiArtworkUrl(carOnlyUrl)
+    if (tweakNotes.trim()) {
+      const changeNote = tweakNotes.trim()
+      setCustomerNotes((prev) =>
+        prev.trim()
+          ? `${prev.trim()}\n\nWhat to change: ${changeNote}`
+          : `What to change: ${changeNote}`
+      )
+      setTweakNotes('')
+    }
+    setIllustrationMode('designer')
+    setVehicleLocked(true)
+    setArtworkUrl(resolveDesignerPlaceholderUrl(selectedColorTitle))
+    setCompositeDataUrl(null)
+    setArtworkOnlyDataUrl(null)
+    setTextOnlyDataUrl(null)
+    setCornersOnlyDataUrl(null)
+    setGenerationStatus('done')
+    setDownloadArtworkEnabled(false)
+    setArtworkHasExtras(false)
+    setIsVehicleTweakOpen(false)
+    setIsDesignerHandoffOpen(false)
+    setIsErasingArtwork(false)
   }
 
   function handleMobileDockTouchStart(e: React.TouchEvent<HTMLButtonElement>) {
@@ -471,14 +711,16 @@ export default function ProductCustomizer() {
           <div>
             <h1 className={styles.title}>Customizer</h1>
           </div>
-          {carGen.revisions.length > 0 && (
+          {(vehicleLocked || illustrationMode != null || carGen.revisions.length > 0) && (
             <button type="button" className={styles.btnNewProject} onClick={reset}>
               Start Fresh
             </button>
           )}
         </div>
         <p className={styles.sessionHint}>
-          Drop your photo and we&apos;ll create a custom illustration of your ride
+          {isDesignerMode
+            ? 'Choose a background and any text you want. A designer will create your illustration in 2–3 days.'
+            : "Drop your photo and we'll create a custom illustration of your ride — or request a designer."}
         </p>
       </div>
 
@@ -487,17 +729,119 @@ export default function ProductCustomizer() {
         carImagePreview={carImagePreview} vehicleLocked={vehicleLocked}
         running={carGen.running} canRun={canRun} isDone={isDone}
         revCount={carGen.revisions.length}
+        illustrationMode={illustrationMode}
         onUploadClick={() => carFileRef.current?.click()}
         onRemoveCarImage={() => {
           setCarImageDataUrl(null)
           setCarImagePreview(null)
           if (carFileRef.current) carFileRef.current.value = ''
         }}
-        onGenerate={carGen.runGeneration}
+        onGenerate={handleChooseAi}
+        onChooseDesigner={handleChooseDesigner}
+        onSwitchToAi={handleSwitchToAi}
         onCancel={carGen.cancelCarGeneration}
         onReset={reset}
       />
       <input ref={carFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCarFile} />
+
+      {isDesignerMode && (
+        <div className={styles.results}>
+          <BackgroundPresets
+            selectedPresetId={selectedPresetId} setSelectedPresetId={setSelectedPresetId}
+            savedCustomBackgrounds={bgGen.savedCustomBackgrounds}
+            backgroundControlsLocked={backgroundControlsLocked}
+            customBackgroundGenerating={bgGen.customBackgroundGenerating}
+            customBackgroundElapsed={bgGen.customBackgroundElapsed}
+            onCancelBackgroundGeneration={bgGen.cancelBackgroundGeneration}
+            showCustomPanel={showCustomPanel}
+            customBackgroundImagePreview={customBackgroundImagePreview}
+            customBackgroundValue={customBackgroundValue}
+            setCustomBackgroundValue={setCustomBackgroundValue}
+            canGenerateCustomBackground={canGenerateCustomBackground}
+            onCustomBackgroundUploadClick={() => customBackgroundFileRef.current?.click()}
+            onRunCustomBackgroundGeneration={bgGen.runCustomBackgroundGeneration}
+            customBackgroundError={bgGen.customBackgroundError}
+            isCustomSavedSelection={isCustomSavedSelection}
+            selectedCustomBg={selectedCustomBg}
+            isBackgroundTweakOpen={isBackgroundTweakOpen}
+            setIsBackgroundTweakOpen={setIsBackgroundTweakOpen}
+            backgroundTweakNotes={bgGen.backgroundTweakNotes}
+            setBackgroundTweakNotes={bgGen.setBackgroundTweakNotes}
+            customBackgroundRemoving={bgGen.customBackgroundRemoving}
+            onRunBackgroundTweak={() => bgGen.runBackgroundTweak(selectedCustomBg)}
+            onResetCustomPanel={() => {
+              setCustomBackgroundImageDataUrl(null)
+              setCustomBackgroundImagePreview(null)
+              setCustomBackgroundValue('')
+              bgGen.setCustomBackgroundError('')
+              if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
+              setSelectedPresetId(CUSTOM_BACKGROUND_NEW)
+            }}
+            onRemoveCustomImage={() => {
+              setCustomBackgroundImageDataUrl(null)
+              setCustomBackgroundImagePreview(null)
+              bgGen.setCustomBackgroundError('')
+              if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
+            }}
+          />
+          <input ref={customBackgroundFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCustomBackgroundFile} disabled={backgroundControlsLocked} />
+
+          <ArtworkPositionSelector
+            artworkSide={artworkSide}
+            setArtworkSide={setArtworkSide}
+            disabled={false}
+          />
+          <TextOverlayToggle
+            enabled={addTextEnabled}
+            onChange={handleAddTextToggle}
+            disabled={false}
+          />
+          {addTextEnabled && (
+            <TextPlacementSelector
+              placement={textPlacement}
+              onChange={setTextPlacement}
+              disabled={false}
+            />
+          )}
+          {addTextEnabled && (
+            <TextLayerEditor
+              textLayers={textLayerHook.textLayers}
+              selectedTextLayerId={textLayerHook.selectedTextLayerId}
+              setSelectedTextLayerId={textLayerHook.setSelectedTextLayerId}
+              selectedTextLayer={textLayerHook.selectedTextLayer}
+              availableFontOptions={availableFontOptions}
+              backgroundControlsLocked={false}
+              onAddTextLayer={textLayerHook.addTextLayer}
+              onUpdateTextLayer={textLayerHook.updateTextLayer}
+              onRemoveTextLayer={textLayerHook.removeTextLayer}
+              onMoveTextLayer={textLayerHook.moveTextLayer}
+              onNudgeTextFontSize={textLayerHook.nudgeTextFontSize}
+              getPrintZoneCornerPosition={getPrintZoneCornerPosition}
+              printZoneCornerImage={printZoneCornerImage}
+              onUpdatePrintZoneCornerImage={updatePrintZoneCornerImage}
+              onUploadCornerImage={() => cornerImageFileRef.current?.click()}
+              onRemoveCornerImage={removePrintZoneCornerImage}
+              garmentColorTitle={selectedColorTitle}
+              onApplyCornerPreset={applyCornerPreset}
+              designerMode
+            />
+          )}
+          <DesignerYesNoSection
+            title="Include Source Files?"
+            ariaLabel="Include source files"
+            intro={`Get editable source files with your finished illustration for ${formatDesignerSourceFilesPrice()}.`}
+            enabled={designerIncludeSourceFiles}
+            onChange={setDesignerIncludeSourceFiles}
+          />
+          <DesignerYesNoSection
+            title="Priority"
+            ariaLabel="Priority rush order"
+            intro={`Rush order — have a designer finish in under 24 hours for ${formatDesignerPriorityPrice()}.`}
+            enabled={designerPriority}
+            onChange={setDesignerPriority}
+          />
+        </div>
+      )}
 
       {showResults && (
         <div className={styles.results}>
@@ -526,33 +870,65 @@ export default function ProductCustomizer() {
               <div>
                 {vehicleLocked && (
                   <div className={styles.tweakPanel}>
-                    <CollapsibleTweak
-                      label="Refine or fix the artwork"
-                      isOpen={isVehicleTweakOpen}
-                      onToggle={() => setIsVehicleTweakOpen((v) => !v)}
-                    >
-                      <div className={styles.setupBlock}>
-                        <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the illustration." value={tweakNotes} onChange={(e) => setTweakNotes(e.target.value)} />
+                    <div className={styles.tweakDropdownRow}>
+                      <div className={styles.tweakDropdownCol}>
+                        <CollapsibleTweak
+                          label="Refine or fix the artwork"
+                          isOpen={isVehicleTweakOpen}
+                          onToggle={() => {
+                            setIsVehicleTweakOpen((v) => !v)
+                            setIsDesignerHandoffOpen(false)
+                          }}
+                        >
+                          <div className={styles.setupBlock}>
+                            <textarea className={styles.textarea} rows={4} placeholder="Add more detail, or fix any issues with the illustration." value={tweakNotes} onChange={(e) => setTweakNotes(e.target.value)} />
+                          </div>
+                          <div className={styles.tweakPanelActions}>
+                            <button className={styles.btnPrimary} onClick={carGen.runGeneration} disabled={!canRun}>
+                              {carGen.running ? 'Generating…' : 'Tweak'}
+                            </button>
+                            {!!viewingUrl && !carGen.running && (
+                              <button
+                                type="button"
+                                className={styles.btn}
+                                onClick={() => setIsErasingArtwork(true)}
+                                title="Tap on white gaps in the artwork to make them transparent"
+                              >
+                                Erase white gaps
+                              </button>
+                            )}
+                            {carGen.running && (
+                              <button type="button" className={styles.btn} onClick={carGen.cancelCarGeneration}>Cancel request</button>
+                            )}
+                          </div>
+                        </CollapsibleTweak>
                       </div>
-                      <div className={styles.tweakPanelActions}>
-                        <button className={styles.btnPrimary} onClick={carGen.runGeneration} disabled={!canRun}>
-                          {carGen.running ? 'Generating…' : 'Tweak'}
-                        </button>
-                        {!!viewingUrl && !carGen.running && (
-                          <button
-                            type="button"
-                            className={styles.btn}
-                            onClick={() => setIsErasingArtwork(true)}
-                            title="Tap on white gaps in the artwork to make them transparent"
+                      {!!viewingUrl && !carGen.running && (
+                        <div className={styles.tweakDropdownCol}>
+                          <CollapsibleTweak
+                            label="Prefer a designer?"
+                            isOpen={isDesignerHandoffOpen}
+                            onToggle={() => {
+                              setIsDesignerHandoffOpen((v) => !v)
+                              setIsVehicleTweakOpen(false)
+                            }}
                           >
-                            Erase white gaps
-                          </button>
-                        )}
-                        {carGen.running && (
-                          <button type="button" className={styles.btn} onClick={carGen.cancelCarGeneration}>Cancel request</button>
-                        )}
-                      </div>
-                    </CollapsibleTweak>
+                            <div className={styles.designerHandoff}>
+                              <p className={styles.hint}>
+                                Want a hand-drawn finish or a few refinements from a profressional desginer? We&apos;ll use your photo and this artwork as reference. <br /> May take up to 1 - 3 days.
+                              </p>
+                              <button
+                                type="button"
+                                className={styles.btn}
+                                onClick={handleSwitchToDesigner}
+                              >
+                                Send to our designer
+                              </button>
+                            </div>
+                          </CollapsibleTweak>
+                        </div>
+                      )}
+                    </div>
                     <div className={styles.nextHint}>
                       <span className="font-bold text-lg">Choose a background below</span>
                       <span aria-hidden className={styles.nextHintArrow}>↓</span>
@@ -565,7 +941,6 @@ export default function ProductCustomizer() {
                     <BackgroundPresets
                       selectedPresetId={selectedPresetId} setSelectedPresetId={setSelectedPresetId}
                       savedCustomBackgrounds={bgGen.savedCustomBackgrounds}
-                      transparentCarUrl={transparentCarUrlForPreset}
                       backgroundControlsLocked={backgroundControlsLocked}
                       customBackgroundGenerating={bgGen.customBackgroundGenerating}
                       customBackgroundElapsed={bgGen.customBackgroundElapsed}

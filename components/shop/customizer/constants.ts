@@ -3,6 +3,14 @@ import type { BackgroundPreset, FontOption } from './types'
 export const SESSION_KEY = 'car-vector-session-v1'
 export const PENDING_GENERATION_KEY = 'car-vector-pending-generation-v1'
 export const PENDING_BACKGROUND_KEY = 'car-vector-pending-background-v1'
+export const DESIGNER_PLACEHOLDER_BLACK_URL = '/placeholders/your-custom-designed-artwork-black.svg'
+export const DESIGNER_PLACEHOLDER_WHITE_URL = '/placeholders/your-custom-designed-artwork-white.svg'
+export const NO_BACKGROUND_PRESET_URL = '/presets/no-background.svg'
+
+export function isRealBackgroundUrl(url: string | null | undefined): boolean {
+  if (!url?.trim()) return false
+  return !url.includes('no-background.svg')
+}
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = [
   { id: 'cyberpunk', name: 'Cyberpunk', src: '/presets/cyberpunk.png' },
@@ -118,6 +126,13 @@ export const LOGO_CORNER_PRESETS: CornerLogoPreset[] = [
 
 function isLightGarmentSlug(slug: string | null): boolean {
   return slug === 'white' || slug === 'grey'
+}
+
+export function resolveDesignerPlaceholderUrl(colorTitle: string | null | undefined): string {
+  const slug = getGarmentColorSlug(colorTitle)
+  return isLightGarmentSlug(slug)
+    ? DESIGNER_PLACEHOLDER_BLACK_URL
+    : DESIGNER_PLACEHOLDER_WHITE_URL
 }
 
 export function resolveCornerLogoPresetSrc(presetId: string, colorTitle: string | null | undefined): string {

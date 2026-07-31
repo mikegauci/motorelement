@@ -10,6 +10,14 @@ import {
   downloadArtworkFeeCents,
   triggerBrowserDownload,
 } from "@/lib/shop/downloadArtwork";
+import {
+  DESIGNER_SOURCE_FILES_LABEL,
+  DESIGNER_SOURCE_FILES_PRICE_CENTS,
+  DESIGNER_PRIORITY_LABEL,
+  DESIGNER_PRIORITY_PRICE_CENTS,
+  designerSourceFilesFeeCents,
+  designerPriorityFeeCents,
+} from "@/lib/shop/designerAddons";
 
 function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -41,12 +49,19 @@ function toCheckoutDownloads(items: CartItem[]): CheckoutDownloadItem[] {
     }));
 }
 
+function isDesignerItem(item: CartItem) {
+  return item.illustrationMode === "designer";
+}
+
 export default function CheckoutPage() {
   const { items, totalPrice, totalItems, clear } = useCart();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [successHint, setSuccessHint] = useState<
+    "designer" | "printify" | "mixed" | null
+  >(null);
   const [downloadItems, setDownloadItems] = useState<CheckoutDownloadItem[]>(
     []
   );
@@ -55,6 +70,14 @@ export default function CheckoutPage() {
 
   const downloadFee = downloadArtworkFeeCents(items);
   const downloadLines = items.filter((item) => item.downloadArtwork).length;
+  const sourceFilesFee = designerSourceFilesFeeCents(items);
+  const sourceFilesLines = items.filter((item) => item.includeSourceFiles).length;
+  const priorityFee = designerPriorityFeeCents(items);
+  const priorityLines = items.filter((item) => item.designerPriority).length;
+  const designerItems = items.filter(isDesignerItem);
+  const aiItems = items.filter((item) => !isDesignerItem(item));
+  const hasDesigner = designerItems.length > 0;
+  const hasAi = aiItems.length > 0;
 
   useEffect(() => {
     if (items.length === 0 && !success) {
@@ -66,30 +89,66 @@ export default function CheckoutPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setSuccessHint(null);
     setDownloadItems([]);
     setDownloadError(null);
 
     const nextDownloads = toCheckoutDownloads(items);
     const wantedDownload = items.some((item) => item.downloadArtwork);
+    const designerOnly = hasDesigner && !hasAi;
 
     try {
-      const res = await fetch("/api/test/printify-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
-      });
+      const messages: string[] = [];
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Something went wrong");
-        setLoading(false);
-        return;
+      if (hasDesigner) {
+        const res = await fetch("/api/designer-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: designerItems }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "Failed to send designer brief");
+          setLoading(false);
+          return;
+        }
+        console.log("[checkout] designer-order response", data);
+        messages.push(
+          designerItems.some((item) => item.designerPriority)
+            ? "Your rush order has been placed — we'll be in touch within 24 hours."
+            : "Your order has been placed — we'll be in touch in 1–3 days."
+        );
       }
 
-      setSuccess(
-        `Printify order created! ID: ${data.printifyOrderId} (status: ${data.status})`
-      );
+      if (hasAi) {
+        const res = await fetch("/api/test/printify-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: aiItems }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(
+            messages.length
+              ? `${messages.join(" ")} Printify failed: ${data.error || "Something went wrong"}`
+              : data.error || "Something went wrong"
+          );
+          setLoading(false);
+          return;
+        }
+        messages.push(
+          `Printify order created! ID: ${data.printifyOrderId} (status: ${data.status})`
+        );
+      }
+
+      setSuccess(messages.join(" "));
+      if (designerOnly) {
+        setSuccessHint("designer");
+      } else if (hasAi && !hasDesigner) {
+        setSuccessHint("printify");
+      } else {
+        setSuccessHint("mixed");
+      }
       clear();
       setLoading(false);
 
@@ -145,6 +204,14 @@ export default function CheckoutPage() {
   const showDownloadSection =
     downloadItems.length > 0 || !!downloadError;
 
+  const checkoutLabel = loading
+    ? "SUBMITTING..."
+    : hasDesigner && hasAi
+      ? "SUBMIT ORDER"
+      : hasDesigner
+        ? "SUBMIT DESIGNER REQUEST"
+        : "TEST: SEND TO PRINTIFY";
+
   return (
     <div className="mx-auto max-w-2xl px-6 py-24">
       <h1 className="font-heading text-display text-white">CHECKOUT</h1>
@@ -156,9 +223,17 @@ export default function CheckoutPage() {
               ORDER SUBMITTED
             </h2>
             <p className="mt-4 font-body text-sm text-white">{success}</p>
-            <p className="mt-2 font-body text-xs text-muted">
-              Check your Printify dashboard to see the order.
-            </p>
+            {successHint === "printify" && (
+              <p className="mt-2 font-body text-xs text-muted">
+                Check your Printify dashboard to see the order.
+              </p>
+            )}
+            {successHint === "designer" && (
+              <p className="mt-2 font-body text-xs text-muted">
+                No Printify order yet — fulfillment happens after the designer
+                finishes the artwork.
+              </p>
+            )}
 
             {showDownloadSection && (
               <div className="mt-8 border-t border-border pt-8">
@@ -260,10 +335,18 @@ export default function CheckoutPage() {
           <>
             <h2 className="font-heading text-2xl text-white">ORDER REVIEW</h2>
 
-            <p className="mt-2 rounded bg-amber-900/40 px-3 py-2 font-body text-xs text-amber-300">
-              TEST MODE — order will be sent directly to Printify with a
-              placeholder image and test address (no payment).
-            </p>
+            {hasAi && (
+              <p className="mt-2 rounded bg-amber-900/40 px-3 py-2 font-body text-xs text-amber-300">
+                TEST MODE — AI items are sent directly to Printify with a test
+                address (no payment).
+              </p>
+            )}
+            {hasDesigner && (
+              <p className="mt-2 rounded bg-white/5 px-3 py-2 font-body text-xs text-muted">
+                Designer items email a brief to the illustrator (original photo,
+                notes, product, color). Fulfillment is handled outside the app.
+              </p>
+            )}
 
             <div className="mt-6 divide-y divide-border">
               {items.map((item) => (
@@ -278,6 +361,12 @@ export default function CheckoutPage() {
                       {item.color && ` · ${item.color}`}
                       {" · "}Size {item.size} &middot; Qty{" "}
                       {item.quantity}
+                      {item.illustrationMode === "designer"
+                        ? item.designerPriority
+                          ? " · Designer Priority (<24h)"
+                          : " · Designer (1–3 days)"
+                        : ""}
+                      {item.includeSourceFiles ? " · Source files" : ""}
                       {item.downloadArtwork ? " · Download" : ""}
                     </p>
                   </div>
@@ -299,6 +388,40 @@ export default function CheckoutPage() {
                   </div>
                   <p className="font-mono text-sm text-white">
                     {formatPrice(downloadLines * DOWNLOAD_ARTWORK_PRICE_CENTS)}
+                  </p>
+                </div>
+              )}
+              {sourceFilesFee > 0 && (
+                <div className="flex items-center justify-between py-4">
+                  <div>
+                    <p className="font-body text-sm text-white">
+                      {DESIGNER_SOURCE_FILES_LABEL}
+                    </p>
+                    <p className="font-sub text-xs font-bold uppercase tracking-widest text-muted">
+                      Editable designer source files
+                      {sourceFilesLines > 1 ? ` · × ${sourceFilesLines}` : ""}
+                    </p>
+                  </div>
+                  <p className="font-mono text-sm text-white">
+                    {formatPrice(
+                      sourceFilesLines * DESIGNER_SOURCE_FILES_PRICE_CENTS
+                    )}
+                  </p>
+                </div>
+              )}
+              {priorityFee > 0 && (
+                <div className="flex items-center justify-between py-4">
+                  <div>
+                    <p className="font-body text-sm text-white">
+                      {DESIGNER_PRIORITY_LABEL}
+                    </p>
+                    <p className="font-sub text-xs font-bold uppercase tracking-widest text-muted">
+                      Under 24 hours
+                      {priorityLines > 1 ? ` · × ${priorityLines}` : ""}
+                    </p>
+                  </div>
+                  <p className="font-mono text-sm text-white">
+                    {formatPrice(priorityLines * DESIGNER_PRIORITY_PRICE_CENTS)}
                   </p>
                 </div>
               )}
@@ -324,11 +447,15 @@ export default function CheckoutPage() {
               onClick={handleCheckout}
               disabled={loading}
             >
-              {loading ? "SENDING TO PRINTIFY..." : "TEST: SEND TO PRINTIFY"}
+              {checkoutLabel}
             </Button>
 
             <p className="mt-4 text-center font-body text-xs text-muted">
-              Bypasses Stripe. Sends order directly to Printify for testing.
+              {hasDesigner && !hasAi
+                ? "Sends the designer brief by email. No Printify order is created yet."
+                : hasDesigner && hasAi
+                  ? "Designer items are emailed; AI items go to Printify (test mode)."
+                  : "Bypasses Stripe. Sends order directly to Printify for testing."}
             </p>
           </>
         )}

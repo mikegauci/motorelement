@@ -23,9 +23,11 @@ export default function MockupPreview() {
     mockupViewSide,
     setMockupViewSide,
     setMockupBaseNaturalSize,
+    illustrationMode,
   } = useCustomizer()
 
   const hasBothSides = textPlacement === 'opposite' && !!textOnlyDataUrl
+  const isDesignerMode = illustrationMode === 'designer'
 
   useEffect(() => {
     if (!hasBothSides && mockupViewSide !== artworkSide) {
@@ -39,7 +41,9 @@ export default function MockupPreview() {
       : artworkSide
 
   let overlayUrl: string | null = null
-  if (mockupViewSide === artworkSide) {
+  if (isDesignerMode) {
+    overlayUrl = mockupViewSide === artworkSide ? artworkUrl : null
+  } else if (mockupViewSide === artworkSide) {
     overlayUrl = textPlacement === 'opposite'
       ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
       : (compositeDataUrl ?? artworkUrl)
@@ -47,7 +51,11 @@ export default function MockupPreview() {
     overlayUrl = textOnlyDataUrl
   }
 
-  const cornersUrl = mockupViewSide === textSide ? cornersOnlyDataUrl : null
+  const cornersUrl = isDesignerMode
+    ? null
+    : mockupViewSide === textSide
+      ? cornersOnlyDataUrl
+      : null
 
   const pz = useMemo(() => getMockupPrintZone(productType, mockupViewSide), [productType, mockupViewSide])
 

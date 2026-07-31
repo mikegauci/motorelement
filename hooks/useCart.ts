@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, useContext } from "react";
 
 export interface CartItem {
@@ -19,6 +17,18 @@ export interface CartItem {
   downloadFullUrl?: string;
   downloadCarOnlyUrl?: string;
   downloadTextUrl?: string;
+  illustrationMode?: "ai" | "designer";
+  customerPhotoUrl?: string;
+  customerNotes?: string;
+  aiArtworkUrl?: string;
+  backgroundUrl?: string;
+  requestedText?: string;
+  textPlacement?: "same" | "opposite";
+  textCorner?: string;
+  cornerImageUrl?: string;
+  cornerImageLabel?: string;
+  includeSourceFiles?: boolean;
+  designerPriority?: boolean;
 }
 
 interface CartContextValue {

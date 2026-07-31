@@ -10,6 +10,14 @@ import {
   DOWNLOAD_ARTWORK_PRICE_CENTS,
   downloadArtworkFeeCents,
 } from "@/lib/shop/downloadArtwork";
+import {
+  DESIGNER_SOURCE_FILES_LABEL,
+  DESIGNER_SOURCE_FILES_PRICE_CENTS,
+  DESIGNER_PRIORITY_LABEL,
+  DESIGNER_PRIORITY_PRICE_CENTS,
+  designerSourceFilesFeeCents,
+  designerPriorityFeeCents,
+} from "@/lib/shop/designerAddons";
 
 function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -21,6 +29,11 @@ export default function CartPage() {
 
   const downloadFee = downloadArtworkFeeCents(items);
   const downloadLines = items.filter((item) => item.downloadArtwork).length;
+  const sourceFilesFee = designerSourceFilesFeeCents(items);
+  const sourceFilesLines = items.filter((item) => item.includeSourceFiles).length;
+  const priorityFee = designerPriorityFeeCents(items);
+  const priorityLines = items.filter((item) => item.designerPriority).length;
+  const itemsSubtotal = totalPrice - downloadFee - sourceFilesFee - priorityFee;
 
   if (items.length === 0) {
     return (
@@ -76,6 +89,12 @@ export default function CartPage() {
                   </h3>
                   <p className="mt-1 font-sub text-[10px] font-bold uppercase tracking-widest text-muted sm:text-xs">
                     {item.color && `${item.color} · `}Size: {item.size}
+                    {item.illustrationMode === "designer"
+                      ? item.designerPriority
+                        ? " · Designer Priority"
+                        : " · Designer"
+                      : ""}
+                    {item.includeSourceFiles ? " · Source files" : ""}
                     {item.downloadArtwork ? " · Download" : ""}
                   </p>
                 </div>
@@ -137,7 +156,7 @@ export default function CartPage() {
                 Items ({totalItems})
               </span>
               <span className="text-white">
-                {formatPrice(totalPrice - downloadFee)}
+                {formatPrice(itemsSubtotal)}
               </span>
             </div>
             {downloadFee > 0 && (
@@ -148,6 +167,28 @@ export default function CartPage() {
                 </span>
                 <span className="text-white">
                   {formatPrice(downloadLines * DOWNLOAD_ARTWORK_PRICE_CENTS)}
+                </span>
+              </div>
+            )}
+            {sourceFilesFee > 0 && (
+              <div className="flex justify-between font-body text-sm">
+                <span className="text-muted">
+                  {DESIGNER_SOURCE_FILES_LABEL}
+                  {sourceFilesLines > 1 ? ` × ${sourceFilesLines}` : ""}
+                </span>
+                <span className="text-white">
+                  {formatPrice(sourceFilesLines * DESIGNER_SOURCE_FILES_PRICE_CENTS)}
+                </span>
+              </div>
+            )}
+            {priorityFee > 0 && (
+              <div className="flex justify-between font-body text-sm">
+                <span className="text-muted">
+                  {DESIGNER_PRIORITY_LABEL}
+                  {priorityLines > 1 ? ` × ${priorityLines}` : ""}
+                </span>
+                <span className="text-white">
+                  {formatPrice(priorityLines * DESIGNER_PRIORITY_PRICE_CENTS)}
                 </span>
               </div>
             )}

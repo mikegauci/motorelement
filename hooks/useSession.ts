@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { PrintZoneCornerImage, TextLayer, Revision, SavedCustomBackground } from '@/components/shop/customizer/types'
-import type { ArtworkSide, TextPlacement } from '@/components/shop/customizer/CustomizerContext'
+import type { ArtworkSide, TextPlacement, IllustrationMode } from '@/components/shop/customizer/CustomizerContext'
 import { SESSION_KEY, PENDING_GENERATION_KEY, PENDING_BACKGROUND_KEY } from '@/components/shop/customizer/constants'
 import { normalizeTextLayer, normalizePrintZoneCornerImage, clampCompositeZoom, clampBgScale } from '@/components/shop/customizer/helpers'
 import { readPending } from './useGenerationJob'
@@ -32,6 +32,10 @@ interface SessionState {
   artworkSide: ArtworkSide
   addTextEnabled: boolean
   textPlacement: TextPlacement
+  illustrationMode: IllustrationMode
+  aiArtworkUrl: string | null
+  designerIncludeSourceFiles: boolean
+  designerPriority: boolean
 }
 
 interface SessionSetters {
@@ -59,6 +63,10 @@ interface SessionSetters {
   setArtworkSide: (v: ArtworkSide) => void
   setAddTextEnabled: (v: boolean) => void
   setTextPlacement: (v: TextPlacement) => void
+  setIllustrationMode: (v: IllustrationMode) => void
+  setAiArtworkUrl: (v: string | null) => void
+  setDesignerIncludeSourceFiles: (v: boolean) => void
+  setDesignerPriority: (v: boolean) => void
   setStatus: (v: string) => void
   resumePendingGeneration: (pending: { requestId: string; endpointId: string; notesForPrompt?: string; wasLocked?: boolean; tweakNotes?: string }) => void
   resumePendingBackgroundGeneration: (pending: { requestId: string; endpointId: string; kind: string; combinedValue?: string; baseLabel?: string; tweakText?: string; originalValue?: string }) => void
@@ -84,7 +92,20 @@ export function useSession(state: SessionState, setters: SessionSetters) {
           const vi = typeof s.viewIndex === 'number' ? Math.min(Math.max(0, s.viewIndex), max) : max
           setters.setViewIndex(vi)
         }
-        if (s.vehicleLocked === true) setters.setVehicleLocked(true)
+        const restoredMode =
+          s.illustrationMode === 'ai' || s.illustrationMode === 'designer'
+            ? s.illustrationMode
+            : Array.isArray(s.revisions) && s.revisions.length > 0
+              ? 'ai'
+              : null
+        if (restoredMode) setters.setIllustrationMode(restoredMode)
+        if (s.vehicleLocked === true) {
+          if (restoredMode || (Array.isArray(s.revisions) && s.revisions.length > 0)) {
+            setters.setVehicleLocked(true)
+          } else {
+            setters.setVehicleLocked(false)
+          }
+        }
         if (typeof s.composedPromptNotes === 'string') setters.setComposedPromptNotes(s.composedPromptNotes)
         if (typeof s.tweakNotes === 'string') setters.setTweakNotes(s.tweakNotes)
         if (typeof s.selectedPresetId === 'string' || s.selectedPresetId === null) {
@@ -126,6 +147,15 @@ export function useSession(state: SessionState, setters: SessionSetters) {
         }
         if (s.textPlacement === 'same' || s.textPlacement === 'opposite') {
           setters.setTextPlacement(s.textPlacement)
+        }
+        if (typeof s.aiArtworkUrl === 'string') {
+          setters.setAiArtworkUrl(s.aiArtworkUrl)
+        }
+        if (typeof s.designerIncludeSourceFiles === 'boolean') {
+          setters.setDesignerIncludeSourceFiles(s.designerIncludeSourceFiles)
+        }
+        if (typeof s.designerPriority === 'boolean') {
+          setters.setDesignerPriority(s.designerPriority)
         }
         setters.setStatus('done')
       }

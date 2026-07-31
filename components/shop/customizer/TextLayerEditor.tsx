@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { useEffect } from 'react'
 import type { TextLayer, FontOption, PrintZoneCorner, PrintZoneCornerImage } from './types'
 import styles from './styles'
 import SliderRow from './parts/SliderRow'
@@ -26,6 +27,7 @@ interface TextLayerEditorProps {
   onRemoveCornerImage: () => void
   garmentColorTitle: string | null
   onApplyCornerPreset: (presetId: string) => void
+  designerMode?: boolean
 }
 
 const CORNER_OPTIONS: Array<{ value: PrintZoneCorner; label: string }> = [
@@ -74,8 +76,15 @@ export default function TextLayerEditor({
   garmentColorTitle,
   onApplyCornerPreset,
   setSelectedTextLayerId,
+  designerMode = false,
 }: TextLayerEditorProps) {
   const { artworkSide, textPlacement, setMockupViewSide } = useCustomizer()
+
+  useEffect(() => {
+    if (!selectedTextLayer) return
+    if (selectedTextLayer.text !== 'Add text') return
+    onUpdateTextLayer(selectedTextLayer.id, { text: '' })
+  }, [selectedTextLayer, onUpdateTextLayer])
 
   function showTextSide() {
     setMockupViewSide(
@@ -216,17 +225,19 @@ export default function TextLayerEditor({
                         </button>
                       ))}
                     </div>
-                    <SliderRow
-                      label="Image size"
-                      displayValue={`${Math.round(printZoneCornerImage.sizePct * 100)}%`}
-                      min={5}
-                      max={35}
-                      value={Math.round(printZoneCornerImage.sizePct * 100)}
-                      disabled={backgroundControlsLocked}
-                      onNudgeDown={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct - 0.01 })}
-                      onNudgeUp={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct + 0.01 })}
-                      onChange={(v) => onUpdatePrintZoneCornerImage({ sizePct: v / 100 })}
-                    />
+                    {!designerMode && (
+                      <SliderRow
+                        label="Image size"
+                        displayValue={`${Math.round(printZoneCornerImage.sizePct * 100)}%`}
+                        min={5}
+                        max={35}
+                        value={Math.round(printZoneCornerImage.sizePct * 100)}
+                        disabled={backgroundControlsLocked}
+                        onNudgeDown={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct - 0.01 })}
+                        onNudgeUp={() => onUpdatePrintZoneCornerImage({ sizePct: printZoneCornerImage.sizePct + 0.01 })}
+                        onChange={(v) => onUpdatePrintZoneCornerImage({ sizePct: v / 100 })}
+                      />
+                    )}
                   </>
                 )}
               </>
@@ -240,20 +251,22 @@ export default function TextLayerEditor({
       className={styles.textOverlayBlock}
       onPointerDown={showTextSide}
     >
-      <div className={styles.textOverlayHeader}>
-        <p className={`${styles.compositeLabel} !mb-0`}>Text overlays</p>
-        <button
-          type="button"
-          className={styles.btn}
-          onClick={onAddTextLayer}
-          disabled={backgroundControlsLocked}
-        >
-          + Add text layer
-        </button>
-      </div>
+      {!designerMode && (
+        <div className={styles.textOverlayHeader}>
+          <p className={`${styles.compositeLabel} !mb-0`}>Text overlays</p>
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={onAddTextLayer}
+            disabled={backgroundControlsLocked}
+          >
+            + Add text layer
+          </button>
+        </div>
+      )}
       {!showCornerImageStandalone && textLayers.length === 0 ? (
         <p className={styles.textOverlayEmpty}>No text layers yet.</p>
-      ) : !showCornerImageStandalone ? (
+      ) : !showCornerImageStandalone && !designerMode ? (
         <div className={styles.textLayerList}>
           {textLayers.map((layer, idx) => (
             <div
@@ -301,136 +314,141 @@ export default function TextLayerEditor({
       ) : null}
       {selectedTextLayer && (
         <div className={styles.textLayerEditor}>
-          <div className={styles.textLayerTextFontRow}>
-            <div className={styles.setupBlock}>
-              <label className={styles.label}>Text</label>
-              <input
-                className={styles.input}
-                type="text"
-                value={selectedTextLayer.text}
-                onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { text: e.target.value })}
-                disabled={backgroundControlsLocked}
-              />
-            </div>
-            <div className={styles.setupBlock}>
-              <label className={styles.label}>Font style</label>
-              <select
-                className={styles.input}
-                value={selectedTextLayer.fontFamily}
-                onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { fontFamily: e.target.value })}
-                disabled={backgroundControlsLocked}
-              >
-                {availableFontOptions.map((font) => (
-                  <option key={font.value} value={font.value}>
-                    {font.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className={styles.textLayerColorStyleRow}>
-            <div className={styles.setupBlock}>
-              <label className={styles.label}>Color</label>
-              <input
-                className={styles.colorInput}
-                type="color"
-                value={selectedTextLayer.color}
-                onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { color: e.target.value })}
-                disabled={backgroundControlsLocked}
-              />
-            </div>
-            <div className={styles.shadowSwatchGroup}>
-              <label className={styles.label}>Format</label>
-              <div className={styles.styleToggleGroup}>
-                <button
-                  type="button"
-                  className={`${styles.styleToggle} ${selectedTextLayer.bold ? styles.styleToggleActive : ''}`}
-                  onClick={() => onUpdateTextLayer(selectedTextLayer.id, { bold: !selectedTextLayer.bold })}
-                  disabled={backgroundControlsLocked}
-                  title="Bold"
-                >
-                  <span className={styles.styleToggleBold}>B</span>
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.styleToggle} ${selectedTextLayer.italic ? styles.styleToggleActive : ''}`}
-                  onClick={() => onUpdateTextLayer(selectedTextLayer.id, { italic: !selectedTextLayer.italic })}
-                  disabled={backgroundControlsLocked}
-                  title="Italic"
-                >
-                  <span className={styles.styleToggleItalic}>I</span>
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.styleToggle} ${selectedTextLayer.underline ? styles.styleToggleActive : ''}`}
-                  onClick={() => onUpdateTextLayer(selectedTextLayer.id, { underline: !selectedTextLayer.underline })}
-                  disabled={backgroundControlsLocked}
-                  title="Underline"
-                >
-                  <span className={styles.styleToggleUnderline}>U</span>
-                </button>
-              </div>
-            </div>
-            <div className={styles.shadowSwatchGroup}>
-              <label className={styles.label}>Shadow</label>
-              <div className={styles.shadowSwatches}>
-                <button
-                  type="button"
-                  className={`${styles.shadowSwatch} ${styles.shadowSwatchOff} ${selectedTextLayer.shadow === 'off' ? styles.shadowSwatchActive : ''}`}
-                  onClick={() => onUpdateTextLayer(selectedTextLayer.id, { shadow: 'off' })}
-                  disabled={backgroundControlsLocked}
-                  title="No shadow"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="3" y1="3" x2="13" y2="13" stroke="#999" strokeWidth="1.5" strokeLinecap="round"/><line x1="13" y1="3" x2="3" y2="13" stroke="#999" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.shadowSwatch} ${styles.shadowSwatchBlack} ${selectedTextLayer.shadow === 'black' ? styles.shadowSwatchActive : ''}`}
-                  onClick={() => onUpdateTextLayer(selectedTextLayer.id, { shadow: 'black' })}
-                  disabled={backgroundControlsLocked}
-                  title="Dark shadow"
-                >
-                  <span className={styles.shadowSwatchPreview} style={{ background: '#000' }} />
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.shadowSwatch} ${styles.shadowSwatchWhite} ${selectedTextLayer.shadow === 'white' ? styles.shadowSwatchActive : ''}`}
-                  onClick={() => onUpdateTextLayer(selectedTextLayer.id, { shadow: 'white' })}
-                  disabled={backgroundControlsLocked}
-                  title="Light shadow"
-                >
-                  <span className={styles.shadowSwatchPreview} style={{ background: '#fff' }} />
-                </button>
-              </div>
-            </div>
-          </div>
           <div className={styles.setupBlock}>
-            <SliderRow
-              label="Font size"
-              displayValue={`${Math.round(selectedTextLayer.fontSizePct * 100)}%`}
-              min={3}
-              max={25}
-              value={Math.round(selectedTextLayer.fontSizePct * 100)}
+            {!designerMode && <label className={styles.label}>Text</label>}
+            <input
+              className={styles.input}
+              type="text"
+              value={selectedTextLayer.text === 'Add text' ? '' : selectedTextLayer.text}
+              onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { text: e.target.value })}
               disabled={backgroundControlsLocked}
-              onNudgeDown={() => onNudgeTextFontSize(selectedTextLayer.id, -0.005)}
-              onNudgeUp={() => onNudgeTextFontSize(selectedTextLayer.id, 0.005)}
-              onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { fontSizePct: v / 100 })}
+              placeholder="Add Your Text Here"
             />
           </div>
-          {!selectedTextLayer.printZoneCorner && (
-            <div className={styles.setupBlock}>
-              <SliderRow
-                label="Vertical position"
-                displayValue={Math.round(selectedTextLayer.yPct * 100)}
-                min={0}
-                max={100}
-                value={Math.round(selectedTextLayer.yPct * 100)}
-                disabled={backgroundControlsLocked}
-                onNudgeDown={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
-                onNudgeUp={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
-                onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { yPct: v / 100 })}
-              />
-            </div>
+          {!designerMode && (
+            <>
+              <div className={styles.textLayerTextFontRow}>
+                <div className={styles.setupBlock}>
+                  <label className={styles.label}>Font style</label>
+                  <select
+                    className={styles.input}
+                    value={selectedTextLayer.fontFamily}
+                    onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { fontFamily: e.target.value })}
+                    disabled={backgroundControlsLocked}
+                  >
+                    {availableFontOptions.map((font) => (
+                      <option key={font.value} value={font.value}>
+                        {font.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className={styles.textLayerColorStyleRow}>
+                <div className={styles.setupBlock}>
+                  <label className={styles.label}>Color</label>
+                  <input
+                    className={styles.colorInput}
+                    type="color"
+                    value={selectedTextLayer.color}
+                    onChange={(e) => onUpdateTextLayer(selectedTextLayer.id, { color: e.target.value })}
+                    disabled={backgroundControlsLocked}
+                  />
+                </div>
+                <div className={styles.shadowSwatchGroup}>
+                  <label className={styles.label}>Format</label>
+                  <div className={styles.styleToggleGroup}>
+                    <button
+                      type="button"
+                      className={`${styles.styleToggle} ${selectedTextLayer.bold ? styles.styleToggleActive : ''}`}
+                      onClick={() => onUpdateTextLayer(selectedTextLayer.id, { bold: !selectedTextLayer.bold })}
+                      disabled={backgroundControlsLocked}
+                      title="Bold"
+                    >
+                      <span className={styles.styleToggleBold}>B</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.styleToggle} ${selectedTextLayer.italic ? styles.styleToggleActive : ''}`}
+                      onClick={() => onUpdateTextLayer(selectedTextLayer.id, { italic: !selectedTextLayer.italic })}
+                      disabled={backgroundControlsLocked}
+                      title="Italic"
+                    >
+                      <span className={styles.styleToggleItalic}>I</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.styleToggle} ${selectedTextLayer.underline ? styles.styleToggleActive : ''}`}
+                      onClick={() => onUpdateTextLayer(selectedTextLayer.id, { underline: !selectedTextLayer.underline })}
+                      disabled={backgroundControlsLocked}
+                      title="Underline"
+                    >
+                      <span className={styles.styleToggleUnderline}>U</span>
+                    </button>
+                  </div>
+                </div>
+                <div className={styles.shadowSwatchGroup}>
+                  <label className={styles.label}>Shadow</label>
+                  <div className={styles.shadowSwatches}>
+                    <button
+                      type="button"
+                      className={`${styles.shadowSwatch} ${styles.shadowSwatchOff} ${selectedTextLayer.shadow === 'off' ? styles.shadowSwatchActive : ''}`}
+                      onClick={() => onUpdateTextLayer(selectedTextLayer.id, { shadow: 'off' })}
+                      disabled={backgroundControlsLocked}
+                      title="No shadow"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="3" y1="3" x2="13" y2="13" stroke="#999" strokeWidth="1.5" strokeLinecap="round"/><line x1="13" y1="3" x2="3" y2="13" stroke="#999" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.shadowSwatch} ${styles.shadowSwatchBlack} ${selectedTextLayer.shadow === 'black' ? styles.shadowSwatchActive : ''}`}
+                      onClick={() => onUpdateTextLayer(selectedTextLayer.id, { shadow: 'black' })}
+                      disabled={backgroundControlsLocked}
+                      title="Dark shadow"
+                    >
+                      <span className={styles.shadowSwatchPreview} style={{ background: '#000' }} />
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.shadowSwatch} ${styles.shadowSwatchWhite} ${selectedTextLayer.shadow === 'white' ? styles.shadowSwatchActive : ''}`}
+                      onClick={() => onUpdateTextLayer(selectedTextLayer.id, { shadow: 'white' })}
+                      disabled={backgroundControlsLocked}
+                      title="Light shadow"
+                    >
+                      <span className={styles.shadowSwatchPreview} style={{ background: '#fff' }} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.setupBlock}>
+                <SliderRow
+                  label="Font size"
+                  displayValue={`${Math.round(selectedTextLayer.fontSizePct * 100)}%`}
+                  min={3}
+                  max={25}
+                  value={Math.round(selectedTextLayer.fontSizePct * 100)}
+                  disabled={backgroundControlsLocked}
+                  onNudgeDown={() => onNudgeTextFontSize(selectedTextLayer.id, -0.005)}
+                  onNudgeUp={() => onNudgeTextFontSize(selectedTextLayer.id, 0.005)}
+                  onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { fontSizePct: v / 100 })}
+                />
+              </div>
+              {!selectedTextLayer.printZoneCorner && (
+                <div className={styles.setupBlock}>
+                  <SliderRow
+                    label="Vertical position"
+                    displayValue={Math.round(selectedTextLayer.yPct * 100)}
+                    min={0}
+                    max={100}
+                    value={Math.round(selectedTextLayer.yPct * 100)}
+                    disabled={backgroundControlsLocked}
+                    onNudgeDown={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.max(0, selectedTextLayer.yPct - 0.01) })}
+                    onNudgeUp={() => onUpdateTextLayer(selectedTextLayer.id, { yPct: Math.min(1, selectedTextLayer.yPct + 0.01) })}
+                    onChange={(v) => onUpdateTextLayer(selectedTextLayer.id, { yPct: v / 100 })}
+                  />
+                </div>
+              )}
+            </>
           )}
           <div className={styles.setupBlock}>
             <button

@@ -5,6 +5,7 @@ import type { MockupPlacement } from './types'
 
 export type ArtworkSide = 'front' | 'back'
 export type TextPlacement = 'same' | 'opposite'
+export type IllustrationMode = 'ai' | 'designer' | null
 
 interface CustomizerContextValue {
   artworkUrl: string | null
@@ -44,6 +45,28 @@ interface CustomizerContextValue {
   setDownloadArtworkEnabled: (enabled: boolean) => void
   artworkHasExtras: boolean
   setArtworkHasExtras: (hasExtras: boolean) => void
+  illustrationMode: IllustrationMode
+  setIllustrationMode: (mode: IllustrationMode) => void
+  customerPhotoDataUrl: string | null
+  setCustomerPhotoDataUrl: (url: string | null) => void
+  customerNotes: string
+  setCustomerNotes: (notes: string) => void
+  designerBackgroundUrl: string | null
+  setDesignerBackgroundUrl: (url: string | null) => void
+  designerRequestedText: string
+  setDesignerRequestedText: (text: string) => void
+  designerTextCorner: string | null
+  setDesignerTextCorner: (v: string | null) => void
+  designerCornerImageUrl: string | null
+  setDesignerCornerImageUrl: (url: string | null) => void
+  designerCornerImageLabel: string | null
+  setDesignerCornerImageLabel: (label: string | null) => void
+  aiArtworkUrl: string | null
+  setAiArtworkUrl: (url: string | null) => void
+  designerIncludeSourceFiles: boolean
+  setDesignerIncludeSourceFiles: (enabled: boolean) => void
+  designerPriority: boolean
+  setDesignerPriority: (enabled: boolean) => void
 }
 
 const CustomizerContext = createContext<CustomizerContextValue | null>(null)
@@ -72,6 +95,17 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
   const [mockupBaseNaturalHeight, setMockupBaseNaturalHeight] = useState<number | null>(null)
   const [downloadArtworkEnabled, setDownloadArtworkEnabled] = useState(false)
   const [artworkHasExtras, setArtworkHasExtras] = useState(false)
+  const [illustrationMode, setIllustrationMode] = useState<IllustrationMode>(null)
+  const [customerPhotoDataUrl, setCustomerPhotoDataUrl] = useState<string | null>(null)
+  const [customerNotes, setCustomerNotes] = useState('')
+  const [designerBackgroundUrl, setDesignerBackgroundUrl] = useState<string | null>(null)
+  const [designerRequestedText, setDesignerRequestedText] = useState('')
+  const [designerTextCorner, setDesignerTextCorner] = useState<string | null>(null)
+  const [designerCornerImageUrl, setDesignerCornerImageUrl] = useState<string | null>(null)
+  const [designerCornerImageLabel, setDesignerCornerImageLabel] = useState<string | null>(null)
+  const [aiArtworkUrl, setAiArtworkUrl] = useState<string | null>(null)
+  const [designerIncludeSourceFiles, setDesignerIncludeSourceFiles] = useState(false)
+  const [designerPriority, setDesignerPriority] = useState(false)
 
   useEffect(() => {
     setMockupPlacementRaw((prev) =>
@@ -146,6 +180,28 @@ export function CustomizerProvider({ children }: { children: ReactNode }) {
         setDownloadArtworkEnabled,
         artworkHasExtras,
         setArtworkHasExtras,
+        illustrationMode,
+        setIllustrationMode,
+        customerPhotoDataUrl,
+        setCustomerPhotoDataUrl,
+        customerNotes,
+        setCustomerNotes,
+        designerBackgroundUrl,
+        setDesignerBackgroundUrl,
+        designerRequestedText,
+        setDesignerRequestedText,
+        designerTextCorner,
+        setDesignerTextCorner,
+        designerCornerImageUrl,
+        setDesignerCornerImageUrl,
+        designerCornerImageLabel,
+        setDesignerCornerImageLabel,
+        aiArtworkUrl,
+        setAiArtworkUrl,
+        designerIncludeSourceFiles,
+        setDesignerIncludeSourceFiles,
+        designerPriority,
+        setDesignerPriority,
       }}
     >
       {children}

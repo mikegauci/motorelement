@@ -20,7 +20,7 @@ import {
 export function createTextLayer(id: string, defaultFontFamily = 'Arial'): TextLayer {
   return {
     id,
-    text: 'Add text',
+    text: '',
     xPct: 0.5,
     yPct: 0.2,
     fontFamily: defaultFontFamily,
@@ -52,7 +52,9 @@ export function normalizeTextLayer(layer: any, fallbackId: string): TextLayer {
     ...next,
     ...layerRest,
     id: typeof layer.id === 'string' ? layer.id : fallbackId,
-    text: typeof layer.text === 'string' ? layer.text : next.text,
+    text: typeof layer.text === 'string'
+      ? (layer.text === 'Add text' ? '' : layer.text)
+      : next.text,
     xPct: typeof layer.xPct === 'number' ? layer.xPct : next.xPct,
     yPct: typeof layer.yPct === 'number' ? layer.yPct : next.yPct,
     fontFamily:

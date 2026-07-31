@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { CartContext, type CartItem } from "@/hooks/useCart";
 import { downloadArtworkFeeCents } from "@/lib/shop/downloadArtwork";
+import { designerAddonsFeeCents } from "@/lib/shop/designerAddons";
 
 const STORAGE_KEY = "motorelement-cart";
 
@@ -66,6 +67,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           downloadFullUrl: item.downloadFullUrl,
           downloadCarOnlyUrl: item.downloadCarOnlyUrl,
           downloadTextUrl: item.downloadTextUrl,
+          illustrationMode: item.illustrationMode ?? existing.illustrationMode,
+          customerPhotoUrl: item.customerPhotoUrl ?? existing.customerPhotoUrl,
+          customerNotes: item.customerNotes ?? existing.customerNotes,
+          aiArtworkUrl: item.aiArtworkUrl ?? existing.aiArtworkUrl,
+          backgroundUrl: item.backgroundUrl ?? existing.backgroundUrl,
+          requestedText: item.requestedText ?? existing.requestedText,
+          textPlacement: item.textPlacement ?? existing.textPlacement,
+          textCorner: item.textCorner ?? existing.textCorner,
+          cornerImageUrl: item.cornerImageUrl ?? existing.cornerImageUrl,
+          cornerImageLabel: item.cornerImageLabel ?? existing.cornerImageLabel,
+          includeSourceFiles: !!item.includeSourceFiles,
+          designerPriority: !!item.designerPriority,
         };
         return updated;
       }
@@ -104,7 +117,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const totalPrice = useMemo(
     () =>
       items.reduce((sum, i) => sum + i.price * i.quantity, 0) +
-      downloadArtworkFeeCents(items),
+      downloadArtworkFeeCents(items) +
+      designerAddonsFeeCents(items),
     [items]
   );
 

@@ -9,7 +9,7 @@ import MockupPreview from "./customizer/MockupPreview";
 import MockupPreviewModal from "./customizer/MockupPreviewModal";
 import { useCustomizer } from "./customizer/CustomizerContext";
 import { buildPrintAreaPng, buildMockupThumbnail } from "./customizer/helpers";
-import { getBlankMockupImage, type PrintExportMultiplierOverrides } from "./customizer/constants";
+import { getBlankMockupImage, isRealBackgroundUrl, type PrintExportMultiplierOverrides } from "./customizer/constants";
 
 interface PrintifyColor {
   id: number;
@@ -65,6 +65,11 @@ export default function ProductPage({
     artworkOnlyDataUrl, textOnlyDataUrl, cornersOnlyDataUrl,
     mockupPlacement, setProductType, setSelectedColorHex, setSelectedColorTitle, generationStatus,
     artworkSide, textPlacement, mockupViewSide, downloadArtworkEnabled, artworkHasExtras,
+    illustrationMode, customerPhotoDataUrl, customerNotes,
+    designerBackgroundUrl, designerRequestedText, designerTextCorner,
+    aiArtworkUrl,
+    designerIncludeSourceFiles, designerPriority,
+    designerCornerImageUrl, designerCornerImageLabel,
   } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -119,11 +124,13 @@ export default function ProductPage({
   const displayPrice = selectedVariant?.price ?? product.basePrice;
   const hasGeneratedImage = Boolean(artworkUrl);
   const generationRunning = generationStatus === "running";
-  const canFinalizeCart =
-    !!selectedVariant &&
-    !!artworkUrl &&
-    !uploading &&
-    !generationRunning;
+  const isDesignerMode = illustrationMode === "designer";
+  const canFinalizeCart = isDesignerMode
+    ? !!selectedVariant && !!customerPhotoDataUrl && !uploading
+    : !!selectedVariant &&
+      !!artworkUrl &&
+      !uploading &&
+      !generationRunning;
 
   useEffect(() => {
     const blank = getBlankMockupImage(product.type, selectedColorObj?.title, mockupViewSide);
@@ -152,6 +159,187 @@ export default function ProductPage({
 
   async function handleAddToCart() {
     if (!selectedVariant || !selectedSizeObj) return;
+
+    if (isDesignerMode) {
+      if (!customerPhotoDataUrl) return;
+
+      setUploading(true);
+      setDownloadExportError(null);
+      try {
+        let persistedThumbnailUrl: string | undefined;
+
+        const photoRes = await fetch(customerPhotoDataUrl);
+        const photoBlob = await photoRes.blob();
+        const persistedPhotoUrl = await uploadPng(
+          photoBlob,
+          "customer_photo",
+          "customer-photo.jpg",
+        );
+
+        if (!persistedPhotoUrl) {
+          setDownloadExportError(
+            "Could not save your photo. Please try again.",
+          );
+          return;
+        }
+
+        if (tshirtBaseImage && artworkUrl) {
+          try {
+            const thumbBlob = await buildMockupThumbnail(
+              tshirtBaseImage,
+              artworkUrl,
+              mockupPlacement,
+              product.type,
+              artworkSide,
+              null,
+            );
+            const fd = new FormData();
+            fd.append("file", thumbBlob, "mockup-thumbnail.jpg");
+            fd.append("metadata", JSON.stringify({ kind: "mockup_thumbnail" }));
+            const res = await fetch("/api/save-artwork", {
+              method: "POST",
+              body: fd,
+            });
+            if (res.ok) {
+              persistedThumbnailUrl = (await res.json()).publicUrl as string;
+            }
+          } catch (err) {
+            console.error("Failed to build designer thumbnail:", err);
+          }
+        }
+
+        let persistedBackgroundUrl: string | undefined;
+        if (isRealBackgroundUrl(designerBackgroundUrl)) {
+          const bgUrl = designerBackgroundUrl as string;
+          const isPublicRemote =
+            /^https?:\/\//i.test(bgUrl) &&
+            !/localhost|127\.0\.0\.1/i.test(bgUrl);
+          if (isPublicRemote) {
+            persistedBackgroundUrl = bgUrl;
+          } else {
+            try {
+              const bgRes = await fetch(bgUrl);
+              const bgBlob = await bgRes.blob();
+              const ext = bgBlob.type.includes("jpeg") ? "jpg" : "png";
+              persistedBackgroundUrl = await uploadPng(
+                bgBlob,
+                "designer_background",
+                `designer-background.${ext}`,
+              );
+            } catch (err) {
+              console.error("Failed to persist designer background:", err);
+            }
+          }
+        }
+
+        let persistedAiArtworkUrl: string | undefined;
+        if (aiArtworkUrl) {
+          const isPublicRemote =
+            /^https?:\/\//i.test(aiArtworkUrl) &&
+            !/localhost|127\.0\.0\.1/i.test(aiArtworkUrl);
+          if (isPublicRemote) {
+            persistedAiArtworkUrl = aiArtworkUrl;
+          } else {
+            try {
+              const aiRes = await fetch(aiArtworkUrl);
+              const aiBlob = await aiRes.blob();
+              const ext = aiBlob.type.includes("jpeg") ? "jpg" : "png";
+              persistedAiArtworkUrl = await uploadPng(
+                aiBlob,
+                "ai_artwork_reference",
+                `ai-artwork-reference.${ext}`,
+              );
+            } catch (err) {
+              console.error("Failed to persist AI artwork reference:", err);
+            }
+          }
+        }
+
+        let persistedCornerImageUrl: string | undefined;
+        if (designerCornerImageUrl) {
+          const isPublicRemote =
+            /^https?:\/\//i.test(designerCornerImageUrl) &&
+            !/localhost|127\.0\.0\.1/i.test(designerCornerImageUrl);
+          if (isPublicRemote) {
+            persistedCornerImageUrl = designerCornerImageUrl;
+          } else {
+            try {
+              const cornerRes = await fetch(designerCornerImageUrl);
+              const cornerBlob = await cornerRes.blob();
+              const ext = cornerBlob.type.includes("jpeg")
+                ? "jpg"
+                : cornerBlob.type.includes("svg")
+                  ? "svg"
+                  : "png";
+              persistedCornerImageUrl = await uploadPng(
+                cornerBlob,
+                "designer_corner_image",
+                `designer-corner-image.${ext}`,
+              );
+            } catch (err) {
+              console.error("Failed to persist designer corner image:", err);
+            }
+          }
+        }
+
+        addItem({
+          productId: product.id,
+          name: product.name,
+          type: product.type,
+          size: selectedSizeObj.title,
+          color: selectedColorObj?.title ?? "",
+          price: displayPrice,
+          artworkSide,
+          illustrationMode: "designer",
+          customerPhotoUrl: persistedPhotoUrl,
+          ...(customerNotes.trim()
+            ? { customerNotes: customerNotes.trim() }
+            : {}),
+          ...(designerRequestedText.trim()
+            ? { requestedText: designerRequestedText.trim() }
+            : {}),
+          ...(designerTextCorner
+            ? { textCorner: designerTextCorner }
+            : {}),
+          ...(designerRequestedText.trim() || designerTextCorner || persistedCornerImageUrl
+            ? { textPlacement }
+            : {}),
+          ...(persistedBackgroundUrl
+            ? { backgroundUrl: persistedBackgroundUrl }
+            : {}),
+          ...(persistedAiArtworkUrl
+            ? { aiArtworkUrl: persistedAiArtworkUrl }
+            : {}),
+          ...(persistedCornerImageUrl
+            ? {
+                cornerImageUrl: persistedCornerImageUrl,
+                ...(designerCornerImageLabel
+                  ? { cornerImageLabel: designerCornerImageLabel }
+                  : {}),
+              }
+            : {}),
+          ...(designerIncludeSourceFiles
+            ? { includeSourceFiles: true }
+            : {}),
+          ...(designerPriority ? { designerPriority: true } : {}),
+          ...(persistedThumbnailUrl
+            ? { thumbnailUrl: persistedThumbnailUrl }
+            : {}),
+        });
+        setAdded(true);
+        openCart();
+        setTimeout(() => setAdded(false), 2000);
+      } catch (err) {
+        console.error("Failed to add designer item:", err);
+        setDownloadExportError(
+          "Could not add designer item to cart. Please try again.",
+        );
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
     if (!artworkUrl || generationStatus === "running") return;
 
     let persistedArtworkUrl: string | undefined;
@@ -288,6 +476,7 @@ export default function ProductPage({
       color: selectedColorObj?.title ?? "",
       price: displayPrice,
       artworkSide,
+      illustrationMode: "ai",
       ...(downloadExportsReady ? { downloadArtwork: true } : {}),
       ...(persistedArtworkUrl ? { artworkUrl: persistedArtworkUrl } : {}),
       ...(persistedThumbnailUrl ? { thumbnailUrl: persistedThumbnailUrl } : {}),

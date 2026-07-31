@@ -19,7 +19,7 @@ interface CarGenerationDeps {
 }
 
 export function useCarGeneration(deps: CarGenerationDeps) {
-  const { setArtworkUrl, setGenerationStatus, setMockupThumbnailUrl } = useCustomizer()
+  const { setArtworkUrl, setGenerationStatus, setMockupThumbnailUrl, illustrationMode } = useCustomizer()
   const job = useGenerationJob(PENDING_GENERATION_KEY, 'car')
 
   const [status, setStatus] = useState('')
@@ -27,6 +27,7 @@ export function useCarGeneration(deps: CarGenerationDeps) {
   const [viewIndex, setViewIndex] = useState(0)
 
   useEffect(() => {
+    if (illustrationMode === 'designer') return
     const transparentRev = revisions.find((r) => r.transparent)
     if (transparentRev) {
       setArtworkUrl(transparentRev.url)
@@ -36,12 +37,10 @@ export function useCarGeneration(deps: CarGenerationDeps) {
       setGenerationStatus('done')
     } else {
       setArtworkUrl(null)
-      // Clear stale mockup thumbnail so the mobile result dock doesn't
-      // keep showing the previous project's artwork after a reset.
       setMockupThumbnailUrl(null)
       setGenerationStatus(status === 'running' ? 'running' : 'idle')
     }
-  }, [revisions, status, setArtworkUrl, setGenerationStatus, setMockupThumbnailUrl])
+  }, [revisions, status, illustrationMode, setArtworkUrl, setGenerationStatus, setMockupThumbnailUrl])
 
   async function finalizeGenerationFromUrl(url: string, notesSnapshot: string, wasLocked: boolean, tweakSnapshot: string) {
     let finalUrl = url

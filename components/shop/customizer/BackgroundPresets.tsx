@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import type { SavedCustomBackground } from './types'
-import { BACKGROUND_PRESETS, CUSTOM_BACKGROUND_NEW } from './constants'
+import { BACKGROUND_PRESETS, CUSTOM_BACKGROUND_NEW, NO_BACKGROUND_PRESET_URL } from './constants'
 import styles from './styles'
 import ImageUploadZone from './parts/ImageUploadZone'
 import ImageLightbox from './parts/ImageLightbox'
@@ -14,7 +14,6 @@ interface BackgroundPresetsProps {
   selectedPresetId: string | null
   setSelectedPresetId: (id: string | null) => void
   savedCustomBackgrounds: SavedCustomBackground[]
-  transparentCarUrl: string | null
   backgroundControlsLocked: boolean
   customBackgroundGenerating: boolean
   customBackgroundElapsed: number
@@ -46,7 +45,6 @@ export default function BackgroundPresets({
   selectedPresetId,
   setSelectedPresetId,
   savedCustomBackgrounds,
-  transparentCarUrl,
   backgroundControlsLocked,
   customBackgroundGenerating,
   customBackgroundElapsed,
@@ -115,13 +113,14 @@ export default function BackgroundPresets({
           onClick={() => setSelectedPresetId(null)}
           disabled={backgroundControlsLocked}
         >
-          {transparentCarUrl ? (
-            <span className={styles.presetThumbWrap}>
-              <img src={transparentCarUrl} alt="Transparent only" className={`${styles.presetThumb} !object-contain`} />
-            </span>
-          ) : (
-            <span className={styles.presetNoneLabel}>None</span>
-          )}
+          <span className={styles.presetThumbWrap}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={NO_BACKGROUND_PRESET_URL}
+              alt="No background"
+              className={`${styles.presetThumb} !object-contain p-4`}
+            />
+          </span>
           <span className={styles.presetOptionCaption}>No background</span>
         </button>
         {visiblePresets.map((p, i) => (

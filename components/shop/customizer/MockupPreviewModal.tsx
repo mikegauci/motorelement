@@ -26,9 +26,11 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     textPlacement,
     mockupViewSide,
     setMockupViewSide,
+    illustrationMode,
   } = useCustomizer()
 
   const hasBothSides = textPlacement === 'opposite' && !!textOnlyDataUrl
+  const isDesignerMode = illustrationMode === 'designer'
 
   const textSide: 'front' | 'back' =
     textPlacement === 'opposite'
@@ -36,14 +38,20 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
       : artworkSide
 
   let overlayUrl: string | null = null
-  if (mockupViewSide === artworkSide) {
+  if (isDesignerMode) {
+    overlayUrl = mockupViewSide === artworkSide ? artworkUrl : null
+  } else if (mockupViewSide === artworkSide) {
     overlayUrl = textPlacement === 'opposite'
       ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
       : (compositeDataUrl ?? artworkUrl)
   } else if (textPlacement === 'opposite') {
     overlayUrl = textOnlyDataUrl
   }
-  const cornersUrl = mockupViewSide === textSide ? cornersOnlyDataUrl : null
+  const cornersUrl = isDesignerMode
+    ? null
+    : mockupViewSide === textSide
+      ? cornersOnlyDataUrl
+      : null
   const pz = getMockupPrintZone(productType, mockupViewSide)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
