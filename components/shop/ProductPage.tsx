@@ -537,12 +537,22 @@ export default function ProductPage({
     <div className="mx-auto max-w-7xl p-6">
       <div className="grid gap-12 lg:grid-cols-2">
         <div className="min-w-0 lg:sticky lg:top-20 lg:self-start">
-          {hasGeneratedImage && !isDesignerMode && !showingGallery && (
+          {hasGeneratedImage && !isDesignerMode && (
             <div className="flex flex-wrap items-center gap-1 mb-3">
-              <span className="px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border border-ignition bg-ignition/10 text-white">
+              <button
+                type="button"
+                onClick={() => setGalleryIndex(null)}
+                className={`px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border transition flex items-center gap-1.5 ${
+                  !showingGallery
+                    ? "border-ignition bg-ignition/10 text-white"
+                    : "border-border text-muted hover:border-white/30 hover:text-white"
+                }`}
+              >
                 Live Mockup
-                <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-ignition" />
-              </span>
+                {!showingGallery && (
+                  <span className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-ignition" />
+                )}
+              </button>
               <button
                 onClick={() => setShowPreviewModal(true)}
                 className="px-4 py-2 text-xs font-sub font-bold uppercase tracking-widest border border-border text-muted hover:border-white/30 hover:text-white transition flex items-center gap-1.5"
@@ -553,72 +563,76 @@ export default function ProductPage({
             </div>
           )}
 
-          {showingGallery ? (
-            <div className="relative w-full aspect-square overflow-hidden border border-border bg-obsidian">
-              <Image
-                src={galleryImages[galleryIndex]!}
-                alt={`${product.name} gallery`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
-              />
+          <div className="flex flex-col gap-3 lg:flex-row-reverse lg:items-start">
+            <div className="min-w-0 flex-1">
+              {showingGallery ? (
+                <div className="relative w-full aspect-square overflow-hidden border border-border bg-obsidian">
+                  <Image
+                    src={galleryImages[galleryIndex]!}
+                    alt={`${product.name} gallery`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    priority
+                  />
+                </div>
+              ) : (
+                <MockupPreview />
+              )}
             </div>
-          ) : (
-            <MockupPreview />
-          )}
 
-          {galleryImages.length > 0 && (
-            <div className="mt-3 flex gap-2 overflow-x-auto">
-              <button
-                type="button"
-                onClick={() => setGalleryIndex(null)}
-                aria-label="Show live mockup"
-                aria-pressed={!showingGallery}
-                className={`relative h-20 w-20 shrink-0 overflow-hidden border transition ${
-                  !showingGallery
-                    ? "border-ignition"
-                    : "border-border hover:border-white/40"
-                }`}
-              >
-                <Image
-                  src={
-                    getBlankMockupImage(
-                      product.type,
-                      selectedColorObj?.title,
-                      "front"
-                    ) ?? galleryImages[0]
-                  }
-                  alt="Mockup"
-                  fill
-                  className="object-cover"
-                  sizes="80px"
-                />
-              </button>
-              {galleryImages.map((src, i) => (
+            {galleryImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto lg:w-20 lg:shrink-0 lg:flex-col lg:overflow-x-visible">
                 <button
-                  key={src}
                   type="button"
-                  onClick={() => setGalleryIndex(i)}
-                  aria-label={`Show gallery image ${i + 1}`}
-                  aria-pressed={galleryIndex === i}
+                  onClick={() => setGalleryIndex(null)}
+                  aria-label="Show live mockup"
+                  aria-pressed={!showingGallery}
                   className={`relative h-20 w-20 shrink-0 overflow-hidden border transition ${
-                    galleryIndex === i
+                    !showingGallery
                       ? "border-ignition"
                       : "border-border hover:border-white/40"
                   }`}
                 >
                   <Image
-                    src={src}
-                    alt=""
+                    src={
+                      getBlankMockupImage(
+                        product.type,
+                        selectedColorObj?.title,
+                        "front"
+                      ) ?? galleryImages[0]
+                    }
+                    alt="Mockup"
                     fill
                     className="object-cover"
                     sizes="80px"
                   />
                 </button>
-              ))}
-            </div>
-          )}
+                {galleryImages.map((src, i) => (
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() => setGalleryIndex(i)}
+                    aria-label={`Show gallery image ${i + 1}`}
+                    aria-pressed={galleryIndex === i}
+                    className={`relative h-20 w-20 shrink-0 overflow-hidden border transition ${
+                      galleryIndex === i
+                        ? "border-ignition"
+                        : "border-border hover:border-white/40"
+                    }`}
+                  >
+                    <Image
+                      src={src}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="min-w-0">
