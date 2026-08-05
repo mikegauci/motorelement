@@ -19,6 +19,7 @@ import {
 import {
   readFileAsDataUrl,
   compressImageDataUrl,
+  fetchUrlAsDataUrl,
   getPrintZoneCornerTextPosition,
   createPrintZoneCornerImage,
   clampCornerImageSizePct,
@@ -33,6 +34,7 @@ import TextOverlayToggle from './TextOverlayToggle'
 import TextPlacementSelector from './TextPlacementSelector'
 import ArtworkPositionSelector from './ArtworkPositionSelector'
 import DownloadArtworkSection from './DownloadArtworkSection'
+import TestArtworkDownload from './TestArtworkDownload'
 import DesignerYesNoSection from './DesignerYesNoSection'
 import MockupPreviewModal from './MockupPreviewModal'
 import CollapsibleTweak from './parts/CollapsibleTweak'
@@ -56,10 +58,14 @@ export default function ProductCustomizer() {
     setArtworkSide,
     textPlacement,
     setTextPlacement,
+    artworkUrl,
     setArtworkUrl,
+    compositeDataUrl,
     artworkOnlyDataUrl,
     setArtworkOnlyDataUrl,
+    textOnlyDataUrl,
     setTextOnlyDataUrl,
+    cornersOnlyDataUrl,
     setCornersOnlyDataUrl,
     setCompositeDataUrl,
     setGenerationStatus,
@@ -122,6 +128,7 @@ export default function ProductCustomizer() {
   const [addTextEnabled, setAddTextEnabled] = useState(false)
   const [printZoneCornerImage, setPrintZoneCornerImage] = useState<PrintZoneCornerImage>(() => createPrintZoneCornerImage())
   const carFileRef = useRef<HTMLInputElement>(null)
+  const illustrationFileRef = useRef<HTMLInputElement>(null)
   const customBackgroundFileRef = useRef<HTMLInputElement>(null)
   const cornerImageFileRef = useRef<HTMLInputElement>(null)
   const loadedCustomFontFamiliesRef = useRef(new Set<string>())
@@ -464,6 +471,27 @@ export default function ProductCustomizer() {
     })
   }
 
+  async function handleCarImageUrl(url: string) {
+    const dataUrl = await fetchUrlAsDataUrl(url)
+    setCarImagePreview(dataUrl)
+    try {
+      const compressed = await compressImageDataUrl(dataUrl)
+      setCarImageDataUrl(compressed)
+      setCarImagePreview(compressed)
+    } catch {
+      setCarImageDataUrl(dataUrl)
+    }
+  }
+
+  function handleIllustrationFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || vehicleLocked || carGen.running) return
+    readFileAsDataUrl(file, async (dataUrl) => {
+      setIllustrationMode('ai')
+      await carGen.seedIllustrationFromUrl(dataUrl)
+    })
+  }
+
   function handleCustomBackgroundFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -547,6 +575,7 @@ export default function ProductCustomizer() {
     try { sessionStorage.removeItem(SESSION_KEY) } catch { /* ignore */ }
     try { sessionStorage.removeItem(PENDING_GENERATION_KEY); sessionStorage.removeItem(PENDING_BACKGROUND_KEY) } catch { /* ignore */ }
     if (carFileRef.current) carFileRef.current.value = ''
+    if (illustrationFileRef.current) illustrationFileRef.current.value = ''
     if (customBackgroundFileRef.current) customBackgroundFileRef.current.value = ''
     if (cornerImageFileRef.current) cornerImageFileRef.current.value = ''
     setCustomerNotes('')
@@ -736,13 +765,16 @@ export default function ProductCustomizer() {
           setCarImagePreview(null)
           if (carFileRef.current) carFileRef.current.value = ''
         }}
+        onLoadImageUrl={handleCarImageUrl}
         onGenerate={handleChooseAi}
         onChooseDesigner={handleChooseDesigner}
+        onUploadIllustration={() => illustrationFileRef.current?.click()}
         onSwitchToAi={handleSwitchToAi}
         onCancel={carGen.cancelCarGeneration}
         onReset={reset}
       />
       <input ref={carFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCarFile} />
+      <input ref={illustrationFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleIllustrationFile} />
 
       {isDesignerMode && (
         <div className={styles.results}>
@@ -1031,6 +1063,18 @@ export default function ProductCustomizer() {
                         <DownloadArtworkSection
                           enabled={downloadArtworkEnabled}
                           onChange={setDownloadArtworkEnabled}
+                          disabled={backgroundControlsLocked}
+                        />
+                        <TestArtworkDownload
+                          artworkUrl={artworkUrl}
+                          compositeDataUrl={compositeDataUrl}
+                          artworkOnlyDataUrl={artworkOnlyDataUrl}
+                          textOnlyDataUrl={textOnlyDataUrl}
+                          cornersOnlyDataUrl={cornersOnlyDataUrl}
+                          mockupPlacement={mockupPlacement}
+                          productType={productType}
+                          artworkSide={artworkSide}
+                          textPlacement={textPlacement}
                           disabled={backgroundControlsLocked}
                         />
                       </>

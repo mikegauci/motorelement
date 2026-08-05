@@ -688,6 +688,32 @@ export function readFileAsDataUrl(file: File, onDone: (result: string) => void) 
   reader.readAsDataURL(file)
 }
 
+export async function fetchUrlAsDataUrl(url: string): Promise<string> {
+  const trimmed = url.trim()
+  if (!trimmed) throw new Error('Enter an image URL')
+  if (trimmed.startsWith('data:image/')) return trimmed
+  if (!/^https:\/\//i.test(trimmed)) throw new Error('URL must start with https://')
+
+  const proxyUrl = `/api/fetch-image?url=${encodeURIComponent(trimmed)}`
+  const res = await fetch(proxyUrl)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(
+      typeof err.error === 'string' ? err.error : `Failed to fetch image (${res.status})`,
+    )
+  }
+  const blob = await res.blob()
+  if (!blob.type.startsWith('image/')) {
+    throw new Error('URL did not return an image')
+  }
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader()
+    fr.onload = () => resolve(fr.result as string)
+    fr.onerror = () => reject(new Error('Failed to read image'))
+    fr.readAsDataURL(blob)
+  })
+}
+
 export function joinNotes(base: string, extra: string) {
   const a = typeof base === 'string' ? base.trim() : ''
   const b = typeof extra === 'string' ? extra.trim() : ''

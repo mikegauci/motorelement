@@ -14,10 +14,7 @@ export function downloadArtworkFeeCents(
   )
 }
 
-export async function triggerBrowserDownload(url: string, filename: string) {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Download failed (${res.status})`)
-  const blob = await res.blob()
+export function triggerBlobDownload(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = objectUrl
@@ -26,4 +23,11 @@ export async function triggerBrowserDownload(url: string, filename: string) {
   a.click()
   a.remove()
   URL.revokeObjectURL(objectUrl)
+}
+
+export async function triggerBrowserDownload(url: string, filename: string) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Download failed (${res.status})`)
+  const blob = await res.blob()
+  triggerBlobDownload(blob, filename)
 }

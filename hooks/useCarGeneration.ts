@@ -151,8 +151,28 @@ export function useCarGeneration(deps: CarGenerationDeps) {
     setViewIndex(0)
   }
 
+  async function seedIllustrationFromUrl(url: string) {
+    if (job.generating || status === 'running' || deps.vehicleLocked) return
+    setStatus('running')
+    try {
+      let finalUrl = url
+      try {
+        finalUrl = await removeWhiteBackground(url)
+      } catch (bgErr) {
+        console.warn('Auto background removal failed for uploaded illustration, using original:', bgErr)
+      }
+      setStatus('done')
+      setRevisions([{ url: finalUrl, label: '1 · Uploaded', transparent: true }])
+      setViewIndex(0)
+      deps.setVehicleLocked(true)
+      deps.setComposedPromptNotes(deps.customerNotes || '')
+    } catch (err: unknown) {
+      setStatus('error:' + ((err as Error).message || 'Failed to load illustration'))
+    }
+  }
+
   return {
-    running: job.generating,
+    running: job.generating || status === 'running',
     status,
     setStatus,
     elapsed: job.elapsed,
@@ -165,5 +185,6 @@ export function useCarGeneration(deps: CarGenerationDeps) {
     cancelCarGeneration,
     resumePendingGeneration,
     resetCarGeneration,
+    seedIllustrationFromUrl,
   }
 }
