@@ -56,7 +56,7 @@ function shuffleItems(items: GalleryItem[]): GalleryItem[] {
 function GalleryCard({ item }: { item: GalleryItem }) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-border bg-carbon">
-      <div className="grid grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2">
         <div className="relative aspect-[4/3]">
           <Image
             src={item.before}
@@ -64,7 +64,7 @@ function GalleryCard({ item }: { item: GalleryItem }) {
             fill
             draggable={false}
             className="pointer-events-none select-none object-cover"
-            sizes="(max-width: 768px) 50vw, 40vw"
+            sizes="(max-width: 768px) 100vw, 40vw"
           />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-void/70 to-transparent px-3 pb-1 pt-8">
             <span className="font-sub text-[10px] font-bold uppercase tracking-widest text-white/80 md:text-xs">
@@ -79,7 +79,7 @@ function GalleryCard({ item }: { item: GalleryItem }) {
             fill
             draggable={false}
             className="pointer-events-none select-none object-cover"
-            sizes="(max-width: 768px) 50vw, 40vw"
+            sizes="(max-width: 768px) 100vw, 40vw"
           />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-void/70 to-transparent px-3 pb-1 pt-8">
             <span className="font-sub text-[10px] font-bold uppercase tracking-widest text-white/80 md:text-xs">
@@ -88,14 +88,14 @@ function GalleryCard({ item }: { item: GalleryItem }) {
           </div>
         </div>
       </div>
-      <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 flex -translate-x-1/2 items-center">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
         <Image
           src="/images/gallery/arrow-red.png"
           alt=""
           width={400}
           height={262}
           draggable={false}
-          className="h-14 w-auto select-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)] md:h-20"
+          className="h-14 w-auto rotate-90 select-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)] md:h-20 md:rotate-0"
           aria-hidden
         />
       </div>
