@@ -8,6 +8,7 @@ import { Container } from "@/components/ui/Container";
 
 const navLinks = [
   { href: "/products", label: "SHOP ALL" },
+  { href: "/about", label: "ABOUT" },
 ];
 
 export function Header() {
