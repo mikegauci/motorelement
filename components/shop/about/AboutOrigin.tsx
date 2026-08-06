@@ -12,10 +12,10 @@ export function AboutOrigin() {
         />
         <div className="space-y-6 text-base leading-relaxed text-muted">
           <p>
-            Motor Element started in 2018 from a simple frustration: most “car
-            merch” never featured your actual car. Stock silhouettes. Generic
-            logos. Nothing that felt like the build you spent nights wrenching
-            on.
+            Motor Element started in 2018 from a simple frustration: most
+            &quot;car merch&quot; never featured your actual car. Stock
+            silhouettes. Generic logos. Nothing that felt like the build you
+            spent nights wrenching on.
           </p>
           <p>
             Our founder is a car enthusiast first — someone who lives the
