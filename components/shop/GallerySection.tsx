@@ -38,6 +38,12 @@ const galleryItems = [
     before: "/images/gallery/builds/mr2-before.jpeg",
     after: "/images/gallery/builds/mr2-after-1.jpg",
   },
+  {
+    id: "sw20",
+    label: "SW20",
+    before: "/images/gallery/builds/sw20-before-2.jpg",
+    after: "/images/gallery/builds/sw20-after-2.jpg",
+  },
 ];
 
 type GalleryItem = (typeof galleryItems)[number];
