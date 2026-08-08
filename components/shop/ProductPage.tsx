@@ -16,6 +16,7 @@ import {
   isRealBackgroundUrl,
   type PrintExportMultiplierOverrides,
 } from "./customizer/constants";
+import { getLinkedPrintifyProductIds } from "@/lib/printify/variants";
 
 interface PrintifyColor {
   id: number;
@@ -50,6 +51,61 @@ interface PrintifyData {
   sizes: PrintifySize[];
   variants: PrintifyVariant[];
   images: Record<number, PrintifyImages>;
+}
+
+const MUG_SYNTHETIC_COLORS: PrintifyColor[] = [
+  { id: 1, title: "White", hex: "#ffffff" },
+  { id: 2, title: "Black", hex: "#000000" },
+];
+
+function mergeMugPrintifyData(products: PrintifyData[]): PrintifyData {
+  const primary = products[0];
+  const sizesByTitle = new Map<string, PrintifySize>();
+  for (const product of products) {
+    for (const size of product.sizes) {
+      const key = size.title.toLowerCase().replace(/\s+/g, "");
+      if (!sizesByTitle.has(key)) sizesByTitle.set(key, size);
+    }
+  }
+  const sizes = Array.from(sizesByTitle.values());
+  const sizeIdByTitle = new Map(
+    sizes.map((s) => [s.title.toLowerCase().replace(/\s+/g, ""), s.id])
+  );
+
+  const colorIdBySlug: Record<string, number> = {
+    white: 1,
+    black: 2,
+  };
+
+  const variants: PrintifyVariant[] = [];
+  products.forEach((product, index) => {
+    const colorSlug = index === 0 ? "white" : "black";
+    const colorId = colorIdBySlug[colorSlug];
+    for (const variant of product.variants) {
+      const sizeTitle = product.sizes.find((s) => s.id === variant.sizeId)?.title;
+      if (!sizeTitle) continue;
+      const sizeKey = sizeTitle.toLowerCase().replace(/\s+/g, "");
+      const sizeId = sizeIdByTitle.get(sizeKey);
+      if (sizeId == null) continue;
+      variants.push({
+        id: variant.id,
+        title: variant.title,
+        price: variant.price,
+        sizeId,
+        colorId,
+      });
+    }
+  });
+
+  return {
+    id: primary.id,
+    title: primary.title,
+    description: primary.description,
+    colors: MUG_SYNTHETIC_COLORS,
+    sizes,
+    variants,
+    images: primary.images,
+  };
 }
 
 function formatPrice(cents: number) {
@@ -112,17 +168,29 @@ export default function ProductPage({
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/printify/product/${printifyProductId}`, {
-          cache: "no-store",
-        });
-        if (!res.ok) throw new Error("Failed to load");
-        const json: PrintifyData = await res.json();
+        const productIds = isMug
+          ? getLinkedPrintifyProductIds(printifyProductId)
+          : [printifyProductId];
+        const responses = await Promise.all(
+          productIds.map((id) =>
+            fetch(`/api/printify/product/${id}`, { cache: "no-store" })
+          )
+        );
+        if (responses.some((res) => !res.ok)) throw new Error("Failed to load");
+        const products = (await Promise.all(
+          responses.map((res) => res.json())
+        )) as PrintifyData[];
+        const json =
+          isMug && products.length > 1
+            ? mergeMugPrintifyData(products)
+            : products[0];
         setData(json);
         if (json.colors.length > 0) setSelectedColor(json.colors[0].id);
         else setSelectedColor(null);
         if (json.sizes.length > 0) {
-          const defaultSize =
-            json.colors.length === 0
+          const defaultSize = isMug
+            ? json.sizes[0]
+            : json.colors.length === 0
               ? json.sizes[0]
               : (json.sizes[2] ?? json.sizes[0]);
           setSelectedSize(defaultSize.id);
@@ -134,7 +202,7 @@ export default function ProductPage({
       }
     }
     load();
-  }, [printifyProductId]);
+  }, [printifyProductId, isMug]);
 
   const hasColors = (data?.colors.length ?? 0) > 0;
 

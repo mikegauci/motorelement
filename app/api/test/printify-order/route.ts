@@ -5,7 +5,10 @@ import {
 } from "@/lib/printify/helpers";
 import { getProductById } from "@/lib/supabase/queries/products";
 import { buildPrintAreas } from "@/lib/printify/printAreas";
-import { resolveVariantIdForProduct } from "@/lib/printify/variants";
+import {
+  resolvePrintifyProductId,
+  resolveVariantIdForProduct,
+} from "@/lib/printify/variants";
 
 const TEST_ADDRESS = {
   first_name: "Test",
@@ -53,7 +56,10 @@ export async function POST(request: Request) {
             console.warn(`[test-printify] No DB product for id ${item.productId}`);
             return null;
           }
-          const printifyProductId = dbProduct.printifyBlueprintId;
+          const printifyProductId = resolvePrintifyProductId(
+            dbProduct.printifyBlueprintId,
+            item.color
+          );
 
           const pfyProduct = (await getProduct(printifyProductId)) as {
             blueprint_id: number;
@@ -81,6 +87,7 @@ export async function POST(request: Request) {
               artworkSide: item.artworkSide ?? "front",
               textArtworkUrl: item.textArtworkUrl,
               textArtworkSide: item.textArtworkSide,
+              color: item.color,
             }),
           };
         })

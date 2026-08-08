@@ -111,9 +111,15 @@ const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string
   },
 }
 
-const MUG_SIZE_MOCKUPS: Record<string, string> = {
-  '11oz': '/images/mockups/mug/11oz.png',
-  '15oz': '/images/mockups/mug/15oz.png',
+const MUG_SIZE_MOCKUPS: Record<string, Record<string, string>> = {
+  '11oz': {
+    white: '/images/mockups/mug/11oz.png',
+    black: '/images/mockups/mug/11oz-black.png',
+  },
+  '15oz': {
+    white: '/images/mockups/mug/15oz.png',
+    black: '/images/mockups/mug/15oz-black.png',
+  },
 }
 
 const MUG_SIZE_MOCKUP_ZONES: Record<string, { xPct: number; yPct: number; widthPct: number }> = {
@@ -141,6 +147,13 @@ function colorSlug(title: string): string {
 function getGarmentColorSlug(colorTitle: string | null | undefined): string | null {
   if (colorTitle == null || !String(colorTitle).trim()) return null
   return colorSlug(String(colorTitle))
+}
+
+function resolveMugMockup(sizeTitle?: string | null, colorTitle?: string | null): string {
+  const sizeKey = normalizeMugSizeKey(sizeTitle) ?? '11oz'
+  const sizeMap = MUG_SIZE_MOCKUPS[sizeKey] ?? MUG_SIZE_MOCKUPS['11oz']
+  const slug = getGarmentColorSlug(colorTitle) ?? 'white'
+  return sizeMap[slug] ?? sizeMap.white ?? Object.values(sizeMap)[0]
 }
 
 type CornerLogoPreset =
@@ -181,8 +194,7 @@ export function getBlankMockupImage(
   sizeTitle?: string | null,
 ): string | null {
   if (productType === 'mug') {
-    const sizeKey = normalizeMugSizeKey(sizeTitle) ?? '11oz'
-    return MUG_SIZE_MOCKUPS[sizeKey] ?? MUG_SIZE_MOCKUPS['11oz']
+    return resolveMugMockup(sizeTitle, colorTitle)
   }
   const sideMap = BLANK_MOCKUP_IMAGES[side]
   if (!sideMap) return null

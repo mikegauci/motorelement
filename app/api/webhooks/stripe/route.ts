@@ -7,7 +7,10 @@ import {
 import { getProductById } from "@/lib/supabase/queries/products";
 import { createPrintifyOrder } from "@/lib/printify/helpers";
 import { buildPrintAreas } from "@/lib/printify/printAreas";
-import { resolveVariantIdForProduct } from "@/lib/printify/variants";
+import {
+  resolvePrintifyProductId,
+  resolveVariantIdForProduct,
+} from "@/lib/printify/variants";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -89,7 +92,10 @@ export async function POST(request: Request) {
                   console.warn(`[stripe-webhook] No DB product for id ${item.productId}`);
                   return null;
                 }
-                const printifyProductId = dbProduct.printifyBlueprintId;
+                const printifyProductId = resolvePrintifyProductId(
+                  dbProduct.printifyBlueprintId,
+                  item.color || undefined
+                );
                 const variantId = resolveVariantIdForProduct(
                   printifyProductId,
                   item.size,
@@ -111,6 +117,7 @@ export async function POST(request: Request) {
                     artworkSide,
                     textArtworkUrl,
                     textArtworkSide,
+                    color: item.color || undefined,
                   }),
                 };
               })

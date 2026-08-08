@@ -17,8 +17,23 @@ const MUG_FRONT_PLACEMENT: Placement = {
   angle: 0,
 }
 
+const MUG_BLACK_FRONT_PLACEMENT: Placement = {
+  x: 0.74,
+  y: 0.48,
+  scale: 1,
+  angle: 0,
+}
+
 function positioned(src: string, placement: Placement): PrintAreaImage[] {
   return [{ src, ...placement }]
+}
+
+function isBlackColor(color?: string | null): boolean {
+  return color?.toLowerCase().replace(/\s+/g, '-').trim() === 'black'
+}
+
+function mugFrontPlacement(color?: string | null): Placement {
+  return isBlackColor(color) ? MUG_BLACK_FRONT_PLACEMENT : MUG_FRONT_PLACEMENT
 }
 
 export function buildPrintAreas({
@@ -27,16 +42,18 @@ export function buildPrintAreas({
   artworkSide = 'front',
   textArtworkUrl,
   textArtworkSide,
+  color,
 }: {
   productType?: string | null
   artworkUrl: string
   artworkSide?: 'front' | 'back'
   textArtworkUrl?: string | null
   textArtworkSide?: 'front' | 'back' | null
+  color?: string | null
 }): PrintAreas {
   if (productType === 'mug') {
     const printAreas: PrintAreas = {
-      front: positioned(artworkUrl, MUG_FRONT_PLACEMENT),
+      front: positioned(artworkUrl, mugFrontPlacement(color)),
     }
     if (textArtworkUrl && textArtworkSide && textArtworkSide !== 'front') {
       printAreas[textArtworkSide] = positioned(textArtworkUrl, {

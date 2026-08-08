@@ -48,6 +48,7 @@ const HOODIE_VARIANTS: VariantMap = {
 };
 
 const MUG_PRODUCT_ID = "6a76ffbd53b99ebb73054a0e";
+const MUG_BLACK_PRODUCT_ID = "6a770b5ff9e2ca7b670f0f9d";
 
 const MUG_VARIANTS: VariantMap = {
   white: {
@@ -56,10 +57,23 @@ const MUG_VARIANTS: VariantMap = {
   },
 };
 
+const MUG_BLACK_VARIANTS: VariantMap = {
+  black: {
+    "11oz": 65217,
+    "15oz": 104470,
+  },
+};
+
+const MUG_COLOR_PRODUCT_IDS: Record<string, string> = {
+  white: MUG_PRODUCT_ID,
+  black: MUG_BLACK_PRODUCT_ID,
+};
+
 const PRODUCT_VARIANTS: Record<string, { map: VariantMap; defaultColor: string }> = {
   [TEE_PRODUCT_ID]: { map: TEE_VARIANTS, defaultColor: "black" },
   [HOODIE_PRODUCT_ID]: { map: HOODIE_VARIANTS, defaultColor: "black" },
   [MUG_PRODUCT_ID]: { map: MUG_VARIANTS, defaultColor: "white" },
+  [MUG_BLACK_PRODUCT_ID]: { map: MUG_BLACK_VARIANTS, defaultColor: "black" },
 };
 
 function normalizeColor(color: string | undefined, fallback: string): string {
@@ -81,6 +95,22 @@ function lookupSize(colorMap: Record<string, number>, size: string): number | nu
     if (key.toLowerCase() === lower) return id;
   }
   return null;
+}
+
+export function getLinkedPrintifyProductIds(primaryProductId: string): string[] {
+  if (primaryProductId === MUG_PRODUCT_ID) {
+    return [MUG_PRODUCT_ID, MUG_BLACK_PRODUCT_ID];
+  }
+  return [primaryProductId];
+}
+
+export function resolvePrintifyProductId(
+  primaryProductId: string,
+  color?: string
+): string {
+  if (primaryProductId !== MUG_PRODUCT_ID) return primaryProductId;
+  const normalized = normalizeColor(color, "white");
+  return MUG_COLOR_PRODUCT_IDS[normalized] ?? MUG_PRODUCT_ID;
 }
 
 /**
