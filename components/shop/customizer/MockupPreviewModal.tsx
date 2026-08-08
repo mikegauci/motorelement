@@ -22,6 +22,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     mockupPlacement,
     tshirtBaseImage,
     productType,
+    selectedSizeTitle,
     artworkSide,
     textPlacement,
     mockupViewSide,
@@ -52,7 +53,7 @@ export default function MockupPreviewModal({ open, onClose }: Props) {
     : mockupViewSide === textSide
       ? cornersOnlyDataUrl
       : null
-  const pz = getMockupPrintZone(productType, mockupViewSide)
+  const pz = getMockupPrintZone(productType, mockupViewSide, selectedSizeTitle)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const baseImgRef = useRef<HTMLImageElement | null>(null)

@@ -6,6 +6,7 @@ import {
 } from "@/lib/supabase/queries/orders";
 import { getProductById } from "@/lib/supabase/queries/products";
 import { createPrintifyOrder } from "@/lib/printify/helpers";
+import { buildPrintAreas } from "@/lib/printify/printAreas";
 import { resolveVariantIdForProduct } from "@/lib/printify/variants";
 
 export async function POST(request: Request) {
@@ -100,15 +101,17 @@ export async function POST(request: Request) {
                   );
                   return null;
                 }
-                const printAreas: Record<string, string> = { [artworkSide]: artworkUrl };
-                if (textArtworkUrl && textArtworkSide) {
-                  printAreas[textArtworkSide] = textArtworkUrl;
-                }
                 return {
                   product_id: printifyProductId,
                   variant_id: variantId,
                   quantity: item.quantity,
-                  print_areas: printAreas,
+                  print_areas: buildPrintAreas({
+                    productType: dbProduct.type,
+                    artworkUrl,
+                    artworkSide,
+                    textArtworkUrl,
+                    textArtworkSide,
+                  }),
                 };
               })
             )
@@ -116,7 +119,7 @@ export async function POST(request: Request) {
             product_id: string;
             variant_id: number;
             quantity: number;
-            print_areas: Record<string, string>;
+            print_areas: ReturnType<typeof buildPrintAreas>;
           }>;
 
           if (printifyLineItems.length > 0) {

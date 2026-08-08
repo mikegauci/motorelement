@@ -74,6 +74,7 @@ export default function ProductCustomizer() {
     mockupBaseNaturalWidth,
     mockupBaseNaturalHeight,
     selectedColorTitle,
+    selectedSizeTitle,
     downloadArtworkEnabled,
     setDownloadArtworkEnabled,
     setArtworkHasExtras,
@@ -339,6 +340,7 @@ export default function ProductCustomizer() {
       placement: mockupPlacement,
       mockupBaseNaturalWidth,
       mockupBaseNaturalHeight,
+      sizeTitle: selectedSizeTitle,
     })
   }
 

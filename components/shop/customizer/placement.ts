@@ -69,6 +69,6 @@ export function getPrintAreaRect(
   profile: ProductProfile,
   side: 'front' | 'back' = 'front',
 ): Rect {
-  const pa = profile.printArea[side]
+  const pa = profile.printArea[side] ?? profile.printArea.front
   return { x: 0, y: 0, w: pa.width, h: pa.height }
 }

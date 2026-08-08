@@ -4,6 +4,7 @@ import {
   getProduct,
 } from "@/lib/printify/helpers";
 import { getProductById } from "@/lib/supabase/queries/products";
+import { buildPrintAreas } from "@/lib/printify/printAreas";
 import { resolveVariantIdForProduct } from "@/lib/printify/variants";
 
 const TEST_ADDRESS = {
@@ -69,17 +70,18 @@ export async function POST(request: Request) {
             return null;
           }
 
-          const side = item.artworkSide ?? "front";
-          const printAreas: Record<string, string> = { [side]: artworkUrl };
-          if (item.textArtworkUrl && item.textArtworkSide) {
-            printAreas[item.textArtworkSide] = item.textArtworkUrl;
-          }
           return {
             blueprint_id: pfyProduct.blueprint_id,
             print_provider_id: pfyProduct.print_provider_id,
             variant_id: variantId,
             quantity: item.quantity,
-            print_areas: printAreas,
+            print_areas: buildPrintAreas({
+              productType: dbProduct.type,
+              artworkUrl,
+              artworkSide: item.artworkSide ?? "front",
+              textArtworkUrl: item.textArtworkUrl,
+              textArtworkSide: item.textArtworkSide,
+            }),
           };
         })
       )

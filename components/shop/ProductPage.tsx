@@ -76,7 +76,7 @@ export default function ProductPage({
     aiArtworkUrl,
     designerIncludeSourceFiles, designerPriority,
     designerCornerImageUrl, designerCornerImageLabel,
-    setArtworkSide, setTextPlacement,
+    setArtworkSide, setTextPlacement, setSelectedSizeTitle,
   } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -166,9 +166,21 @@ export default function ProductPage({
 
   useEffect(() => {
     const colorTitle = selectedColorObj?.title ?? (isMug ? "White" : undefined);
-    const blank = getBlankMockupImage(product.type, colorTitle, mockupViewSide);
+    const blank = getBlankMockupImage(
+      product.type,
+      colorTitle,
+      mockupViewSide,
+      selectedSizeObj?.title,
+    );
     setTshirtBaseImage(blank ?? null);
-  }, [product.type, selectedColorObj?.title, mockupViewSide, setTshirtBaseImage, isMug]);
+  }, [
+    product.type,
+    selectedColorObj?.title,
+    selectedSizeObj?.title,
+    mockupViewSide,
+    setTshirtBaseImage,
+    isMug,
+  ]);
 
   useEffect(() => {
     setSelectedColorHex(selectedColorObj?.hex ?? (isMug ? "#ffffff" : null));
@@ -177,6 +189,10 @@ export default function ProductPage({
   useEffect(() => {
     setSelectedColorTitle(selectedColorObj?.title ?? (isMug ? "White" : null));
   }, [selectedColorObj?.title, setSelectedColorTitle, isMug]);
+
+  useEffect(() => {
+    setSelectedSizeTitle(selectedSizeObj?.title ?? null);
+  }, [selectedSizeObj?.title, setSelectedSizeTitle]);
 
   const uploadPng = useCallback(
     async (blob: Blob, kind: string, filename: string) => {
@@ -225,6 +241,7 @@ export default function ProductPage({
               product.type,
               artworkSide,
               null,
+              selectedSizeObj.title,
             );
             const fd = new FormData();
             fd.append("file", thumbBlob, "mockup-thumbnail.jpg");
@@ -407,7 +424,12 @@ export default function ProductPage({
           ? (artworkOnlyDataUrl ?? compositeDataUrl ?? artworkUrl)
           : (compositeDataUrl ?? artworkUrl);
         const thumbBlank = isOpposite
-          ? (getBlankMockupImage(product.type, selectedColorObj?.title, artworkSide) ?? null)
+          ? (getBlankMockupImage(
+              product.type,
+              selectedColorObj?.title,
+              artworkSide,
+              selectedSizeObj.title,
+            ) ?? null)
           : tshirtBaseImage;
         const thumbBlob = thumbBlank && thumbSource
           ? buildMockupThumbnail(
@@ -417,6 +439,7 @@ export default function ProductPage({
               product.type,
               artworkSide,
               cornersForArtworkSide,
+              selectedSizeObj.title,
             )
           : null;
         const textBlob = isOpposite && textOnlyDataUrl
@@ -620,7 +643,8 @@ export default function ProductPage({
                       getBlankMockupImage(
                         product.type,
                         selectedColorObj?.title,
-                        "front"
+                        "front",
+                        selectedSizeObj?.title,
                       ) ?? galleryImages[0]
                     }
                     alt="Mockup"

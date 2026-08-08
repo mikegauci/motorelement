@@ -1,8 +1,5 @@
 import { printifyFetch, shopPath } from "./client";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import type { PrintAreas } from "./printAreas";
 
 interface PrintifyAddress {
   first_name: string;
@@ -23,7 +20,7 @@ interface PrintifyLineItem {
   print_provider_id?: number;
   variant_id: number;
   quantity: number;
-  print_areas?: Record<string, string>;
+  print_areas?: PrintAreas;
 }
 
 interface PrintifyOrder {

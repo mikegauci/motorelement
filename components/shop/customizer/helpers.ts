@@ -172,6 +172,7 @@ interface PrintZoneCornerAnchorOptions {
   placement: Placement
   mockupBaseNaturalWidth?: number | null
   mockupBaseNaturalHeight?: number | null
+  sizeTitle?: string | null
 }
 
 function getPrintZoneCornerAnchor(
@@ -186,7 +187,10 @@ function getPrintZoneCornerAnchor(
   if (!mockupBaseNaturalWidth || !mockupBaseNaturalHeight) return null
   if (mockupBaseNaturalWidth <= 0 || mockupBaseNaturalHeight <= 0) return null
   const baseRect = letterboxRect(mockupBaseNaturalWidth, mockupBaseNaturalHeight, 1)
-  const zoneRect = getMockupPrintZoneRect(baseRect, getMockupPrintZone(options.productType, options.side))
+  const zoneRect = getMockupPrintZoneRect(
+    baseRect,
+    getMockupPrintZone(options.productType, options.side, options.sizeTitle),
+  )
   const artworkRect = getArtworkRect(zoneRect, canvasWidth / canvasHeight, options.placement)
   if (artworkRect.w <= 0 || artworkRect.h <= 0) return null
   const basePad = Math.min(zoneRect.w, zoneRect.h)
@@ -741,10 +745,11 @@ export async function buildMockupThumbnail(
   productType?: string,
   side: 'front' | 'back' = 'front',
   cornersSrc?: string | null,
+  sizeTitle?: string | null,
 ): Promise<Blob> {
   const { getMockupPrintZone } = await import('./constants')
   const { letterbox, printZoneRect, drawArtworkClipped } = await import('./canvas')
-  const zone = getMockupPrintZone(productType, side)
+  const zone = getMockupPrintZone(productType, side, sizeTitle)
 
   const [baseImg, artImg, cornersImg] = await Promise.all([
     loadImageElement(baseSrc),
@@ -789,8 +794,9 @@ export async function buildPrintAreaPng(
   const { getProductProfile } = await import('./constants')
   const { getArtworkRect, getPrintAreaRect } = await import('./placement')
   const profile = getProductProfile(productType)
-  const { width: paW, height: paH } = profile.printArea[side]
-  const printAreaRect = getPrintAreaRect(profile, side)
+  const printSide = profile.printArea[side] ? side : 'front'
+  const { width: paW, height: paH } = profile.printArea[printSide]!
+  const printAreaRect = getPrintAreaRect(profile, printSide)
 
   const [img, cornersImg] = await Promise.all([
     loadImageElement(artworkSrc),

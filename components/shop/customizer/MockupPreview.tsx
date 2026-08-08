@@ -17,6 +17,7 @@ export default function MockupPreview() {
     tshirtBaseImage,
     productType,
     selectedColorHex,
+    selectedSizeTitle,
     setMockupThumbnailUrl,
     artworkSide,
     textPlacement,
@@ -57,7 +58,10 @@ export default function MockupPreview() {
       ? cornersOnlyDataUrl
       : null
 
-  const pz = useMemo(() => getMockupPrintZone(productType, mockupViewSide), [productType, mockupViewSide])
+  const pz = useMemo(
+    () => getMockupPrintZone(productType, mockupViewSide, selectedSizeTitle),
+    [productType, mockupViewSide, selectedSizeTitle],
+  )
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)

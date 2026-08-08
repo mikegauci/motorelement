@@ -92,7 +92,7 @@ const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string
       navy:  '/images/mockups/hoodie/front-navy-hoodie.png',
     },
     mug: {
-      white: '/images/mockups/mug/front-white-mug.jpg',
+      white: '/images/mockups/mug/11oz.png',
     },
   },
   back: {
@@ -108,10 +108,23 @@ const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string
       grey:  '/images/mockups/hoodie/back-grey-hoodie.png',
       navy:  '/images/mockups/hoodie/back-navy-hoodie.png',
     },
-    mug: {
-      white: '/images/mockups/mug/front-white-mug.jpg',
-    },
   },
+}
+
+const MUG_SIZE_MOCKUPS: Record<string, string> = {
+  '11oz': '/images/mockups/mug/11oz.png',
+  '15oz': '/images/mockups/mug/15oz.png',
+}
+
+const MUG_SIZE_MOCKUP_ZONES: Record<string, { xPct: number; yPct: number; widthPct: number }> = {
+  '11oz': { xPct: 0.26, yPct: 0.30, widthPct: 0.39 },
+  '15oz': { xPct: 0.29, yPct: 0.32, widthPct: 0.34 },
+}
+
+function normalizeMugSizeKey(sizeTitle?: string | null): string | null {
+  if (sizeTitle == null || !String(sizeTitle).trim()) return null
+  const key = String(sizeTitle).toLowerCase().replace(/\s+/g, '')
+  return MUG_SIZE_MOCKUPS[key] ? key : null
 }
 
 const COLOR_TITLE_TO_SLUG: Record<string, string> = {
@@ -161,16 +174,16 @@ export function resolveCornerLogoPresetSrc(presetId: string, colorTitle: string 
   return isLightGarmentSlug(slug) ? preset.lightSrc : preset.darkSrc
 }
 
-/**
- * Look up a blank mockup image for a given product type, Printify colour title,
- * and side ('front' or 'back'). Returns the image path if a matching file exists,
- * or `null` (caller falls back to the Printify image).
- */
 export function getBlankMockupImage(
   productType?: string,
   colorTitle?: string,
   side: 'front' | 'back' = 'front',
+  sizeTitle?: string | null,
 ): string | null {
+  if (productType === 'mug') {
+    const sizeKey = normalizeMugSizeKey(sizeTitle) ?? '11oz'
+    return MUG_SIZE_MOCKUPS[sizeKey] ?? MUG_SIZE_MOCKUPS['11oz']
+  }
   const sideMap = BLANK_MOCKUP_IMAGES[side]
   if (!sideMap) return null
   const typeMap = sideMap[productType ?? '']
@@ -181,14 +194,18 @@ export function getBlankMockupImage(
   return typeMap[slug] ?? null
 }
 
+type SideBox = {
+  xPct: number
+  yPct: number
+  widthPct: number
+}
+
+type SideSize = { width: number; height: number }
+
 export interface ProductProfile {
-  mockupZone: Record<'front' | 'back', {
-    xPct: number
-    yPct: number
-    widthPct: number
-  }>
-  printArea: Record<'front' | 'back', { width: number; height: number }>
-  printExportMultiplier: Record<'front' | 'back', number>
+  mockupZone: { front: SideBox; back?: SideBox }
+  printArea: { front: SideSize; back?: SideSize }
+  printExportMultiplier: { front: number; back?: number }
 }
 
 const PRODUCT_PROFILES: Record<string, ProductProfile> = {
@@ -216,14 +233,12 @@ const PRODUCT_PROFILES: Record<string, ProductProfile> = {
   },
   mug: {
     mockupZone: {
-      front: { xPct: 0.27, yPct: 0.37, widthPct: 0.40 },
-      back:  { xPct: 0.27, yPct: 0.37, widthPct: 0.40 },
+      front: MUG_SIZE_MOCKUP_ZONES['11oz'],
     },
     printArea: {
-      front: { width: 2475, height: 1155 },
-      back:  { width: 2475, height: 1155 },
+      front: { width: 2475, height: 3000 },
     },
-    printExportMultiplier: { front: 1, back: 1 },
+    printExportMultiplier: { front: 0.35 },
   },
 }
 
@@ -242,16 +257,26 @@ export function getPrintExportMultiplier(
   side: 'front' | 'back',
   overrides?: PrintExportMultiplierOverrides | null,
 ): number {
-  const base = getProductProfile(productType).printExportMultiplier[side]
+  const multipliers = getProductProfile(productType).printExportMultiplier
+  const base = multipliers[side] ?? multipliers.front
   const o = overrides?.[side]
   if (o != null && Number.isFinite(o) && o > 0) return o
   return base
 }
 
-export function getMockupPrintZone(productType?: string, side: 'front' | 'back' = 'front') {
+export function getMockupPrintZone(
+  productType?: string,
+  side: 'front' | 'back' = 'front',
+  sizeTitle?: string | null,
+) {
   const profile = getProductProfile(productType)
-  const z = profile.mockupZone[side]
-  const pa = profile.printArea[side]
+  const resolvedSide = productType === 'mug' ? 'front' : side
+  let z = profile.mockupZone[resolvedSide] ?? profile.mockupZone.front
+  if (productType === 'mug') {
+    const sizeKey = normalizeMugSizeKey(sizeTitle) ?? '11oz'
+    z = MUG_SIZE_MOCKUP_ZONES[sizeKey] ?? z
+  }
+  const pa = profile.printArea[resolvedSide] ?? profile.printArea.front
   const printAspect = pa.width / pa.height
   return {
     xPct: z.xPct,
