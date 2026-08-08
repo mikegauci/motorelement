@@ -76,6 +76,7 @@ export default function ProductPage({
     aiArtworkUrl,
     designerIncludeSourceFiles, designerPriority,
     designerCornerImageUrl, designerCornerImageLabel,
+    setArtworkSide, setTextPlacement,
   } = useCustomizer();
   const [data, setData] = useState<PrintifyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,9 +88,17 @@ export default function ProductPage({
   const [downloadExportError, setDownloadExportError] = useState<string | null>(null);
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
 
+  const isMug = product.type === "mug";
+
   useEffect(() => {
     setProductType(product.type);
   }, [product.type, setProductType]);
+
+  useEffect(() => {
+    if (!isMug) return;
+    setArtworkSide("front");
+    setTextPlacement("same");
+  }, [isMug, setArtworkSide, setTextPlacement]);
 
   const printMultiplierOverrides = useMemo((): PrintExportMultiplierOverrides | null => {
     const o: PrintExportMultiplierOverrides = {};
@@ -110,7 +119,14 @@ export default function ProductPage({
         const json: PrintifyData = await res.json();
         setData(json);
         if (json.colors.length > 0) setSelectedColor(json.colors[0].id);
-        if (json.sizes.length > 0) setSelectedSize(json.sizes[2]?.id ?? json.sizes[0].id);
+        else setSelectedColor(null);
+        if (json.sizes.length > 0) {
+          const defaultSize =
+            json.colors.length === 0
+              ? json.sizes[0]
+              : (json.sizes[2] ?? json.sizes[0]);
+          setSelectedSize(defaultSize.id);
+        }
       } catch {
         console.error("Failed to load Printify data");
       } finally {
@@ -120,10 +136,14 @@ export default function ProductPage({
     load();
   }, [printifyProductId]);
 
+  const hasColors = (data?.colors.length ?? 0) > 0;
+
   const selectedVariant =
-    data?.variants.find(
-      (v) => v.colorId === selectedColor && v.sizeId === selectedSize
-    ) ?? null;
+    data?.variants.find((v) => {
+      if (v.sizeId !== selectedSize) return false;
+      if (!hasColors) return true;
+      return v.colorId === selectedColor;
+    }) ?? null;
 
   const selectedColorObj = data?.colors.find((c) => c.id === selectedColor);
 
@@ -145,17 +165,18 @@ export default function ProductPage({
       !generationRunning;
 
   useEffect(() => {
-    const blank = getBlankMockupImage(product.type, selectedColorObj?.title, mockupViewSide);
+    const colorTitle = selectedColorObj?.title ?? (isMug ? "White" : undefined);
+    const blank = getBlankMockupImage(product.type, colorTitle, mockupViewSide);
     setTshirtBaseImage(blank ?? null);
-  }, [product.type, selectedColorObj?.title, mockupViewSide, setTshirtBaseImage]);
+  }, [product.type, selectedColorObj?.title, mockupViewSide, setTshirtBaseImage, isMug]);
 
   useEffect(() => {
-    setSelectedColorHex(selectedColorObj?.hex ?? null);
-  }, [selectedColorObj?.hex, setSelectedColorHex]);
+    setSelectedColorHex(selectedColorObj?.hex ?? (isMug ? "#ffffff" : null));
+  }, [selectedColorObj?.hex, setSelectedColorHex, isMug]);
 
   useEffect(() => {
-    setSelectedColorTitle(selectedColorObj?.title ?? null);
-  }, [selectedColorObj?.title, setSelectedColorTitle]);
+    setSelectedColorTitle(selectedColorObj?.title ?? (isMug ? "White" : null));
+  }, [selectedColorObj?.title, setSelectedColorTitle, isMug]);
 
   const uploadPng = useCallback(
     async (blob: Blob, kind: string, filename: string) => {
@@ -299,7 +320,7 @@ export default function ProductPage({
           name: product.name,
           type: product.type,
           size: selectedSizeObj.title,
-          color: selectedColorObj?.title ?? "",
+          color: selectedColorObj?.title ?? (isMug ? "White" : ""),
           price: displayPrice,
           artworkSide,
           illustrationMode: "designer",
@@ -485,7 +506,7 @@ export default function ProductPage({
       name: product.name,
       type: product.type,
       size: selectedSizeObj.title,
-      color: selectedColorObj?.title ?? "",
+      color: selectedColorObj?.title ?? (isMug ? "White" : ""),
       price: displayPrice,
       artworkSide,
       illustrationMode: "ai",
@@ -512,7 +533,7 @@ export default function ProductPage({
 
   const availableSizeIds = new Set(
     data?.variants
-      .filter((v) => v.colorId === selectedColor)
+      .filter((v) => !hasColors || v.colorId === selectedColor)
       .map((v) => v.sizeId) ?? []
   );
 
@@ -759,9 +780,11 @@ export default function ProductPage({
               </p>
             )}
 
-            {!selectedVariant && selectedColor && selectedSize && (
+            {!selectedVariant && selectedSize && (!hasColors || selectedColor) && (
               <p className="mt-3 font-body text-xs text-redline">
-                This color/size combination is not available.
+                {hasColors
+                  ? "This color/size combination is not available."
+                  : "This size is not available."}
               </p>
             )}
           </div>

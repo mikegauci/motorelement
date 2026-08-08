@@ -91,6 +91,9 @@ const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string
       grey:  '/images/mockups/hoodie/front-grey-hoodie.png',
       navy:  '/images/mockups/hoodie/front-navy-hoodie.png',
     },
+    mug: {
+      white: '/images/mockups/mug/front-white-mug.jpg',
+    },
   },
   back: {
     't-shirt': {
@@ -104,6 +107,9 @@ const BLANK_MOCKUP_IMAGES: Record<'front' | 'back', Record<string, Record<string
       black: '/images/mockups/hoodie/back-black-hoodie.png',
       grey:  '/images/mockups/hoodie/back-grey-hoodie.png',
       navy:  '/images/mockups/hoodie/back-navy-hoodie.png',
+    },
+    mug: {
+      white: '/images/mockups/mug/front-white-mug.jpg',
     },
   },
 }
@@ -207,6 +213,17 @@ const PRODUCT_PROFILES: Record<string, ProductProfile> = {
       back:  { width: 4200, height: 4800 },
     },
     printExportMultiplier: { front: 0.63, back: 1 },
+  },
+  mug: {
+    mockupZone: {
+      front: { xPct: 0.27, yPct: 0.37, widthPct: 0.40 },
+      back:  { xPct: 0.27, yPct: 0.37, widthPct: 0.40 },
+    },
+    printArea: {
+      front: { width: 2475, height: 1155 },
+      back:  { width: 2475, height: 1155 },
+    },
+    printExportMultiplier: { front: 1, back: 1 },
   },
 }
 

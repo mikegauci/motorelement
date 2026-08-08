@@ -40,6 +40,41 @@ interface PrintifyProduct {
   options: PrintifyOption[];
 }
 
+type ImageBucket = { front: string | null; back: string | null; other: string[] };
+
+const COLORLESS_IMAGE_KEY = 0;
+
+function isSizesOption(name: string) {
+  const n = name.toLowerCase();
+  return n === "sizes" || n === "size";
+}
+
+function isColorsOption(name: string) {
+  return name.toLowerCase() === "colors" || name.toLowerCase() === "color";
+}
+
+function ensureBucket(
+  map: Record<number, ImageBucket>,
+  key: number
+): ImageBucket {
+  if (!map[key]) {
+    map[key] = { front: null, back: null, other: [] };
+  }
+  return map[key];
+}
+
+function assignImage(bucket: ImageBucket, img: PrintifyImage) {
+  if (img.position === "front" && !bucket.front) {
+    bucket.front = img.src;
+  } else if (img.position === "back" && !bucket.back) {
+    bucket.back = img.src;
+  } else if (img.position === "other") {
+    if (bucket.other.length < 4) {
+      bucket.other.push(img.src);
+    }
+  }
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: { productId: string } }
@@ -49,8 +84,8 @@ export async function GET(
       shopPath(`/products/${params.productId}.json`)
     );
 
-    const colorsOption = product.options.find((o) => o.name === "Colors");
-    const sizesOption = product.options.find((o) => o.name === "Sizes");
+    const colorsOption = product.options.find((o) => isColorsOption(o.name));
+    const sizesOption = product.options.find((o) => isSizesOption(o.name));
 
     const colorValueIds = new Set((colorsOption?.values ?? []).map((v) => v.id));
     const sizeValueIds = new Set((sizesOption?.values ?? []).map((v) => v.id));
@@ -66,8 +101,6 @@ export async function GET(
       title: v.title,
     }));
 
-    // variant.options order is not consistent — classify each value
-    // by checking which option set it belongs to
     const enabledVariants = product.variants
       .filter((v) => v.is_enabled && v.is_available)
       .map((v) => {
@@ -80,42 +113,33 @@ export async function GET(
         return { id: v.id, title: v.title, price: v.price, colorId, sizeId };
       });
 
-    // Enabled color/size IDs (only include options that have at least one enabled variant)
     const enabledColorIds = new Set(enabledVariants.map((v) => v.colorId));
     const enabledSizeIds = new Set(enabledVariants.map((v) => v.sizeId));
 
     const activeColors = colors.filter((c) => enabledColorIds.has(c.id));
     const activeSizes = sizes.filter((s) => enabledSizeIds.has(s.id));
+    const hasColors = activeColors.length > 0;
 
-    // Build image map: colorId -> { front, back, other[] }
-    const colorImages: Record<
-      number,
-      { front: string | null; back: string | null; other: string[] }
-    > = {};
+    const colorImages: Record<number, ImageBucket> = {};
 
-    for (const color of activeColors) {
-      colorImages[color.id] = { front: null, back: null, other: [] };
+    if (hasColors) {
+      for (const color of activeColors) {
+        ensureBucket(colorImages, color.id);
+      }
+    } else {
+      ensureBucket(colorImages, COLORLESS_IMAGE_KEY);
     }
 
     for (const img of product.images) {
-      // Find which color this image belongs to by checking variant_ids
       const matchedVariant = enabledVariants.find((v) =>
         img.variant_ids.includes(v.id)
       );
       if (!matchedVariant) continue;
 
-      const colorId = matchedVariant.colorId;
-      if (!colorImages[colorId]) continue;
-
-      if (img.position === "front" && !colorImages[colorId].front) {
-        colorImages[colorId].front = img.src;
-      } else if (img.position === "back" && !colorImages[colorId].back) {
-        colorImages[colorId].back = img.src;
-      } else if (img.position === "other") {
-        if (colorImages[colorId].other.length < 4) {
-          colorImages[colorId].other.push(img.src);
-        }
-      }
+      const key = hasColors ? matchedVariant.colorId : COLORLESS_IMAGE_KEY;
+      const bucket = colorImages[key];
+      if (!bucket) continue;
+      assignImage(bucket, img);
     }
 
     return NextResponse.json({

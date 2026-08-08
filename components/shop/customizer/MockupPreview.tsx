@@ -265,7 +265,7 @@ export default function MockupPreview() {
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full"
-          aria-label="T-shirt mockup preview"
+          aria-label={productType === 'mug' ? 'Mug mockup preview' : 'Product mockup preview'}
         />
         {hasBothSides && (
           <div className="absolute top-3 left-3 flex gap-1 bg-black/60 backdrop-blur-sm border border-border p-1 rounded">

@@ -173,6 +173,12 @@ export default function ProductCustomizer() {
   }, [carImageDataUrl, setCustomerPhotoDataUrl])
 
   useEffect(() => {
+    if (productType !== 'mug') return
+    setArtworkSide('front')
+    setTextPlacement('same')
+  }, [productType, setArtworkSide, setTextPlacement])
+
+  useEffect(() => {
     if (illustrationMode !== 'designer') return
     setArtworkUrl(resolveDesignerPlaceholderUrl(selectedColorTitle))
     setGenerationStatus('done')
@@ -818,17 +824,19 @@ export default function ProductCustomizer() {
           />
           <input ref={customBackgroundFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCustomBackgroundFile} disabled={backgroundControlsLocked} />
 
-          <ArtworkPositionSelector
-            artworkSide={artworkSide}
-            setArtworkSide={setArtworkSide}
-            disabled={false}
-          />
+          {productType !== 'mug' && (
+            <ArtworkPositionSelector
+              artworkSide={artworkSide}
+              setArtworkSide={setArtworkSide}
+              disabled={false}
+            />
+          )}
           <TextOverlayToggle
             enabled={addTextEnabled}
             onChange={handleAddTextToggle}
             disabled={false}
           />
-          {addTextEnabled && (
+          {addTextEnabled && productType !== 'mug' && (
             <TextPlacementSelector
               placement={textPlacement}
               onChange={setTextPlacement}
@@ -1021,17 +1029,19 @@ export default function ProductCustomizer() {
                           backgroundControlsLocked={backgroundControlsLocked}
                           onInViewChange={handleAdjustCompositionInView}
                         />
-                        <ArtworkPositionSelector
-                          artworkSide={artworkSide}
-                          setArtworkSide={setArtworkSide}
-                          disabled={backgroundControlsLocked}
-                        />
+                        {productType !== 'mug' && (
+                          <ArtworkPositionSelector
+                            artworkSide={artworkSide}
+                            setArtworkSide={setArtworkSide}
+                            disabled={backgroundControlsLocked}
+                          />
+                        )}
                         <TextOverlayToggle
                           enabled={addTextEnabled}
                           onChange={handleAddTextToggle}
                           disabled={backgroundControlsLocked}
                         />
-                        {addTextEnabled && (
+                        {addTextEnabled && productType !== 'mug' && (
                           <TextPlacementSelector
                             placement={textPlacement}
                             onChange={setTextPlacement}

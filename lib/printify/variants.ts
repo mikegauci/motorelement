@@ -3,10 +3,8 @@
  * Each product has its own map; the resolver picks the right one at runtime.
  */
 
-type Size = "S" | "M" | "L" | "XL" | "2XL" | "3XL" | "4XL" | "5XL";
-type VariantMap = Record<string, Record<Size, number>>;
+type VariantMap = Record<string, Record<string, number>>;
 
-// ── Gildan 5000 Heavy Cotton (Classic Tee) ────────────────────────────
 const TEE_PRODUCT_ID = "6a4d1b5c6c67e7b25505eece";
 
 const TEE_VARIANTS: VariantMap = {
@@ -28,7 +26,6 @@ const TEE_VARIANTS: VariantMap = {
   },
 };
 
-// ── Gildan 18500 Heavy Blend Hoodie ─────────────────────────────────
 const HOODIE_PRODUCT_ID = "69d8c3476246f29b190f7d9e";
 
 const HOODIE_VARIANTS: VariantMap = {
@@ -50,12 +47,41 @@ const HOODIE_VARIANTS: VariantMap = {
   },
 };
 
-// ── Registry ────────────────────────────────────────────────────────
+const MUG_PRODUCT_ID = "6a76ffbd53b99ebb73054a0e";
+
+const MUG_VARIANTS: VariantMap = {
+  white: {
+    "11oz": 65216,
+    "15oz": 104692,
+  },
+};
 
 const PRODUCT_VARIANTS: Record<string, { map: VariantMap; defaultColor: string }> = {
   [TEE_PRODUCT_ID]: { map: TEE_VARIANTS, defaultColor: "black" },
   [HOODIE_PRODUCT_ID]: { map: HOODIE_VARIANTS, defaultColor: "black" },
+  [MUG_PRODUCT_ID]: { map: MUG_VARIANTS, defaultColor: "white" },
 };
+
+function normalizeColor(color: string | undefined, fallback: string): string {
+  const normalized = color?.toLowerCase().replace(/\s+/g, "-").trim();
+  return normalized || fallback;
+}
+
+function normalizeSize(size: string): string {
+  const trimmed = size.trim();
+  const lower = trimmed.toLowerCase();
+  if (/^\d+(\.\d+)?oz$/.test(lower)) return lower;
+  return trimmed.toUpperCase();
+}
+
+function lookupSize(colorMap: Record<string, number>, size: string): number | null {
+  if (colorMap[size] != null) return colorMap[size];
+  const lower = size.toLowerCase();
+  for (const [key, id] of Object.entries(colorMap)) {
+    if (key.toLowerCase() === lower) return id;
+  }
+  return null;
+}
 
 /**
  * Resolve a Printify variant ID given a product, size, and optional color.
@@ -69,10 +95,10 @@ export function resolveVariantIdForProduct(
   const entry = PRODUCT_VARIANTS[printifyProductId];
   if (!entry) return null;
 
-  const normalizedColor = color?.toLowerCase().replace(/\s+/g, "-") ?? entry.defaultColor;
-  const normalizedSize = size.toUpperCase() as Size;
+  const normalizedColor = normalizeColor(color, entry.defaultColor);
+  const normalizedSize = normalizeSize(size);
 
   const colorMap = entry.map[normalizedColor] ?? entry.map[entry.defaultColor];
   if (!colorMap) return null;
-  return colorMap[normalizedSize] ?? null;
+  return lookupSize(colorMap, normalizedSize);
 }
