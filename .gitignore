@@ -36,9 +36,6 @@ yarn-error.log*
 # cursor
 .cursor/
 
-# local Supabase storage backups
-/backups/
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
