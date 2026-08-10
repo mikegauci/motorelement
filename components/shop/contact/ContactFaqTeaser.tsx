@@ -1,23 +1,33 @@
+import Link from "next/link";
 import { ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
-import { faqs } from "@/lib/shop/faqs";
-import { SectionWrapper } from "./SectionWrapper";
-import { SectionHeading } from "./SectionHeading";
+import { SectionWrapper } from "@/components/shop/SectionWrapper";
+import { SectionHeading } from "@/components/shop/SectionHeading";
+import { contactFaqTeaserIds, faqs } from "@/lib/shop/faqs";
 
-export function FAQSection() {
+export function ContactFaqTeaser() {
+  const items = contactFaqTeaserIds.map((index) => faqs[index]);
+
   return (
-    <SectionWrapper id="faq">
+    <SectionWrapper>
       <Container size="narrow">
-        <SectionHeading eyebrow="SUPPORT" title="FREQUENTLY ASKED" />
-
+        <SectionHeading
+          eyebrow="SUPPORT"
+          title="QUICK ANSWERS"
+          subtitle="Common questions before you write in."
+        />
         <div className="border-t border-border">
-          {faqs.map((faq, index) => (
+          {items.map((faq, index) => (
             <details
-              key={index}
-              name="motorelement-faq"
+              key={faq.question}
+              name="contact-faq-teaser"
               className="group border-b border-border"
-              // React 18 @types/react omit defaultOpen on <details>; it is valid in the DOM.
-              {...(index === 0 ? ({ defaultOpen: true } as React.HTMLAttributes<HTMLDetailsElement>) : {})}
+              {...(index === 0
+                ? ({
+                    defaultOpen: true,
+                  } as React.HTMLAttributes<HTMLDetailsElement>)
+                : {})}
             >
               <summary className="flex w-full cursor-pointer list-none items-center justify-between gap-4 py-6 text-left [&::-webkit-details-marker]:hidden">
                 <span className="font-sub text-base font-bold uppercase tracking-widest text-white">
@@ -34,6 +44,13 @@ export function FAQSection() {
               </p>
             </details>
           ))}
+        </div>
+        <div className="mt-10 text-center">
+          <Link href="/#faq">
+            <Button variant="ghost" size="md">
+              VIEW ALL FAQ
+            </Button>
+          </Link>
         </div>
       </Container>
     </SectionWrapper>
